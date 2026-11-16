@@ -1,0 +1,182 @@
+import CoreGraphics
+import Foundation
+
+/// One photo or video on the timeline. `date` is the local wall-clock time stored as if it were UTC,
+/// the same way Immich's web timeline does it, so grouping by day never depends on this Mac's time zone.
+struct Asset: Codable, Sendable {
+    let id: String
+    let date: Date
+    let isVideo: Bool
+}
+
+/// Immich sends times like `2026-11-10T21:45:03` or `...03.886` with no zone; like the web UI, read them as UTC.
+/// Strings that do carry a zone (`Z`, `+08:00`) keep it. Not Sendable: make one per task.
+struct UTCDateParser {
+    private let plain = ISO8601DateFormatter()
+    private let fraction: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return f
+    }()
+
+    func date(_ string: String) -> Date? {
+        let time = string.dropFirst(19) // after yyyy-MM-ddTHH:mm:ss
+        let zoned = time.contains { $0 == "Z" || $0 == "+" || $0 == "-" }
+        let s = zoned ? string : string + "Z"
+        return fraction.date(from: s) ?? plain.date(from: s)
+    }
+}
+
+enum Grouping: String, CaseIterable {
+    case day, month, none
+
+    var label: String {
+        switch self {
+        case .day: "依日"
+        case .month: "依月"
+        case .none: "不分組"
+        }
+    }
+}
+
+/// Cell sizes in points for the zoom steps, smallest first. Below `openLevel` a click zooms in; from it on, a click opens the photo.
+let zoomLevels: [Double] = [16, 24, 36, 52, 76, 110, 160, 220]
+let openLevel = 5
+
+struct Section {
+    let title: String
+    let range: Range<Int>
+}
+
+/// Splits `assets` (newest first) into day or month sections, or one section for `.none`.
+func makeSections(_ assets: [Asset], by grouping: Grouping) -> [Section] {
+    guard !assets.isEmpty else { return [] }
+    guard grouping != .none else { return [Section(title: "", range: assets.indices)] }
+
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = .gmt
+    var style = grouping == .day ? Date.FormatStyle(date: .complete, time: .omitted) : Date.FormatStyle().year().month(.wide)
+    style.timeZone = .gmt
+
+    var sections: [Section] = []
+    var start = 0, lastDay = Int.min, lastKey = Int.min
+    for (i, asset) in assets.enumerated() {
+        let day = Int((asset.date.timeIntervalSince1970 / 86400).rounded(.down))
+        if day == lastDay { continue }
+        lastDay = day
+        let key: Int
+        if grouping == .day {
+            key = day
+        } else {
+            let c = calendar.dateComponents([.year, .month], from: asset.date)
+            key = c.year! * 12 + c.month!
+        }
+        if key != lastKey {
+            if i > 0 { sections.append(Section(title: assets[start].date.formatted(style), range: start..<i)) }
+            start = i
+            lastKey = key
+        }
+    }
+    sections.append(Section(title: assets[start].date.formatted(style), range: start..<assets.count))
+    return sections
+}
+
+/// Square-grid geometry, like Photos: columns fill the width, each section has an optional header.
+/// Pure math so it is cheap to query for 100k+ items and testable without AppKit.
+struct GridMath {
+    let width: Double
+    let side: Double
+    let spacing: Double
+    let header: Double
+    let columns: Int
+    let counts: [Int]
+    let tops: [Double]
+    let height: Double
+
+    init(counts: [Int], width: Double, target: Double, header: Double, spacing: Double = 1) {
+        let width = max(width, 1)
+        let columns = max(1, Int((width + spacing) / (target + spacing)))
+        let side = (width - spacing * Double(columns - 1)) / Double(columns)
+        var tops: [Double] = []
+        var y = 0.0
+        for n in counts {
+            tops.append(y)
+            y += header + Double((n + columns - 1) / columns) * (side + spacing)
+        }
+        (self.width, self.side, self.spacing, self.header, self.columns, self.counts, self.tops, self.height) =
+            (width, side, spacing, header, columns, counts, tops, y)
+    }
+
+    func itemFrame(_ section: Int, _ item: Int) -> CGRect {
+        CGRect(x: Double(item % columns) * (side + spacing),
+               y: tops[section] + header + Double(item / columns) * (side + spacing),
+               width: side, height: side)
+    }
+
+    func headerFrame(_ section: Int) -> CGRect {
+        CGRect(x: 0, y: tops[section], width: width, height: header)
+    }
+
+    /// Sections touching the vertical range minY..<maxY, with the items whose rows touch it.
+    func visible(_ minY: Double, _ maxY: Double) -> [(section: Int, items: Range<Int>)] {
+        // binary search: first section whose bottom is below minY
+        var lo = 0, hi = tops.count
+        while lo < hi {
+            let mid = (lo + hi) / 2
+            if bottom(mid) <= minY { lo = mid + 1 } else { hi = mid }
+        }
+        var result: [(section: Int, items: Range<Int>)] = []
+        let rowHeight = side + spacing
+        var s = lo
+        while s < tops.count, tops[s] < maxY {
+            let base = tops[s] + header
+            let lastRow = (counts[s] + columns - 1) / columns - 1
+            let r0 = max(0, Int(((minY - base) / rowHeight).rounded(.down)))
+            let r1 = min(lastRow, Int(((maxY - base) / rowHeight).rounded(.down)))
+            result.append((s, r0 <= r1 ? r0 * columns..<min(counts[s], (r1 + 1) * columns) : 0..<0))
+            s += 1
+        }
+        return result
+    }
+
+    private func bottom(_ s: Int) -> Double { s + 1 < tops.count ? tops[s + 1] : height }
+}
+
+extension GridMath {
+    /// The item one row below (or above) in the same column, or the nearest one if that row is shorter.
+    /// Crosses into the next (previous) section; nil at the very end (start).
+    func row(from section: Int, _ item: Int, down: Bool) -> (section: Int, item: Int)? {
+        let column = item % columns
+        if down {
+            if item / columns < (counts[section] - 1) / columns { return (section, min(item + columns, counts[section] - 1)) }
+            guard let s = counts.indices.dropFirst(section + 1).first(where: { counts[$0] > 0 }) else { return nil }
+            return (s, min(column, counts[s] - 1))
+        }
+        if item >= columns { return (section, item - columns) }
+        guard let s = counts.indices.prefix(section).last(where: { counts[$0] > 0 }) else { return nil }
+        return (s, min((counts[s] - 1) / columns * columns + column, counts[s] - 1))
+    }
+}
+
+/// Where `day` (00:00 wall-clock, stored as UTC like `Asset.date`) starts in `assets`, sorted either way.
+/// A day without photos gives the next one in display order.
+func index(of day: Date, in assets: [Asset]) -> Int? {
+    guard let first = assets.first, let last = assets.last else { return nil }
+    let i = first.date >= last.date
+        ? assets.firstIndex { $0.date < day.addingTimeInterval(86400) }
+        : assets.firstIndex { $0.date >= day }
+    return i ?? assets.count - 1
+}
+
+/// The first index of each year in `assets` (sorted either way), for the scrubber's year marks.
+func yearStarts(_ assets: [Asset]) -> [(year: Int, index: Int)] {
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = .gmt
+    var result: [(year: Int, index: Int)] = []
+    var current: DateInterval?
+    for (i, asset) in assets.enumerated() where current.map({ !($0.start..<$0.end).contains(asset.date) }) ?? true {
+        current = calendar.dateInterval(of: .year, for: asset.date)
+        result.append((calendar.component(.year, from: asset.date), i))
+    }
+    return result
+}

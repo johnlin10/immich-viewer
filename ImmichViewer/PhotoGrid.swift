@@ -1,0 +1,709 @@
+import AppKit
+import SwiftUI
+
+/// The photo wall: an AppKit NSCollectionView with a custom square-grid layout, wrapped for SwiftUI.
+/// It fills the whole window; `insets` keep the first and last rows clear of the title bar and the bottom bar.
+struct PhotoGrid: NSViewRepresentable {
+    let library: Library
+    let data: GridData
+    let level: Int
+    let showHeaders: Bool
+    let style: GridStyle
+    let insets: NSEdgeInsets
+    /// False while a photo is open over the grid: keys go to the viewer.
+    let active: Bool
+    let onZoom: (Int) -> Void
+    let onOpen: (Int, CGRect?, CGImage?) -> Void
+    let bridge: GridBridge
+
+    func makeCoordinator() -> GridController { GridController(library: library) }
+
+    func makeNSView(context: Context) -> NSScrollView {
+        let controller = context.coordinator
+        let collection = GridCollectionView()
+        collection.collectionViewLayout = controller.layout
+        collection.dataSource = controller
+        collection.prefetchDataSource = controller
+        collection.isSelectable = false
+        collection.backgroundColors = [.clear]
+        collection.register(ThumbCell.self, forItemWithIdentifier: ThumbCell.id)
+        collection.register(HeaderView.self, forSupplementaryViewOfKind: NSCollectionView.elementKindSectionHeader,
+                            withIdentifier: HeaderView.id)
+        collection.onClick = { [weak controller] in controller?.clicked(at: $0) }
+        collection.onMagnify = { [weak controller] in controller?.pinched(phase: $0, magnification: $1, at: $2) }
+        collection.onKey = { [weak controller] in controller?.key($0) ?? false }
+
+        let scroll = ScrubbedScrollView()
+        scroll.documentView = collection
+        scroll.drawsBackground = false
+        scroll.automaticallyAdjustsContentInsets = false
+        scroll.contentView.postsBoundsChangedNotifications = true
+        NotificationCenter.default.addObserver(controller, selector: #selector(GridController.scrolled),
+                                               name: NSView.boundsDidChangeNotification, object: scroll.contentView)
+        controller.collection = collection
+        controller.bridge = bridge
+        bridge.controller = controller
+        return scroll
+    }
+
+    func updateNSView(_ scroll: NSScrollView, context: Context) {
+        let controller = context.coordinator
+        controller.onZoom = onZoom
+        controller.onOpen = onOpen
+        controller.active = active
+        controller.update(data: data, level: level, header: showHeaders ? 40 : 0, style: style, insets: insets)
+    }
+}
+
+/// How the cells look, from Settings and the ⋯ menu.
+struct GridStyle: Equatable {
+    var fit = false
+    var spacing = 1.0
+    var radius = 0.0
+    var badge = true
+}
+
+/// The grid's scroll position for SwiftUI (date capsule, scrubber), and ways to move it.
+@MainActor @Observable
+final class GridBridge {
+    @ObservationIgnored weak var controller: GridController?
+    /// The photo at the top of the visible area.
+    var top = 0
+    /// How far down the grid is scrolled, 0...1.
+    var fraction = 0.0
+
+    /// Selects photo `index`, scrolls it into view and returns where it is, for the viewer's closing animation.
+    func reveal(_ index: Int) -> CGRect? { controller?.reveal(index) }
+    func scroll(to fraction: Double) { controller?.scroll(to: fraction) }
+    /// Where photo `index` sits on the scrubber, 0...1.
+    func fraction(of index: Int) -> Double { controller?.fraction(of: index) ?? 0 }
+    /// Scrolls photo `index` to the top of the visible area.
+    func jump(to index: Int) { controller?.jump(to: index, select: false) }
+}
+
+/// Assets and their sections, swapped together so the grid never sees a mismatched pair.
+struct GridData {
+    var assets: [Asset] = []
+    var sections: [Section] = []
+    var years: [(year: Int, index: Int)] = []
+    var id = 0
+}
+
+@MainActor
+final class GridController: NSObject, NSCollectionViewDataSource, NSCollectionViewPrefetching {
+    let layout = GridLayout()
+    let library: Library
+    weak var collection: NSCollectionView?
+    weak var bridge: GridBridge?
+    var active = true
+    var onZoom: (Int) -> Void = { _ in }
+    var onOpen: (Int, CGRect?, CGImage?) -> Void = { _, _, _ in }
+
+    private var data = GridData(id: -1)
+    private var level = -1
+    private var requestedLevel = -1
+    private var pinchStartLevel = 0
+    private var pinchScale = 1.0
+    private var style = GridStyle()
+    private var insets = NSEdgeInsets()
+    /// The keyboard selection, an index into `data.assets`.
+    private var selected: Int?
+    /// The photo to keep in place on the next zoom, and its distance from the top of the visible area.
+    private var pendingAnchor: (path: IndexPath, screenY: Double)?
+    private var zoomOverlay: NSView?
+
+    init(library: Library) { self.library = library }
+
+    private var scrollView: NSScrollView? { collection?.enclosingScrollView }
+
+    /// Top of the area not covered by the title bar, in collection-view coordinates.
+    private var contentTop: Double { (scrollView?.contentView.bounds.minY ?? 0) + insets.top }
+    private var contentHeight: Double { (scrollView?.contentView.bounds.height ?? 0) - insets.top - insets.bottom }
+
+    private var pixels: Int {
+        ThumbnailStore.pixels(forSide: layout.math.side, scale: Double(collection?.window?.backingScaleFactor ?? 2))
+    }
+
+    func update(data: GridData, level: Int, header: Double, style: GridStyle, insets: NSEdgeInsets) {
+        guard let collection, let scroll = scrollView else { return }
+        if insets.top != self.insets.top || insets.bottom != self.insets.bottom {
+            self.insets = insets
+            scroll.contentInsets = insets
+        }
+        if style != self.style {
+            self.style = style
+            for case let cell as ThumbCell in collection.visibleItems() { cell.style = style }
+        }
+        if data.id != self.data.id {
+            // keep the photo at the top in place across a regroup or a refreshed list
+            let top = topAnchor().map { (id: self.data.assets[index($0.path)].id, screenY: $0.screenY) }
+            let selectedID = selected.map { self.data.assets[$0].id }
+            self.data = data
+            selected = selectedID.flatMap { id in data.assets.firstIndex { $0.id == id } }
+            self.level = level
+            requestedLevel = level
+            layout.target = zoomLevels[level]
+            layout.header = header
+            layout.spacing = style.spacing
+            collection.reloadData()
+            if let top, let i = data.assets.firstIndex(where: { $0.id == top.id }),
+               let s = data.sections.firstIndex(where: { $0.range.contains(i) }) {
+                collection.layoutSubtreeIfNeeded()
+                keep((IndexPath(item: i - data.sections[s].range.lowerBound, section: s), top.screenY))
+            }
+            scrolled()
+            // on the first load the grid has no size yet; ask again once it has been laid out
+            DispatchQueue.main.async { [weak self] in self?.scrolled() }
+        } else if level != self.level || header != layout.header || style.spacing != layout.spacing {
+            // buttons and ⌘−/⌘= zoom around the middle of the screen; clicks and pinches set their own anchor
+            let anchor = pendingAnchor ?? centerAnchor()
+            pendingAnchor = nil
+            let oldSide = layout.math.side
+            let overlay = beginZoom()
+            let from = anchor.map { center($0.path) }
+            self.level = level
+            requestedLevel = level
+            layout.target = zoomLevels[level]
+            layout.header = header
+            layout.spacing = style.spacing
+            layout.invalidateLayout()
+            collection.layoutSubtreeIfNeeded()
+            if let anchor, anchor.path.section < data.sections.count {
+                keep(anchor)
+                collection.layoutSubtreeIfNeeded() // create the cells at the new scroll position
+            }
+            // cells already on screen were decoded for the old size
+            let pixels = pixels
+            for case let cell as ThumbCell in collection.visibleItems() {
+                if let p = collection.indexPath(for: cell) { cell.show(data.assets[index(p)], pixels: pixels, library: library) }
+            }
+            if let overlay, oldSide > 0 {
+                let mid = CGPoint(x: overlay.bounds.midX, y: overlay.bounds.midY)
+                finishZoom(overlay, scale: layout.math.side / oldSide, from: from ?? mid, to: anchor.map { center($0.path) } ?? mid)
+            }
+        }
+    }
+
+    /// Starts a zoom: the grid as it is now, copied into an overlay that will scale away.
+    private func beginZoom() -> NSView? {
+        zoomOverlay?.removeFromSuperview()
+        zoomOverlay = nil
+        guard let scroll = scrollView, !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else {
+            collection?.alphaValue = 1
+            return nil
+        }
+        let overlay = PassthroughView(frame: scroll.bounds)
+        overlay.wantsLayer = true
+        scroll.addSubview(overlay)
+        overlay.layer!.addSublayer(snapshot(in: overlay))
+        zoomOverlay = overlay
+        return overlay
+    }
+
+    /// The cells and headers on screen as plain layers, in the overlay's coordinates.
+    private func snapshot(in overlay: NSView) -> CALayer {
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        defer { CATransaction.commit() }
+        let container = CALayer()
+        container.anchorPoint = .zero
+        container.frame = overlay.bounds
+        guard let collection else { return container }
+        for case let cell as ThumbCell in collection.visibleItems() {
+            guard let source = cell.view.layer else { continue }
+            let copy = CALayer()
+            copy.frame = cell.view.convert(cell.view.bounds, to: overlay)
+            copy.contents = source.contents
+            // a cell that just scrolled in may still be loading; use any size already in memory
+            if copy.contents == nil, let p = collection.indexPath(for: cell) {
+                let id = data.assets[index(p)].id
+                copy.contents = library.thumbs.anyCached(id)
+                if copy.contents == nil, let api = library.api {
+                    let store = library.thumbs, pixels = pixels
+                    Task { copy.contents = await store.image(id, pixels: pixels, api: api) } // fades in while zooming
+                }
+            }
+            copy.contentsGravity = source.contentsGravity
+            copy.backgroundColor = copy.contents == nil || !style.fit ? source.backgroundColor : nil
+            copy.cornerRadius = source.cornerRadius
+            copy.masksToBounds = true
+            container.addSublayer(copy)
+        }
+        for header in collection.visibleSupplementaryViews(ofKind: NSCollectionView.elementKindSectionHeader) {
+            guard let rep = header.bitmapImageRepForCachingDisplay(in: header.bounds) else { continue }
+            header.cacheDisplay(in: header.bounds, to: rep)
+            let copy = CALayer()
+            copy.frame = header.convert(header.bounds, to: overlay)
+            copy.contents = rep.cgImage
+            container.addSublayer(copy)
+        }
+        return container
+    }
+
+    /// One continuous zoom: the old grid grows (or shrinks) by `r` around the anchor and fades out,
+    /// while the new grid, copied under it, comes from the opposite scale to its real size.
+    /// The anchor photo sits at the same spot in both, so they move as one picture.
+    private func finishZoom(_ overlay: NSView, scale r: Double, from p0: CGPoint, to p1: CGPoint) {
+        guard let collection, let old = overlay.layer?.sublayers?.first else { return }
+        let new = snapshot(in: overlay)
+        overlay.layer!.insertSublayer(new, below: old)
+        collection.alphaValue = 0 // the copies stand in for the real grid until the end
+
+        // containers have their anchor at the origin: these map p0 to p1 and back
+        let grow = CATransform3DConcat(CATransform3DMakeScale(r, r, 1),
+                                       CATransform3DMakeTranslation(p1.x - r * p0.x, p1.y - r * p0.y, 0))
+        let shrink = CATransform3DConcat(CATransform3DMakeScale(1 / r, 1 / r, 1),
+                                         CATransform3DMakeTranslation(p0.x - p1.x / r, p0.y - p1.y / r, 0))
+        let timing = CAMediaTimingFunction(controlPoints: 0.2, 0, 0, 1)
+        func animate(_ layer: CALayer, _ key: String, from: Any, to: Any) {
+            let a = CABasicAnimation(keyPath: key)
+            a.fromValue = from
+            a.toValue = to
+            a.duration = 0.35
+            a.timingFunction = timing
+            layer.add(a, forKey: key)
+        }
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        CATransaction.setCompletionBlock { [weak self, weak overlay, weak collection] in
+            // a newer zoom may have taken over; then it owns the overlay and the grid's visibility
+            guard let self, let overlay, self.zoomOverlay === overlay else { return }
+            overlay.removeFromSuperview()
+            self.zoomOverlay = nil
+            collection?.alphaValue = 1
+        }
+        old.transform = grow
+        old.opacity = 0
+        animate(old, "transform", from: CATransform3DIdentity, to: grow)
+        animate(old, "opacity", from: 1, to: 0)
+        animate(new, "transform", from: shrink, to: CATransform3DIdentity)
+        CATransaction.commit()
+    }
+
+    /// A grid frame in the scroll view's coordinates, origin at the top left (as SwiftUI sees it).
+    private func onScreen(_ frame: CGRect) -> CGRect? {
+        guard let collection, let scroll = scrollView else { return nil }
+        let r = collection.convert(frame, to: scroll)
+        return scroll.isFlipped ? r : CGRect(x: r.minX, y: scroll.bounds.height - r.maxY, width: r.width, height: r.height)
+    }
+
+    private func center(_ path: IndexPath) -> CGPoint {
+        guard let collection, let overlay = zoomOverlay else { return .zero }
+        let f = collection.convert(layout.math.itemFrame(path.section, path.item), to: overlay)
+        return CGPoint(x: f.midX, y: f.midY)
+    }
+
+    func reveal(_ i: Int) -> CGRect? {
+        guard let path = indexPath(i) else { return nil }
+        let frame = layout.math.itemFrame(path.section, path.item)
+        if frame.minY < contentTop || frame.maxY > contentTop + contentHeight {
+            keep((path, contentHeight / 2))
+            collection?.layoutSubtreeIfNeeded()
+        }
+        select(i)
+        return onScreen(frame)
+    }
+
+    private func indexPath(_ i: Int) -> IndexPath? {
+        guard let s = data.sections.firstIndex(where: { $0.range.contains(i) }) else { return nil }
+        return IndexPath(item: i - data.sections[s].range.lowerBound, section: s)
+    }
+
+    /// Moves the selection ring.
+    private func select(_ i: Int?) {
+        guard i != selected, let collection else { return }
+        for old in [selected, i].compactMap({ $0 }) {
+            if let p = indexPath(old), let cell = collection.item(at: p) as? ThumbCell { cell.ring = old == i }
+        }
+        selected = i
+    }
+
+    /// Selects photo `i` and scrolls just enough to show it.
+    private func selectAndShow(_ i: Int) {
+        guard let path = indexPath(i) else { return }
+        select(i)
+        let f = layout.math.itemFrame(path.section, path.item)
+        let header = path.item < layout.math.columns ? layout.header : 0
+        if f.minY - header < contentTop { keep((path, 0)) } else if f.maxY > contentTop + contentHeight { keep((path, contentHeight)) }
+    }
+
+    /// Puts photo `i` at the top of the visible area (with its section title).
+    func jump(to i: Int, select: Bool) {
+        guard let path = indexPath(i) else { return }
+        if select { self.select(i) }
+        keep((path, 0))
+    }
+
+    /// Scroll distance in points from the first row to the last screenful.
+    private var scrollRange: Double { max(1, layout.math.height - contentHeight) }
+
+    func scroll(to fraction: Double) {
+        guard let scroll = scrollView else { return }
+        let clip = scroll.contentView
+        var bounds = clip.bounds
+        bounds.origin.y = min(max(fraction, 0), 1) * scrollRange - insets.top
+        clip.setBoundsOrigin(clip.constrainBoundsRect(bounds).origin)
+        scroll.reflectScrolledClipView(clip)
+    }
+
+    func fraction(of i: Int) -> Double {
+        guard let path = indexPath(i) else { return 0 }
+        let header = path.item < layout.math.columns ? layout.header : 0
+        return min(max((layout.math.itemFrame(path.section, path.item).minY - header) / scrollRange, 0), 1)
+    }
+
+    /// Arrow keys move the selection, Return or Space open it, ⌘↑ ⌘↓ go to the ends, Esc clears it.
+    func key(_ event: NSEvent) -> Bool {
+        guard active, !data.assets.isEmpty else { return false }
+        let last = data.assets.count - 1
+        let command = event.modifierFlags.contains(.command)
+        // the first arrow press picks the photo at the top left
+        let current = selected ?? topAnchor().map { index($0.path) } ?? 0
+        switch event.keyCode {
+        case 123: selectAndShow(selected == nil ? current : max(current - 1, 0))
+        case 124: selectAndShow(selected == nil ? current : min(current + 1, last))
+        case 125, 126:
+            let down = event.keyCode == 125
+            if command { jump(to: down ? last : 0, select: true); break }
+            guard selected != nil else { selectAndShow(current); break }
+            if let p = indexPath(current), let next = layout.math.row(from: p.section, p.item, down: down) {
+                selectAndShow(data.sections[next.section].range.lowerBound + next.item)
+            }
+        case 115: jump(to: 0, select: true) // Home
+        case 119: jump(to: last, select: true) // End
+        case 36, 76, 49: // Return, Enter, Space
+            guard let selected, let p = indexPath(selected) else { return false }
+            open(p)
+        case 53: select(nil)
+        default: return false
+        }
+        return true
+    }
+
+    private func open(_ path: IndexPath) {
+        let i = index(path)
+        select(i)
+        onOpen(i, onScreen(layout.math.itemFrame(path.section, path.item)), collection?.item(at: path)?.view.layer?.contents as! CGImage?)
+    }
+
+    /// Scrolls so the anchor photo sits where it was on screen, moved just enough to be fully visible.
+    private func keep(_ anchor: (path: IndexPath, screenY: Double)) {
+        guard let scroll = scrollView else { return }
+        let frame = layout.math.itemFrame(anchor.path.section, anchor.path.item)
+        var top = frame.midY - anchor.screenY
+        top = min(top, frame.minY - (layout.header > 0 && anchor.path.item < layout.math.columns ? layout.header : 0))
+        top = max(top, frame.maxY - contentHeight)
+        let clip = scroll.contentView
+        var bounds = clip.bounds
+        bounds.origin.y = top - insets.top
+        clip.setBoundsOrigin(clip.constrainBoundsRect(bounds).origin)
+        scroll.reflectScrolledClipView(clip)
+    }
+
+    /// The photo in the middle of the visible area.
+    private func centerAnchor() -> (path: IndexPath, screenY: Double)? {
+        let y = contentTop + contentHeight / 2
+        guard let row = layout.math.visible(y, y + 1).last, !row.items.isEmpty else { return topAnchor() }
+        let m = layout.math
+        let column = Int((m.width / 2) / (m.side + m.spacing))
+        let item = min(row.items.lowerBound + column, row.items.upperBound - 1)
+        return (IndexPath(item: item, section: row.section), m.itemFrame(row.section, item).midY - contentTop)
+    }
+
+    /// The first photo at the top of the visible area.
+    private func topAnchor() -> (path: IndexPath, screenY: Double)? {
+        guard let first = layout.math.visible(contentTop, contentTop + 1).first else { return nil }
+        let path = IndexPath(item: first.items.first ?? 0, section: first.section)
+        return (path, layout.math.itemFrame(path.section, path.item).midY - contentTop)
+    }
+
+    /// Asks SwiftUI for another zoom level, keeping `path` (or the photo nearest `point`) in place.
+    private func requestZoom(_ target: Int, at point: NSPoint) {
+        let target = min(max(target, 0), zoomLevels.count - 1)
+        guard target != requestedLevel, let collection else { return }
+        let path = collection.indexPathForItem(at: point) ?? layout.math.visible(point.y, point.y + 1).first
+            .map { IndexPath(item: $0.items.first ?? 0, section: $0.section) }
+        if let path { pendingAnchor = (path, layout.math.itemFrame(path.section, path.item).midY - contentTop) }
+        requestedLevel = target
+        onZoom(target)
+    }
+
+    func clicked(at point: NSPoint) {
+        guard let collection, let path = collection.indexPathForItem(at: point) else { return }
+        if level >= openLevel {
+            open(path)
+        } else {
+            requestZoom(level + 1, at: point)
+        }
+    }
+
+    /// One zoom step for every ~35% of pinch, several steps in one gesture.
+    func pinched(phase: NSEvent.Phase, magnification: Double, at point: NSPoint) {
+        if phase.contains(.began) {
+            pinchStartLevel = level
+            pinchScale = 1
+        }
+        pinchScale = max(0.05, pinchScale * (1 + magnification))
+        let steps = Int((log(pinchScale) / log(1.35)).rounded(.towardZero))
+        requestZoom(pinchStartLevel + steps, at: point)
+    }
+
+    private func index(_ p: IndexPath) -> Int { data.sections[p.section].range.lowerBound + p.item }
+
+    @objc func scrolled() {
+        guard let first = layout.math.visible(contentTop, contentTop + 1).first, !data.assets.isEmpty else { return }
+        let top = index(IndexPath(item: first.items.first ?? 0, section: first.section))
+        let fraction = min(max(contentTop / scrollRange, 0), 1)
+        // may run inside a SwiftUI update, which mustn't change observed state
+        DispatchQueue.main.async { [weak bridge] in
+            guard let bridge else { return }
+            if bridge.top != top { bridge.top = top }
+            if bridge.fraction != fraction { bridge.fraction = fraction }
+        }
+    }
+
+    func numberOfSections(in collectionView: NSCollectionView) -> Int { data.sections.count }
+
+    func collectionView(_ collectionView: NSCollectionView, numberOfItemsInSection section: Int) -> Int {
+        data.sections[section].range.count
+    }
+
+    func collectionView(_ collectionView: NSCollectionView, itemForRepresentedObjectAt p: IndexPath) -> NSCollectionViewItem {
+        let cell = collectionView.makeItem(withIdentifier: ThumbCell.id, for: p) as! ThumbCell
+        cell.style = style
+        cell.ring = index(p) == selected
+        cell.show(data.assets[index(p)], pixels: pixels, library: library)
+        return cell
+    }
+
+    func collectionView(_ collectionView: NSCollectionView, viewForSupplementaryElementOfKind kind: NSCollectionView.SupplementaryElementKind,
+                        at p: IndexPath) -> NSView {
+        let header = collectionView.makeSupplementaryView(ofKind: kind, withIdentifier: HeaderView.id, for: p) as! HeaderView
+        header.label.stringValue = data.sections[p.section].title
+        return header
+    }
+
+    /// Decodes photos just outside the visible area before they scroll in.
+    func collectionView(_ collectionView: NSCollectionView, prefetchItemsAt paths: [IndexPath]) {
+        guard let api = library.api else { return }
+        let store = library.thumbs, pixels = pixels
+        let ids = paths.map { data.assets[index($0)].id }.filter { store.cached($0, pixels: pixels) == nil }
+        guard !ids.isEmpty else { return }
+        Task.detached(priority: .utility) {
+            for id in ids { _ = await store.image(id, pixels: pixels, api: api) }
+        }
+    }
+}
+
+/// No scroll bar: the time scrubber takes its place. Setting `hasVerticalScroller = false` once isn't enough,
+/// AppKit turns it back on later, so it is fixed here.
+final class ScrubbedScrollView: NSScrollView {
+    override var hasVerticalScroller: Bool {
+        get { false }
+        set { super.hasVerticalScroller = false }
+    }
+}
+
+/// Shows layers without taking any clicks.
+final class PassthroughView: NSView {
+    override var isFlipped: Bool { true }
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+}
+
+/// Handles clicks itself: NSCollectionView's own mouse tracking (for selection) would swallow them.
+final class GridCollectionView: NSCollectionView {
+    var onClick: (NSPoint) -> Void = { _ in }
+    var onMagnify: (NSEvent.Phase, Double, NSPoint) -> Void = { _, _, _ in }
+    var onKey: (NSEvent) -> Bool = { _ in false }
+    private var downPoint: NSPoint?
+
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+    override var acceptsFirstResponder: Bool { true }
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        DispatchQueue.main.async { [weak self] in self?.window?.makeFirstResponder(self) } // arrow keys work right away
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        window?.makeFirstResponder(self)
+        downPoint = convert(event.locationInWindow, from: nil)
+    }
+
+    override func keyDown(with event: NSEvent) {
+        if !onKey(event) { nextResponder?.keyDown(with: event) }
+    }
+
+    override func mouseUp(with event: NSEvent) {
+        let point = convert(event.locationInWindow, from: nil)
+        if let down = downPoint, hypot(point.x - down.x, point.y - down.y) < 5 { onClick(point) }
+        downPoint = nil
+    }
+
+    override func magnify(with event: NSEvent) {
+        onMagnify(event.phase, Double(event.magnification), convert(event.locationInWindow, from: nil))
+    }
+}
+
+/// Lays out only what is on screen, using GridMath, so 100k+ items stay fast.
+final class GridLayout: NSCollectionViewLayout {
+    var target = 76.0
+    var header = 0.0
+    var spacing = 1.0
+    private(set) var math = GridMath(counts: [], width: 0, target: 76, header: 0)
+
+    override func prepare() {
+        guard let collection = collectionView else { return }
+        let counts = (0..<collection.numberOfSections).map { collection.numberOfItems(inSection: $0) }
+        let width = collection.enclosingScrollView?.contentSize.width ?? collection.bounds.width
+        math = GridMath(counts: counts, width: width, target: target, header: header, spacing: spacing)
+    }
+
+    override var collectionViewContentSize: NSSize { NSSize(width: math.width, height: math.height) }
+
+    override func shouldInvalidateLayout(forBoundsChange newBounds: NSRect) -> Bool { newBounds.width != math.width }
+
+    override func layoutAttributesForElements(in rect: NSRect) -> [NSCollectionViewLayoutAttributes] {
+        var result: [NSCollectionViewLayoutAttributes] = []
+        for v in math.visible(rect.minY, rect.maxY) {
+            if header > 0 { result.append(headerAttributes(v.section)) }
+            for i in v.items { result.append(itemAttributes(IndexPath(item: i, section: v.section))) }
+        }
+        return result
+    }
+
+    override func layoutAttributesForItem(at p: IndexPath) -> NSCollectionViewLayoutAttributes? { itemAttributes(p) }
+
+    override func layoutAttributesForSupplementaryView(ofKind kind: NSCollectionView.SupplementaryElementKind,
+                                                       at p: IndexPath) -> NSCollectionViewLayoutAttributes? {
+        header > 0 ? headerAttributes(p.section) : nil
+    }
+
+    private func itemAttributes(_ p: IndexPath) -> NSCollectionViewLayoutAttributes {
+        let a = NSCollectionViewLayoutAttributes(forItemWith: p)
+        a.frame = math.itemFrame(p.section, p.item)
+        return a
+    }
+
+    private func headerAttributes(_ section: Int) -> NSCollectionViewLayoutAttributes {
+        let a = NSCollectionViewLayoutAttributes(forSupplementaryViewOfKind: NSCollectionView.elementKindSectionHeader,
+                                                 with: IndexPath(item: 0, section: section))
+        a.frame = math.headerFrame(section)
+        return a
+    }
+}
+
+final class ThumbCell: NSCollectionViewItem {
+    static let id = NSUserInterfaceItemIdentifier("thumb")
+    private static let placeholder = NSColor.gray.withAlphaComponent(0.2).cgColor
+    private var task: Task<Void, Never>?
+    private let badge = CATextLayer()
+    private var isVideo = false
+    private var assetID = ""
+
+    var style = GridStyle() {
+        didSet {
+            guard style != oldValue else { return }
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
+            // fit: the whole photo inside the square (letterboxed) instead of filling it
+            view.layer?.contentsGravity = style.fit ? .resizeAspect : .resizeAspectFill
+            view.layer?.cornerRadius = min(style.radius, view.bounds.width / 4)
+            updateBackground()
+            updateBadge()
+            CATransaction.commit()
+        }
+    }
+
+    /// The keyboard selection.
+    var ring = false {
+        didSet {
+            view.layer?.borderWidth = ring ? 3 : 0
+            view.layer?.borderColor = NSColor.controlAccentColor.cgColor
+        }
+    }
+
+    override func loadView() {
+        view = NSView()
+        view.wantsLayer = true
+        let layer = view.layer!
+        layer.contentsGravity = .resizeAspectFill
+        layer.masksToBounds = true
+        badge.string = "▶"
+        badge.fontSize = 11
+        badge.foregroundColor = NSColor.white.cgColor
+        badge.alignmentMode = .right
+        badge.contentsScale = 2
+        badge.shadowOpacity = 0.8
+        badge.shadowRadius = 1
+        badge.shadowOffset = .zero
+        layer.addSublayer(badge)
+    }
+
+    override func viewDidLayout() {
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        badge.frame = CGRect(x: view.bounds.width - 20, y: 2, width: 16, height: 14)
+        view.layer?.cornerRadius = min(style.radius, view.bounds.width / 4) // small cells stay square-ish
+        updateBadge()
+        CATransaction.commit()
+    }
+
+    override func prepareForReuse() {
+        super.prepareForReuse()
+        task?.cancel()
+    }
+
+    private func updateBadge() {
+        badge.isHidden = !isVideo || !style.badge || view.bounds.width < 50 // too busy on tiny cells
+    }
+
+    /// Grey square while loading; in fit mode the letterbox bars stay clear once the photo is there.
+    private func updateBackground() {
+        view.layer?.backgroundColor = view.layer?.contents == nil || !style.fit ? Self.placeholder : nil
+    }
+
+    private func setImage(_ image: CGImage?) {
+        view.layer?.contents = image
+        updateBackground()
+    }
+
+    func show(_ asset: Asset, pixels: Int, library: Library) {
+        task?.cancel()
+        isVideo = asset.isVideo
+        updateBadge()
+        if let image = library.thumbs.cached(asset.id, pixels: pixels) {
+            assetID = asset.id
+            setImage(image)
+            return
+        }
+        // same photo at a new size: keep the old image until the sharper one is ready
+        if asset.id != assetID { setImage(nil) }
+        assetID = asset.id
+        guard let api = library.api else { return }
+        let store = library.thumbs, id = asset.id
+        task = Task { [weak self] in
+            let image = await store.image(id, pixels: pixels, api: api)
+            guard !Task.isCancelled else { return }
+            self?.setImage(image)
+        }
+    }
+}
+
+final class HeaderView: NSView, NSCollectionViewElement {
+    static let id = NSUserInterfaceItemIdentifier("header")
+    let label = NSTextField(labelWithString: "")
+
+    override init(frame: NSRect) {
+        super.init(frame: frame)
+        label.font = .systemFont(ofSize: 15, weight: .semibold)
+        label.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(label)
+        NSLayoutConstraint.activate([
+            label.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 6),
+            label.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -8),
+        ])
+    }
+
+    required init?(coder: NSCoder) { fatalError("not used") }
+}
