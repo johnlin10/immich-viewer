@@ -5,10 +5,10 @@ import SwiftUI
 struct SettingsView: View {
     var body: some View {
         TabView {
-            Tab("一般", systemImage: "gearshape") { GeneralSettings() }
-            Tab("影片", systemImage: "play.rectangle") { VideoSettings() }
-            Tab("儲存空間", systemImage: "internaldrive") { StorageSettings() }
-            Tab("連線", systemImage: "network") { ConnectionForm().padding(20) }
+            Tab("General", systemImage: "gearshape") { GeneralSettings() }
+            Tab("Video", systemImage: "play.rectangle") { VideoSettings() }
+            Tab("Storage", systemImage: "internaldrive") { StorageSettings() }
+            Tab("Connection", systemImage: "network") { ConnectionForm().padding(20) }
         }
         .frame(width: 460)
     }
@@ -33,27 +33,27 @@ private struct GeneralSettings: View {
 
     var body: some View {
         Form {
-            Picker("外觀", selection: $appearance) {
-                Text("跟隨系統").tag("system")
-                Text("淺色").tag("light")
-                Text("深色").tag("dark")
+            Picker("Appearance", selection: $appearance) {
+                Text("System").tag("system")
+                Text("Light").tag("light")
+                Text("Dark").tag("dark")
             }
             .pickerStyle(.segmented)
             .onChange(of: appearance) { applyAppearance(appearance) }
 
-            SwiftUI.Section("照片網格") {
-                Picker("排序", selection: $newestFirst) {
-                    Text("最新的在上").tag(true)
-                    Text("最舊的在上").tag(false)
+            SwiftUI.Section("Photo Grid") {
+                Picker("Sort Order", selection: $newestFirst) {
+                    Text("Newest First").tag(true)
+                    Text("Oldest First").tag(false)
                 }
-                LabeledContent("間距") {
-                    Slider(value: $spacing, in: 0...8, step: 1) { EmptyView() } minimumValueLabel: { Text("0") } maximumValueLabel: { Text("8") }
+                LabeledContent("Spacing") {
+                    Slider(value: $spacing, in: 0...8, step: 1) { EmptyView() } minimumValueLabel: { Text(verbatim: "0") } maximumValueLabel: { Text(verbatim: "8") }
                 }
-                LabeledContent("圓角") {
-                    Slider(value: $radius, in: 0...12, step: 1) { EmptyView() } minimumValueLabel: { Text("0") } maximumValueLabel: { Text("12") }
+                LabeledContent("Corner Radius") {
+                    Slider(value: $radius, in: 0...12, step: 1) { EmptyView() } minimumValueLabel: { Text(verbatim: "0") } maximumValueLabel: { Text(verbatim: "12") }
                 }
-                Toggle("顯示完整比例", isOn: $fit)
-                Toggle("標示影片（▶）", isOn: $badge)
+                Toggle("Show Whole Photos", isOn: $fit)
+                Toggle("Mark Videos (▶)", isOn: $badge)
             }
         }
         .formStyle(.grouped)
@@ -68,9 +68,9 @@ private struct VideoSettings: View {
 
     var body: some View {
         Form {
-            Toggle("打開時自動播放", isOn: $autoplay)
-            Toggle("開始時靜音", isOn: $muted)
-            Toggle("重複播放", isOn: $loop)
+            Toggle("Play Automatically", isOn: $autoplay)
+            Toggle("Start Muted", isOn: $muted)
+            Toggle("Loop", isOn: $loop)
         }
         .formStyle(.grouped)
         .fixedSize(horizontal: false, vertical: true)
@@ -86,35 +86,35 @@ private struct StorageSettings: View {
     var body: some View {
         Form {
             SwiftUI.Section {
-                LabeledContent("縮圖", value: size(thumbs))
-                LabeledContent("人物頭像", value: size(faces))
+                LabeledContent("Thumbnails", value: size(thumbs))
+                LabeledContent("Faces", value: size(faces))
             } footer: {
-                Text("縮圖存在這台 Mac 上，捲動時不必向伺服器要。清除後，照片會在下次顯示時重新下載；重新整理（⌘R）會一次全部補回。")
+                Text("Thumbnails are kept on this Mac, so scrolling doesn’t wait on the server. After clearing, photos download again when they are shown; Refresh (⌘R) gets them all back at once.")
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
             HStack {
-                Button("在 Finder 中顯示") { NSWorkspace.shared.activateFileViewerSelecting([library.thumbs.dir]) }
+                Button("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting([library.thumbs.dir]) }
                 Spacer()
-                Button("清除快取…", role: .destructive) { confirming = true }
+                Button("Clear Cache…", role: .destructive) { confirming = true }
                     .disabled(library.syncing)
             }
         }
         .formStyle(.grouped)
         .fixedSize(horizontal: false, vertical: true)
         .task { await measure() }
-        .confirmationDialog("清除所有快取的縮圖？", isPresented: $confirming) {
-            Button("清除", role: .destructive) {
+        .confirmationDialog("Clear all cached thumbnails?", isPresented: $confirming) {
+            Button("Clear", role: .destructive) {
                 library.thumbs.clear()
                 library.faces.clear()
                 Task { await measure() }
             }
         } message: {
-            Text("伺服器上的照片不受影響。")
+            Text("Photos on the server are not affected.")
         }
     }
 
-    private func size(_ bytes: Int?) -> String { bytes.map { $0.formatted(.byteCount(style: .file)) } ?? "計算中…" }
+    private func size(_ bytes: Int?) -> String { bytes.map { $0.formatted(.byteCount(style: .file)) } ?? String(localized: "Calculating…") }
 
     private func measure() async {
         let stores = (library.thumbs, library.faces)
@@ -130,13 +130,13 @@ struct ConnectionForm: View {
 
     var body: some View {
         Form {
-            TextField("伺服器網址", text: $server)
-            SecureField("API 金鑰", text: $key)
-            Text("在 Immich 網頁的「帳號設定 > API 金鑰」建立新金鑰，權限勾選 asset.read、asset.view、person.read 和 album.read。想拷貝或拖出原始檔，再加 asset.download（沒有就用大預覽圖）。金鑰存在鑰匙圈裡。")
+            TextField("Server URL", text: $server)
+            SecureField("API Key", text: $key)
+            Text("In the Immich web UI, open Account Settings > API Keys and create a new key with asset.read, asset.view, person.read and album.read. To copy or drag out originals, also add asset.download (without it, the large preview is used). The key is kept in the keychain.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
-            Button("連線") { library.connect(server: server, key: key) }
+            Button("Connect") { library.connect(server: server, key: key) }
                 .keyboardShortcut(.defaultAction)
                 .disabled(key.isEmpty || URL(string: server) == nil)
         }

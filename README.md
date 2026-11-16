@@ -4,9 +4,9 @@ A native macOS photo wall for an Immich server. It only browses; deleting, editi
 
 It keeps every small thumbnail (about 15 KB each) on this Mac, so scrolling reads from disk instead of asking the server for each one.
 
-> **Language:** the interface is in Traditional Chinese for now. English (US) and Simplified Chinese are planned; see [docs/localization.md](docs/localization.md). Menu and button names below are the planned English ones.
+> **Language:** English and Traditional Chinese, following the macOS language (or the per-app language in System Settings > General > Language & Region). Simplified Chinese is planned; see [docs/localization.md](docs/localization.md).
 
-## What it does (v0.1)
+## What it does (v0.2)
 
 - A sidebar with Library, People and Albums.
 - People: everyone Immich recognised (hidden people left out) as round faces; click one for their photos.
@@ -82,14 +82,19 @@ swiftc ImmichViewer/TimelineModel.swift ImmichViewer/ThumbnailStore.swift Immich
 | `PhotoViewer.swift` | Single photo view, zoom and pan, info panel, copy and drag-out, video player, swipes |
 | `Collections.swift` | People and album pages, one person's or album's grid |
 | `TimelineModel.swift` | Asset, grouping, grid geometry, row moves, date lookup, year marks |
+| `Localizable.xcstrings` | Interface text and its translations |
 
 ## Not in this version
 
-Searching, map, memories, English and Simplified Chinese interface, and noticing deletions made in the browser until the next refresh. Thumbnails of deleted photos stay in the cache.
+Searching, map, memories, Simplified Chinese interface, and noticing deletions made in the browser until the next refresh. Thumbnails of deleted photos stay in the cache.
 
 ## Version history
 
-### v0.1 (current)
+### v0.2 (current)
+
+- English and Traditional Chinese interface, following the macOS language. English is now the source language; the translations live in `ImmichViewer/Localizable.xcstrings`.
+
+### v0.1
 
 - First version: a grid of the whole Immich library, people and albums, single photo view and video playback.
 - Info panel, zoom in the single photo view, copy and drag-out, time scrubber, keyboard navigation, View menu and Settings window.

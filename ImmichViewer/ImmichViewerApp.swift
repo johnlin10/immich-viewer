@@ -15,7 +15,7 @@ struct ImmichViewerApp: App {
     }
 }
 
-/// What the 顯示方式 menu can do to the grid in the front window.
+/// What the View menu can do to the grid in the front window.
 struct BrowserActions {
     var viewerOpen: Bool
     var toTop: () -> Void
@@ -27,7 +27,7 @@ extension FocusedValues {
     @Entry var browser: BrowserActions?
 }
 
-/// The 顯示方式 menu, after the toolbar items.
+/// The View menu, after the toolbar items.
 struct ViewCommands: Commands {
     let library: Library
     @FocusedValue(\.browser) private var browser
@@ -39,31 +39,31 @@ struct ViewCommands: Commands {
         // only for a grid with no photo open over it
         let off = browser?.viewerOpen != false
         CommandGroup(after: .toolbar) {
-            Button("重新整理") { Task { await library.refresh() } }
+            Button("Refresh") { Task { await library.refresh() } }
                 .keyboardShortcut("r")
                 .disabled(library.syncing || library.api == nil)
             Divider()
-            Button("放大") { level = min(level + 1, zoomLevels.count - 1) }
+            Button("Zoom In") { level = min(level + 1, zoomLevels.count - 1) }
                 .keyboardShortcut("=")
                 .disabled(off || level >= zoomLevels.count - 1)
-            Button("縮小") { level = max(level - 1, 0) }
+            Button("Zoom Out") { level = max(level - 1, 0) }
                 .keyboardShortcut("-")
                 .disabled(off || level <= 0)
             Divider()
             ForEach(Array(Grouping.allCases.enumerated()), id: \.element) { i, option in
-                Toggle(option.label, isOn: Binding { grouping == option } set: { _ in grouping = option })
+                Toggle(isOn: Binding { grouping == option } set: { _ in grouping = option }) { Text(option.label) }
                     .keyboardShortcut(KeyEquivalent(Character("\(i + 1)")))
             }
             .disabled(off)
-            Toggle("顯示完整比例", isOn: $fit).disabled(off)
+            Toggle("Show Whole Photos", isOn: $fit).disabled(off)
             Divider()
-            Button("跳到最上方") { browser?.toTop() }
+            Button("Go to Top") { browser?.toTop() }
                 .keyboardShortcut(.upArrow)
                 .disabled(off)
-            Button("跳到最下方") { browser?.toBottom() }
+            Button("Go to Bottom") { browser?.toBottom() }
                 .keyboardShortcut(.downArrow)
                 .disabled(off)
-            Button("跳到日期…") { browser?.askDate() }
+            Button("Go to Date…") { browser?.askDate() }
                 .keyboardShortcut("j")
                 .disabled(off)
         }
@@ -87,19 +87,19 @@ struct ContentView: View {
             } else {
                 NavigationSplitView {
                     List(selection: $page) {
-                        Label("圖庫", systemImage: "photo.on.rectangle").tag(Page.library)
-                        Label("人物", systemImage: "person.crop.circle").tag(Page.people)
-                        Label("相簿", systemImage: "rectangle.stack").tag(Page.albums)
+                        Label("Library", systemImage: "photo.on.rectangle").tag(Page.library)
+                        Label("People", systemImage: "person.crop.circle").tag(Page.people)
+                        Label("Albums", systemImage: "rectangle.stack").tag(Page.albums)
                     }
                     .navigationSplitViewColumnWidth(min: 150, ideal: 180, max: 260)
                 } detail: {
                     switch page ?? .library {
                     case .library:
-                        TimelineBrowser(title: "圖庫", subtitle: library.status, assets: library.assets, revision: library.revision)
+                        TimelineBrowser(title: String(localized: "Library"), subtitle: library.status, assets: library.assets, revision: library.revision)
                     case .people:
                         NavigationStack {
                             PeopleGrid().navigationDestination(for: Person.self) { person in
-                                CollectionTimeline(title: person.name.isEmpty ? "未命名" : person.name,
+                                CollectionTimeline(title: person.name.isEmpty ? String(localized: "Unnamed") : person.name,
                                                    filter: ["personId": person.id, "visibility": "timeline"])
                             }
                         }
@@ -177,12 +177,12 @@ struct TimelineBrowser: View {
                         Color.clear.toolbar {
                             ToolbarItem(placement: .primaryAction) {
                                 Menu {
-                                    Toggle("顯示完整比例", isOn: $fit)
+                                    Toggle("Show Whole Photos", isOn: $fit)
                                 } label: {
                                     Image(systemName: "ellipsis")
                                 }
                                 .menuIndicator(.hidden)
-                                .help("更多")
+                                .help("More")
                             }
                         }
                     }
@@ -228,13 +228,13 @@ struct BottomBar: View {
         GlassEffectContainer(spacing: 10) {
             HStack(spacing: 10) {
                 HStack(spacing: 0) {
-                    // ⌘− and ⌘= live in the 顯示方式 menu
+                    // ⌘− and ⌘= live in the View menu
                     BarIcon("minus.magnifyingglass") { level -= 1 }
                         .disabled(level <= 0)
-                        .help("縮小（⌘−）")
+                        .help("Zoom Out (⌘−)")
                     BarIcon("plus.magnifyingglass") { level += 1 }
                         .disabled(level >= zoomLevels.count - 1)
-                        .help("放大（⌘＋）")
+                        .help("Zoom In (⌘+)")
                 }
                 .modifier(GlassCapsule())
                 HStack(spacing: 0) {

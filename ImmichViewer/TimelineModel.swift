@@ -30,11 +30,11 @@ struct UTCDateParser {
 enum Grouping: String, CaseIterable {
     case day, month, none
 
-    var label: String {
+    var label: LocalizedStringResource {
         switch self {
-        case .day: "依日"
-        case .month: "依月"
-        case .none: "不分組"
+        case .day: "Days"
+        case .month: "Months"
+        case .none: "All"
         }
     }
 }

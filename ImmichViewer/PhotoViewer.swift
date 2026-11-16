@@ -151,11 +151,11 @@ struct PhotoViewer: View {
                         Image(systemName: showInfo ? "info.circle.fill" : "info.circle")
                     }
                     .keyboardShortcut("i")
-                    .help("資訊（⌘I）")
+                    .help("Info (⌘I)")
                     Button { library.openInBrowser(asset) } label: { Image(systemName: "safari") }
-                        .help("在瀏覽器開啟（編輯、刪除）")
+                        .help("Open in Browser (Edit, Delete)")
                     Button(action: close) { Image(systemName: "xmark") }
-                        .help("關閉（Esc）")
+                        .help("Close (Esc)")
                 }
             }
             .onAppear {
@@ -574,9 +574,10 @@ struct InfoPanel: View {
     private func place(_ exif: AssetDetail.Exif) -> String? {
         var parts: [String] = []
         for part in [exif.city, exif.state, exif.country] {
-            if let part, !part.isEmpty, !parts.contains(part) { parts.append(part) } // 臺北市, 臺北市 → once
+            if let part, !part.isEmpty, !parts.contains(part) { parts.append(part) } // a city that is also its state shows once
         }
-        return parts.isEmpty ? nil : parts.joined(separator: "，")
+        return parts.isEmpty ? nil : parts.joined(separator: String(localized: "place.separator", defaultValue: ", ",
+                                                                         comment: "Between city, state and country"))
     }
 
     private struct Row: View {
@@ -623,7 +624,7 @@ struct InfoPanel: View {
                 item.name = name
                 item.openInMaps()
             }
-            .help("在「地圖」中開啟")
+            .help("Open in Maps")
         }
     }
 
@@ -634,7 +635,7 @@ struct InfoPanel: View {
         var body: some View {
             let named = people.filter { !$0.name.isEmpty }
             VStack(alignment: .leading, spacing: 8) {
-                Label("人物", systemImage: "person.2").foregroundStyle(.secondary)
+                Label("People", systemImage: "person.2").foregroundStyle(.secondary)
                 ForEach(named) { person in
                     HStack(spacing: 8) {
                         Thumb(id: person.id, store: library.faces)
@@ -644,7 +645,7 @@ struct InfoPanel: View {
                     }
                 }
                 if named.count < people.count {
-                    Text("另有 \(people.count - named.count) 位未命名").font(.callout).foregroundStyle(.secondary)
+                    Text("Plus \(people.count - named.count) unnamed").font(.callout).foregroundStyle(.secondary)
                 }
             }
         }

@@ -45,7 +45,7 @@ final class Library {
         if let data = try? Data(contentsOf: listFile), let list = try? JSONDecoder().decode([Asset].self, from: data) {
             assets = list
             revision += 1
-            status = "\(list.count.formatted()) 項"
+            status = String(localized: "\(list.count) items")
         }
     }
 
@@ -64,12 +64,12 @@ final class Library {
         guard let api, !syncing else { return }
         syncing = true
         defer { syncing = false }
-        status = "正在同步清單…"
+        status = String(localized: "Syncing the list…")
         let list: [Asset]
         do {
             list = try await api.timeline()
         } catch {
-            status = "同步失敗：\(error.localizedDescription)"
+            status = String(localized: "Sync failed: \(error.localizedDescription)")
             return
         }
         assets = list
@@ -79,10 +79,12 @@ final class Library {
         await loadCollections()
 
         await thumbs.downloadMissing(list.map(\.id), api: api) { done, total, failed in
-            let fails = failed > 0 ? "，\(failed) 張失敗" : ""
-            self.status = done < total
-                ? "正在下載縮圖 \(done.formatted()) / \(total.formatted())\(fails)"
-                : "\(list.count.formatted()) 項\(fails)"
+            self.status = switch (done < total, failed > 0) {
+            case (true, false): String(localized: "Downloading thumbnails \(done) of \(total)")
+            case (true, true): String(localized: "Downloading thumbnails \(done) of \(total), \(failed) failed")
+            case (false, false): String(localized: "\(list.count) items")
+            case (false, true): String(localized: "\(list.count) items, \(failed) failed")
+            }
         }
     }
 

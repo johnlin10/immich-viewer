@@ -100,7 +100,7 @@ struct Scrubber: View {
     }
 }
 
-/// 跳到日期… (⌘J): pick a day, the grid scrolls to its first photo (or the next one if that day has none).
+/// Go to Date… (⌘J): pick a day, the grid scrolls to its first photo (or the next one if that day has none).
 struct JumpToDate: View {
     let assets: [Asset]
     let current: Int
@@ -126,14 +126,14 @@ struct JumpToDate: View {
         let ends = [assets.first?.date ?? .now, assets.last?.date ?? .now].sorted() // sorted either way
         let range = Self.local(ends[0])...Self.local(ends[1])
         VStack(spacing: 16) {
-            Text("跳到日期").font(.headline)
-            DatePicker("日期", selection: $day, in: range, displayedComponents: .date)
+            Text("Go to Date").font(.headline)
+            DatePicker("Date", selection: $day, in: range, displayedComponents: .date)
                 .datePickerStyle(.graphical)
                 .labelsHidden()
             HStack {
-                Button("取消", role: .cancel) { dismiss() }
+                Button("Cancel", role: .cancel) { dismiss() }
                     .keyboardShortcut(.cancelAction)
-                Button("跳轉") {
+                Button("Go") {
                     jump(Self.wall(day))
                     dismiss()
                 }

@@ -23,9 +23,9 @@ struct PeopleGrid: View {
             }
             .padding(20)
         }
-        .overlay { Empty(count: library.people.count, error: library.collectionsError, title: "沒有人物") }
-        .navigationTitle("人物")
-        .navigationSubtitle("\(library.people.count.formatted()) 位")
+        .overlay { Empty(count: library.people.count, error: library.collectionsError, title: "No People") }
+        .navigationTitle("People")
+        .navigationSubtitle("\(library.people.count) people")
     }
 }
 
@@ -44,7 +44,7 @@ struct AlbumGrid: View {
                                 .clipShape(RoundedRectangle(cornerRadius: 10))
                                 .padding(.bottom, 4)
                             Text(album.albumName).lineLimit(1)
-                            Text("\(album.assetCount.formatted()) 項")
+                            Text("\(album.assetCount) items")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -55,9 +55,9 @@ struct AlbumGrid: View {
             }
             .padding(20)
         }
-        .overlay { Empty(count: library.albums.count, error: library.collectionsError, title: "沒有相簿") }
-        .navigationTitle("相簿")
-        .navigationSubtitle("\(library.albums.count.formatted()) 本")
+        .overlay { Empty(count: library.albums.count, error: library.collectionsError, title: "No Albums") }
+        .navigationTitle("Albums")
+        .navigationSubtitle("\(library.albums.count) albums")
     }
 }
 
@@ -72,9 +72,9 @@ struct CollectionTimeline: View {
     var body: some View {
         Group {
             if let assets {
-                TimelineBrowser(title: title, subtitle: "\(assets.count.formatted()) 項", assets: assets, revision: 1)
+                TimelineBrowser(title: title, subtitle: String(localized: "\(assets.count) items"), assets: assets, revision: 1)
             } else if let error {
-                ContentUnavailableView("無法載入", systemImage: "exclamationmark.triangle", description: Text(error))
+                ContentUnavailableView("Can’t Load", systemImage: "exclamationmark.triangle", description: Text(error))
                     .navigationTitle(title)
             } else {
                 ProgressView().navigationTitle(title)
@@ -111,13 +111,13 @@ struct Thumb: View {
 private struct Empty: View {
     let count: Int
     let error: String?
-    let title: String
+    let title: LocalizedStringKey
 
     var body: some View {
         if count == 0 {
             if let error {
-                ContentUnavailableView("無法載入", systemImage: "exclamationmark.triangle",
-                                       description: Text("\(error)\n金鑰需要 person.read 和 album.read 權限。"))
+                ContentUnavailableView("Can’t Load", systemImage: "exclamationmark.triangle",
+                                       description: Text("\(error)\nThe key needs the person.read and album.read permissions."))
             } else {
                 ContentUnavailableView(title, systemImage: "photo.on.rectangle")
             }

@@ -1,6 +1,6 @@
 # Localization plan
 
-Status: planned, not started. Today the interface is Traditional Chinese only, written straight into the Swift code.
+Status: step 1 done in v0.2.0 (English source, `zh-Hant` translation). Simplified Chinese is next.
 
 ## Languages
 
@@ -14,10 +14,10 @@ The app follows macOS: the user's preferred languages, or the per-app language i
 
 ## How
 
-- One String Catalog, `ImmichViewer/Localizable.xcstrings`. Xcode fills it from the code on every build; translations live only there.
+- One String Catalog, `ImmichViewer/Localizable.xcstrings`. Xcode fills it from the code when built in Xcode; translations live only there. A command-line build doesn't update it; after `xcodebuild`, run `xcrun xcstringstool sync ImmichViewer/Localizable.xcstrings --stringsdata <DerivedData>/…/Objects-normal/arm64/*.stringsdata`.
 - Source strings in the code are English. `zh-Hant` and `zh-Hans` are translations in the catalog.
 - Project: `developmentRegion` becomes `en`; `knownRegions` becomes `en`, `zh-Hant`, `zh-Hans`, `Base`. System menus (File, Edit, View, Window) then follow the same language.
-- The app name stays "Immich Viewer" in every language.
+- The app name stays "Immich Viewer" in every language. The menu bar name comes from `CFBundleName` in `ImmichViewer/InfoPlist.xcstrings` (the generated Info.plist would otherwise use the product name `ImmichViewer`); add each new language there too.
 
 ## Code changes
 
@@ -35,7 +35,7 @@ A survey of v0.1.0 found 74 Chinese strings in 8 files. Most are literals in `Te
 3. **Punctuation inside strings.** Move it into the translations instead of the code:
    - The full-width `（⌘I）` in help tags becomes ` (⌘I)` in English.
    - The `：` in sync errors.
-   - Places in the info panel (city, state, country) use `.formatted(.list(type: .and, width: .narrow))`, so each language gets its own separator.
+   - Places in the info panel (city, state, country) are joined with the `place.separator` string (", " in English, "，" in Chinese).
 4. **Dates and numbers** already use `Date.FormatStyle` and `formatted()`, which follow the locale: section headers, date capsule, scrubber month, info panel, jump-to-date calendar (including the first day of the week). Keep the `.gmt` time zone; only the locale changes.
 5. **Not translated:** error text from the Immich server (English), file names, camera and lens names, people and album names, and permission names such as `asset.read`.
 
@@ -82,7 +82,7 @@ Use the same word everywhere in a language. Taiwan and mainland terms differ, so
 
 ## Steps
 
-1. **v0.2.0: English source.** Switch the development language to English, move the existing Chinese into `zh-Hant`, make the code changes above. The app looks the same in Traditional Chinese and is complete in English.
+1. **v0.2.0: English source (done).** Switch the development language to English, move the existing Chinese into `zh-Hant`, make the code changes above. The app looks the same in Traditional Chinese and is complete in English.
 2. **v0.3.0: Simplified Chinese.** Add `zh-Hans` using the glossary, then check layout.
 3. **README:** remove the "planned" note and say the interface follows the macOS language.
 
