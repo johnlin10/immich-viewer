@@ -70,6 +70,8 @@ Delete these folders to start fresh, for example after switching servers.
 swiftc ImmichViewer/TimelineModel.swift ImmichViewer/ThumbnailStore.swift ImmichViewer/ImmichAPI.swift Tests/main.swift -o /tmp/immichviewer-check && /tmp/immichviewer-check
 ```
 
+- Installer: `scripts/make-dmg.sh` builds Release and makes `build/ImmichViewer-<version>.dmg`, a window with the app, an Applications shortcut and a background (`scripts/dmg-background.tiff`) that says to drag it across. It needs [uv](https://docs.astral.sh/uv/) (`brew install uv`), which runs dmgbuild; the layout is in `scripts/dmg-settings.py`. The app is signed with a development certificate only, so on another Mac it has to be allowed once in System Settings > Privacy & Security.
+
 | File | Contents |
 |---|---|
 | `ImmichViewerApp.swift` | App window and sidebar, View menu, timeline page, bottom bar, title bar blur |
@@ -93,6 +95,7 @@ Searching, map, memories, Simplified Chinese interface, and noticing deletions m
 ### v0.2 (current)
 
 - English and Traditional Chinese interface, following the macOS language. English is now the source language; the translations live in `ImmichViewer/Localizable.xcstrings`.
+- A DMG installer (`scripts/make-dmg.sh`): drag the app to Applications.
 
 ### v0.1
 
