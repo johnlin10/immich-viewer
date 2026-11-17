@@ -36,6 +36,11 @@ extension FocusedValues {
     @Entry var browser: BrowserActions?
 }
 
+extension EnvironmentValues {
+    /// Opens a person's page, for example from the info panel.
+    @Entry var showPerson: (Person) -> Void = { _ in }
+}
+
 /// The View menu, after the toolbar items.
 struct ViewCommands: Commands {
     let library: Library
@@ -110,6 +115,8 @@ enum Page: Hashable {
 struct ContentView: View {
     @Environment(Library.self) private var library
     @State private var page: Page? = .library
+    /// The person open on the People page.
+    @State private var personPath: [Person] = []
     @AppStorage("appearance") private var appearance = "system"
 
     var body: some View {
@@ -129,7 +136,7 @@ struct ContentView: View {
                     case .library:
                         TimelineBrowser(title: String(localized: "Library"), subtitle: library.status, assets: library.assets, revision: library.revision)
                     case .people:
-                        NavigationStack {
+                        NavigationStack(path: $personPath) {
                             PeopleGrid().navigationDestination(for: Person.self) { person in
                                 CollectionTimeline(title: person.name.isEmpty ? String(localized: "Unnamed") : person.name,
                                                    filter: ["personId": person.id, "visibility": "timeline"])
@@ -142,6 +149,10 @@ struct ContentView: View {
                             }
                         }
                     }
+                }
+                .environment(\.showPerson) { person in
+                    page = .people
+                    personPath = [person]
                 }
             }
         }
@@ -250,11 +261,13 @@ struct TimelineBrowser: View {
 }
 
 /// Floating controls over the bottom of the grid, one glass capsule per job.
-/// Plain buttons inside the glass, so nothing has a second border.
+/// The chosen grouping sits on one tinted piece of glass that slides over to the next choice, like an iOS tab bar.
 struct BottomBar: View {
     @Binding var level: Int
     @Binding var grouping: Grouping
-    @Namespace private var selection
+    @Namespace private var glass
+    /// The option the glass is on. Its own state, because a change to the stored setting doesn't carry the animation.
+    @State private var selected = Grouping.day
 
     var body: some View {
         GlassEffectContainer(spacing: 10) {
@@ -271,23 +284,29 @@ struct BottomBar: View {
                 .modifier(GlassCapsule())
                 HStack(spacing: 0) {
                     ForEach(Grouping.allCases, id: \.self) { option in
-                        Button { withAnimation(.snappy(duration: 0.25)) { grouping = option } } label: {
+                        Button { grouping = option } label: {
                             Text(option.label)
                                 .padding(.horizontal, 14)
                                 .frame(height: 28)
-                                .foregroundStyle(grouping == option ? .white : .primary)
-                                .background {
-                                    if grouping == option {
-                                        Capsule().fill(.tint)
-                                            .matchedGeometryEffect(id: "selected", in: selection)
-                                    }
-                                }
+                                .foregroundStyle(selected == option ? .white : .primary)
                                 .contentShape(Capsule())
                         }
-                        .accessibilityAddTraits(grouping == option ? .isSelected : [])
+                        .matchedGeometryEffect(id: option, in: glass) // where the glass goes for this option
+                        .accessibilityAddTraits(selected == option ? .isSelected : [])
                     }
                 }
+                .background {
+                    // one piece of glass that takes the chosen option's place, so a change slides it across
+                    Capsule()
+                        .fill(.clear)
+                        .glassEffect(.regular.tint(.accentColor).interactive(), in: .capsule)
+                        .matchedGeometryEffect(id: selected, in: glass, isSource: false)
+                }
                 .modifier(GlassCapsule())
+                .onChange(of: grouping, initial: true) { old, new in
+                    // also for ⌘1–⌘3 in the View menu
+                    withAnimation(old == new ? nil : .bouncy(duration: 0.4)) { selected = new }
+                }
             }
         }
         .buttonStyle(.plain)

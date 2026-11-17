@@ -104,6 +104,12 @@ final class GridController: NSObject, NSCollectionViewDataSource, NSCollectionVi
     private var requestedLevel = -1
     private var pinchStartLevel = 0
     private var pinchScale = 1.0
+    private var pinch: Pinch?
+    /// While pinching: takes every pinch and scroll event in the window, so the end of the gesture always arrives
+    /// (even over the bottom bar or the scrubber) and the hidden grid doesn't scroll away under the picture.
+    private var pinchMonitor: Any?
+    /// Ends a pinch whose last event never came.
+    private var pinchWatchdog: DispatchWorkItem?
     private var style = GridStyle()
     private var insets = NSEdgeInsets()
     /// The keyboard selection, an index into `data.assets`.
@@ -138,6 +144,9 @@ final class GridController: NSObject, NSCollectionViewDataSource, NSCollectionVi
             // keep the photo at the top in place across a regroup or a refreshed list
             let top = topAnchor().map { (id: self.data.assets[index($0.path)].id, screenY: $0.screenY) }
             let selectedID = selected.map { self.data.assets[$0].id }
+            // the column shift stays only while its section is unchanged
+            if let shift = layout.shift, shift.section >= min(data.sections.count, self.data.sections.count)
+                || data.sections[shift.section].range != self.data.sections[shift.section].range { layout.shift = nil }
             self.data = data
             selected = selectedID.flatMap { id in data.assets.firstIndex { $0.id == id } }
             self.level = level
@@ -154,33 +163,43 @@ final class GridController: NSObject, NSCollectionViewDataSource, NSCollectionVi
             scrolled()
             // on the first load the grid has no size yet; ask again once it has been laid out
             DispatchQueue.main.async { [weak self] in self?.scrolled() }
-        } else if level != self.level || header != layout.header || style.spacing != layout.spacing {
+        } else if pinch == nil, level != self.level || header != layout.header || style.spacing != layout.spacing {
+            // (during a pinch the grid sets its own level; the stored one may lag a step behind)
             // buttons and ⌘−/⌘= zoom around the middle of the screen; clicks and pinches set their own anchor
             let anchor = pendingAnchor ?? centerAnchor()
             pendingAnchor = nil
             let oldSide = layout.math.side
             let overlay = beginZoom()
             let from = anchor.map { center($0.path) }
+            let oldX = anchor.map { layout.math.itemFrame($0.path.section, $0.path.item).midX }
             self.level = level
             requestedLevel = level
             layout.target = zoomLevels[level]
             layout.header = header
             layout.spacing = style.spacing
+            if let anchor, let oldX, anchor.path.section < data.sections.count {
+                layout.shift = columns(level).shift(putting: anchor.path.item, of: anchor.path.section, under: oldX)
+            }
             layout.invalidateLayout()
             collection.layoutSubtreeIfNeeded()
             if let anchor, anchor.path.section < data.sections.count {
                 keep(anchor)
                 collection.layoutSubtreeIfNeeded() // create the cells at the new scroll position
             }
-            // cells already on screen were decoded for the old size
-            let pixels = pixels
-            for case let cell as ThumbCell in collection.visibleItems() {
-                if let p = collection.indexPath(for: cell) { cell.show(data.assets[index(p)], pixels: pixels, library: library) }
-            }
+            redrawVisible()
             if let overlay, oldSide > 0 {
                 let mid = CGPoint(x: overlay.bounds.midX, y: overlay.bounds.midY)
                 finishZoom(overlay, scale: layout.math.side / oldSide, from: from ?? mid, to: anchor.map { center($0.path) } ?? mid)
             }
+        }
+    }
+
+    /// Cells already on screen were decoded for the old size.
+    private func redrawVisible() {
+        guard let collection else { return }
+        let pixels = pixels
+        for case let cell as ThumbCell in collection.visibleItems() {
+            if let p = collection.indexPath(for: cell) { cell.show(data.assets[index(p)], pixels: pixels, library: library) }
         }
     }
 
@@ -214,6 +233,7 @@ final class GridController: NSObject, NSCollectionViewDataSource, NSCollectionVi
             let copy = CALayer()
             copy.frame = cell.view.convert(cell.view.bounds, to: overlay)
             copy.contents = source.contents
+            copy.name = collection.indexPath(for: cell).map { data.assets[index($0)].id } // to follow a photo across a reflow
             // a cell that just scrolled in may still be loading; use any size already in memory
             if copy.contents == nil, let p = collection.indexPath(for: cell) {
                 let id = data.assets[index(p)].id
@@ -323,7 +343,7 @@ final class GridController: NSObject, NSCollectionViewDataSource, NSCollectionVi
         guard let path = indexPath(i) else { return }
         select(i)
         let f = layout.math.itemFrame(path.section, path.item)
-        let header = path.item < layout.math.columns ? layout.header : 0
+        let header = layout.math.firstRow(path.section, path.item) ? layout.header : 0
         if f.minY - header < contentTop { keep((path, 0)) } else if f.maxY > contentTop + contentHeight { keep((path, contentHeight)) }
     }
 
@@ -348,7 +368,7 @@ final class GridController: NSObject, NSCollectionViewDataSource, NSCollectionVi
 
     func fraction(of i: Int) -> Double {
         guard let path = indexPath(i) else { return 0 }
-        let header = path.item < layout.math.columns ? layout.header : 0
+        let header = layout.math.firstRow(path.section, path.item) ? layout.header : 0
         return min(max((layout.math.itemFrame(path.section, path.item).minY - header) / scrollRange, 0), 1)
     }
 
@@ -391,7 +411,7 @@ final class GridController: NSObject, NSCollectionViewDataSource, NSCollectionVi
         guard let scroll = scrollView else { return }
         let frame = layout.math.itemFrame(anchor.path.section, anchor.path.item)
         var top = frame.midY - anchor.screenY
-        top = min(top, frame.minY - (layout.header > 0 && anchor.path.item < layout.math.columns ? layout.header : 0))
+        top = min(top, frame.minY - (layout.header > 0 && layout.math.firstRow(anchor.path.section, anchor.path.item) ? layout.header : 0))
         top = max(top, frame.maxY - contentHeight)
         let clip = scroll.contentView
         var bounds = clip.bounds
@@ -406,7 +426,8 @@ final class GridController: NSObject, NSCollectionViewDataSource, NSCollectionVi
         guard let row = layout.math.visible(y, y + 1).last, !row.items.isEmpty else { return topAnchor() }
         let m = layout.math
         let column = Int((m.width / 2) / (m.side + m.spacing))
-        let item = min(row.items.lowerBound + column, row.items.upperBound - 1)
+        let item = min(max(row.items.lowerBound + column - m.column(row.section, row.items.lowerBound), row.items.lowerBound),
+                       row.items.upperBound - 1)
         return (IndexPath(item: item, section: row.section), m.itemFrame(row.section, item).midY - contentTop)
     }
 
@@ -437,8 +458,214 @@ final class GridController: NSObject, NSCollectionViewDataSource, NSCollectionVi
         }
     }
 
-    /// One zoom step for every ~35% of pinch, several steps in one gesture.
+    /// A pinch in progress, as pictures in the zoom overlay: `base` is the grid at one zoom step, `target` the next step
+    /// in the direction the fingers go, underneath it. `photo` is the one that was under the pointer.
+    private struct Pinch {
+        struct Picture {
+            var level: Int
+            var layer: CALayer
+            /// The photo's middle in this picture and its cells' size, in overlay coordinates.
+            var center: CGPoint
+            var side: Double
+            /// How the real grid was laid out for it.
+            var shift: GridMath.Shift?
+            var y: Double
+        }
+        var photo: IndexPath
+        var pointer: CGPoint
+        var start: CGPoint
+        var startSide: Double
+        /// How far the fingers have scaled the grid since they went down.
+        var scale = 1.0
+        var base: Picture
+        var target: Picture?
+        /// The photo's size and middle right now: it grows or shrinks around the pointer, so the spot under the
+        /// pointer stays under it.
+        var side: Double { startSide * scale }
+        var spot: CGPoint {
+            CGPoint(x: pointer.x + (start.x - pointer.x) * scale, y: pointer.y + (start.y - pointer.y) * scale)
+        }
+    }
+
+    /// A pinch is a transition the fingers drive, like in Photos: the grid grows or shrinks around the pointer and
+    /// fades into the next zoom step, whose picture is lined up so the same photo sits in the same place. Once the
+    /// photos reach the next step's size, that step becomes the base and the one after it is prepared, so one pinch
+    /// can go through several steps. Letting go settles on whichever step the photos are closer to.
     func pinched(phase: NSEvent.Phase, magnification: Double, at point: NSPoint) {
+        if phase.contains(.began) { startPinch(at: point) }
+        guard var p = pinch else { return stepPinch(phase, magnification, point) }
+        p.scale *= 1 + magnification
+        // past the smallest and largest step it only gives a little
+        let low = p.base.level > 0 ? 0.0 : 0.95, high = p.base.level + 1 < zoomLevels.count ? .infinity : 1.15
+        p.scale = min(max(p.side / p.base.side, low), high) * p.base.side / p.startSide
+        pinch = p
+        advance()
+        if phase.contains(.ended) || phase.contains(.cancelled) {
+            endPinch()
+        } else {
+            let watchdog = DispatchWorkItem { [weak self] in self?.endPinch() }
+            pinchWatchdog?.cancel()
+            pinchWatchdog = watchdog
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: watchdog)
+        }
+    }
+
+    private func startPinch(at point: NSPoint) {
+        stopPinchEvents()
+        pinch = nil
+        guard let collection, let overlay = beginZoom() else { return }
+        guard let layer = overlay.layer?.sublayers?.first,
+              let photo = collection.indexPathForItem(at: point) ?? layout.math.visible(point.y, point.y + 1).first
+                .map({ IndexPath(item: $0.items.first ?? 0, section: $0.section) }) ?? centerAnchor()?.path
+        else {
+            overlay.removeFromSuperview()
+            zoomOverlay = nil
+            collection.alphaValue = 1
+            return
+        }
+        collection.alphaValue = 0 // the pictures stand in for the grid until the fingers let go
+        let base = Pinch.Picture(level: level, layer: layer, center: center(photo), side: layout.math.side,
+                                 shift: layout.shift, y: center(photo).y)
+        pinch = Pinch(photo: photo, pointer: collection.convert(point, to: overlay), start: base.center,
+                      startSide: base.side, base: base)
+        pinchMonitor = NSEvent.addLocalMonitorForEvents(matching: [.magnify, .scrollWheel]) { [weak self] event in
+            guard let self, self.pinch != nil, let collection = self.collection, event.window === collection.window else { return event }
+            if event.type == .magnify {
+                self.pinched(phase: event.phase, magnification: Double(event.magnification),
+                             at: collection.convert(event.locationInWindow, from: nil))
+            }
+            return nil
+        }
+    }
+
+    private func stopPinchEvents() {
+        if let pinchMonitor { NSEvent.removeMonitor(pinchMonitor) }
+        pinchMonitor = nil
+        pinchWatchdog?.cancel()
+        pinchWatchdog = nil
+    }
+
+    /// Prepares the step the fingers are heading to, moves on to it once the photos have reached its size, then
+    /// places the pictures.
+    private func advance() {
+        guard var p = pinch else { return }
+        for _ in 0..<zoomLevels.count {
+            let to = p.base.level + (p.side > p.base.side ? 1 : -1)
+            guard p.side != p.base.side, zoomLevels.indices.contains(to) else { break }
+            if p.target?.level != to {
+                p.target?.layer.removeFromSuperlayer()
+                p.target = prepare(to, for: p)
+            }
+            guard let t = p.target, to > p.base.level ? p.side >= t.side : p.side <= t.side else { break }
+            p.base.layer.removeFromSuperlayer() // past this step: it becomes the base
+            p.base = t
+            p.target = nil
+        }
+        pinch = p
+        place(p)
+    }
+
+    /// Moves the real (hidden) grid to step `to`, with the photo where the fingers will have taken it by the time it
+    /// reaches that size (in the nearest column), and adds a picture of it under the base.
+    private func prepare(_ to: Int, for p: Pinch) -> Pinch.Picture? {
+        guard let collection, let overlay = zoomOverlay else { return nil }
+        let math = columns(to), k = math.side / p.startSide
+        let spot = CGPoint(x: p.pointer.x + (p.start.x - p.pointer.x) * k, y: p.pointer.y + (p.start.y - p.pointer.y) * k)
+        let shift = math.shift(putting: p.photo.item, of: p.photo.section, under: collection.convert(spot, from: overlay).x)
+        setLevel(to, shift: shift, keeping: p.photo, at: spot.y)
+        let layer = snapshot(in: overlay)
+        overlay.layer?.insertSublayer(layer, below: p.base.layer)
+        return Pinch.Picture(level: to, layer: layer, center: center(p.photo), side: layout.math.side, shift: shift, y: spot.y)
+    }
+
+    /// The grid's geometry at zoom step `l` (columns and cell size; no items).
+    private func columns(_ l: Int) -> GridMath {
+        GridMath(counts: [], width: layout.math.width, target: zoomLevels[l], header: 0, spacing: layout.spacing)
+    }
+
+    private func setLevel(_ l: Int, shift: GridMath.Shift?, keeping photo: IndexPath, at y: Double) {
+        guard let collection else { return }
+        level = l
+        requestedLevel = l
+        layout.target = zoomLevels[l]
+        layout.shift = shift
+        layout.invalidateLayout()
+        collection.layoutSubtreeIfNeeded()
+        keep((photo, y - insets.top))
+        collection.layoutSubtreeIfNeeded()
+        redrawVisible()
+    }
+
+    /// How far the photos have gone from the base's size to the target's, 0...1.
+    private func progress(_ p: Pinch) -> Double {
+        guard let t = p.target, abs(log(t.side / p.base.side)) > 0.001 else { return 0 }
+        return min(max(log(p.side / p.base.side) / log(t.side / p.base.side), 0), 1)
+    }
+
+    /// The transform that shows `picture` with its photo `side` big and its middle at `spot`.
+    private func mapping(_ picture: Pinch.Picture, side: Double, at spot: CGPoint) -> CATransform3D {
+        let s = side / picture.side
+        return CATransform3DConcat(CATransform3DMakeScale(s, s, 1),
+                                   CATransform3DMakeTranslation(spot.x - s * picture.center.x, spot.y - s * picture.center.y, 0))
+    }
+
+    private func place(_ p: Pinch) {
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        let t = progress(p)
+        p.base.layer.transform = mapping(p.base, side: p.side, at: p.spot)
+        p.base.layer.opacity = Float(1 - t)
+        if let target = p.target {
+            target.layer.isHidden = t == 0
+            target.layer.transform = mapping(target, side: p.side, at: p.spot)
+        }
+        CATransaction.commit()
+    }
+
+    /// The fingers let go: the pictures finish (or undo) the transition, then the real grid comes back.
+    private func endPinch() {
+        stopPinchEvents()
+        guard let p = pinch, zoomOverlay != nil else {
+            pinch = nil
+            return
+        }
+        pinch = nil
+        let target = progress(p) >= 0.5 ? p.target : nil
+        let final = target ?? p.base
+        if level != final.level || layout.shift != final.shift { // the real grid is on the other step
+            setLevel(final.level, shift: final.shift, keeping: p.photo, at: final.y)
+        }
+        let spot = center(p.photo) // where the real grid has it
+        let timing = CAMediaTimingFunction(controlPoints: 0.2, 0, 0, 1)
+        func animate(_ layer: CALayer, _ key: String, to value: Any) {
+            let a = CABasicAnimation(keyPath: key)
+            a.fromValue = layer.value(forKeyPath: key)
+            a.toValue = value
+            a.duration = 0.25
+            a.timingFunction = timing
+            layer.setValue(value, forKeyPath: key)
+            layer.add(a, forKey: key)
+        }
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        let overlay = zoomOverlay
+        CATransaction.setCompletionBlock { [weak self, weak overlay] in
+            guard let self, let overlay, self.zoomOverlay === overlay else { return }
+            overlay.removeFromSuperview()
+            self.zoomOverlay = nil
+            self.collection?.alphaValue = 1
+        }
+        animate(p.base.layer, "transform", to: NSValue(caTransform3D: mapping(p.base, side: final.side, at: spot)))
+        animate(p.base.layer, "opacity", to: NSNumber(value: target == nil ? 1 : 0))
+        if let other = p.target, !other.layer.isHidden {
+            animate(other.layer, "transform", to: NSValue(caTransform3D: mapping(other, side: final.side, at: spot)))
+        }
+        CATransaction.commit()
+        onZoom(final.level)
+    }
+
+    /// With Reduce Motion: one zoom step for every ~35% of pinch, several steps in one gesture.
+    private func stepPinch(_ phase: NSEvent.Phase, _ magnification: Double, _ point: NSPoint) {
         if phase.contains(.began) {
             pinchStartLevel = level
             pinchScale = 1
@@ -550,13 +777,14 @@ final class GridLayout: NSCollectionViewLayout {
     var target = 76.0
     var header = 0.0
     var spacing = 1.0
+    var shift: GridMath.Shift?
     private(set) var math = GridMath(counts: [], width: 0, target: 76, header: 0)
 
     override func prepare() {
         guard let collection = collectionView else { return }
         let counts = (0..<collection.numberOfSections).map { collection.numberOfItems(inSection: $0) }
         let width = collection.enclosingScrollView?.contentSize.width ?? collection.bounds.width
-        math = GridMath(counts: counts, width: width, target: target, header: header, spacing: spacing)
+        math = GridMath(counts: counts, width: width, target: target, header: header, spacing: spacing, shift: shift)
     }
 
     override var collectionViewContentSize: NSSize { NSSize(width: math.width, height: math.height) }

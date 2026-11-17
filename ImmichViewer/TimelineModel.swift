@@ -82,35 +82,59 @@ func makeSections(_ assets: [Asset], by grouping: Grouping) -> [Section] {
 }
 
 /// Square-grid geometry, like Photos: columns fill the width, each section has an optional header.
+/// One section can start `shift.slots` cells in, so a photo keeps its column when the zoom changes.
 /// Pure math so it is cheap to query for 100k+ items and testable without AppKit.
 struct GridMath {
+    struct Shift: Equatable {
+        var section: Int
+        var slots: Int
+    }
+
     let width: Double
     let side: Double
     let spacing: Double
     let header: Double
     let columns: Int
     let counts: [Int]
+    let shift: Shift?
     let tops: [Double]
     let height: Double
 
-    init(counts: [Int], width: Double, target: Double, header: Double, spacing: Double = 1) {
+    init(counts: [Int], width: Double, target: Double, header: Double, spacing: Double = 1, shift: Shift? = nil) {
         let width = max(width, 1)
         let columns = max(1, Int((width + spacing) / (target + spacing)))
         let side = (width - spacing * Double(columns - 1)) / Double(columns)
         var tops: [Double] = []
         var y = 0.0
-        for n in counts {
+        for (s, n) in counts.enumerated() {
             tops.append(y)
-            y += header + Double((n + columns - 1) / columns) * (side + spacing)
+            let lead = shift?.section == s ? shift!.slots % columns : 0
+            y += header + Double((n + lead + columns - 1) / columns) * (side + spacing)
         }
-        (self.width, self.side, self.spacing, self.header, self.columns, self.counts, self.tops, self.height) =
-            (width, side, spacing, header, columns, counts, tops, y)
+        (self.width, self.side, self.spacing, self.header, self.columns, self.counts, self.shift, self.tops, self.height) =
+            (width, side, spacing, header, columns, counts, shift, tops, y)
+    }
+
+    /// Empty cells before the first photo of section `s`.
+    func lead(_ s: Int) -> Int { shift?.section == s ? shift!.slots % columns : 0 }
+
+    /// The column of item `i` in section `s`.
+    func column(_ s: Int, _ i: Int) -> Int { (i + lead(s)) % columns }
+
+    /// Whether item `i` is in the first row of section `s`, right under its header.
+    func firstRow(_ s: Int, _ i: Int) -> Bool { i + lead(s) < columns }
+
+    /// The shift that puts item `i` of section `s` in the column under `x`.
+    func shift(putting i: Int, of s: Int, under x: Double) -> Shift {
+        let c = min(max(Int(x / (side + spacing)), 0), columns - 1)
+        return Shift(section: s, slots: ((c - i) % columns + columns) % columns)
     }
 
     func itemFrame(_ section: Int, _ item: Int) -> CGRect {
-        CGRect(x: Double(item % columns) * (side + spacing),
-               y: tops[section] + header + Double(item / columns) * (side + spacing),
-               width: side, height: side)
+        let slot = item + lead(section)
+        return CGRect(x: Double(slot % columns) * (side + spacing),
+                      y: tops[section] + header + Double(slot / columns) * (side + spacing),
+                      width: side, height: side)
     }
 
     func headerFrame(_ section: Int) -> CGRect {
@@ -130,10 +154,11 @@ struct GridMath {
         var s = lo
         while s < tops.count, tops[s] < maxY {
             let base = tops[s] + header
-            let lastRow = (counts[s] + columns - 1) / columns - 1
+            let lead = lead(s)
+            let lastRow = (counts[s] + lead + columns - 1) / columns - 1
             let r0 = max(0, Int(((minY - base) / rowHeight).rounded(.down)))
             let r1 = min(lastRow, Int(((maxY - base) / rowHeight).rounded(.down)))
-            result.append((s, r0 <= r1 ? r0 * columns..<min(counts[s], (r1 + 1) * columns) : 0..<0))
+            result.append((s, r0 <= r1 ? max(0, r0 * columns - lead)..<min(counts[s], (r1 + 1) * columns - lead) : 0..<0))
             s += 1
         }
         return result
@@ -146,15 +171,18 @@ extension GridMath {
     /// The item one row below (or above) in the same column, or the nearest one if that row is shorter.
     /// Crosses into the next (previous) section; nil at the very end (start).
     func row(from section: Int, _ item: Int, down: Bool) -> (section: Int, item: Int)? {
-        let column = item % columns
+        let column = column(section, item)
+        func clamp(_ i: Int, _ s: Int) -> Int { min(max(i, 0), counts[s] - 1) }
         if down {
-            if item / columns < (counts[section] - 1) / columns { return (section, min(item + columns, counts[section] - 1)) }
+            if (item + lead(section)) / columns < (counts[section] + lead(section) - 1) / columns {
+                return (section, min(item + columns, counts[section] - 1))
+            }
             guard let s = counts.indices.dropFirst(section + 1).first(where: { counts[$0] > 0 }) else { return nil }
-            return (s, min(column, counts[s] - 1))
+            return (s, clamp(column - lead(s), s))
         }
-        if item >= columns { return (section, item - columns) }
+        if !firstRow(section, item) { return (section, max(item - columns, 0)) }
         guard let s = counts.indices.prefix(section).last(where: { counts[$0] > 0 }) else { return nil }
-        return (s, min((counts[s] - 1) / columns * columns + column, counts[s] - 1))
+        return (s, clamp((counts[s] + lead(s) - 1) / columns * columns + column - lead(s), s))
     }
 }
 

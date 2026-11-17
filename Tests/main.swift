@@ -16,6 +16,18 @@ precondition(show(g.visible(0, 1000)) == "0:0..<5 1:0..<1 2:0..<7")
 precondition(show(g.visible(122, 125)) == "2:0..<0") // header only
 precondition(show(g.visible(500, 600)) == "")
 
+// section 2 starts 2 cells in: its 7 items fill slots 2...8, three rows
+let h = GridMath(counts: [5, 1, 7], width: 100, target: 30, header: 10, spacing: 2, shift: .init(section: 2, slots: 2))
+precondition(h.tops == [0, 78, 122] && h.height == 234)
+precondition(h.itemFrame(2, 0) == CGRect(x: 68, y: 132, width: 32, height: 32))
+precondition(h.itemFrame(2, 1) == CGRect(x: 0, y: 166, width: 32, height: 32))
+precondition(show(h.visible(132, 133)) == "2:0..<1" && show(h.visible(166, 167)) == "2:1..<4" && show(h.visible(200, 201)) == "2:4..<7")
+precondition(h.firstRow(2, 0) && !h.firstRow(2, 1))
+precondition(h.shift(putting: 4, of: 2, under: 50) == .init(section: 2, slots: 0)) // column 1; item 4 is already there
+precondition(h.shift(putting: 0, of: 0, under: 99) == .init(section: 0, slots: 2))
+precondition(h.row(from: 2, 0, down: false)! == (1, 0) && h.row(from: 1, 0, down: true)! == (2, 0))
+precondition(h.row(from: 2, 1, down: false)! == (2, 0) && h.row(from: 2, 3, down: true)! == (2, 6))
+
 let empty = GridMath(counts: [], width: 0, target: 100, header: 0)
 precondition(empty.columns == 1 && show(empty.visible(0, 100)) == "")
 

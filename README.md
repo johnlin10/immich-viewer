@@ -6,14 +6,15 @@ It keeps every small thumbnail (about 15 KB each) on this Mac, so scrolling read
 
 > **Language:** English and Traditional Chinese, following the macOS language (or the per-app language in System Settings > General > Language & Region). Simplified Chinese is planned; see [docs/localization.md](docs/localization.md).
 
-## What it does (v0.4)
+## What it does (v0.5)
 
 - A sidebar with Library, People and Albums.
 - People: everyone Immich recognised (hidden people left out) as round faces; click one for their photos.
 - Albums: own and shared albums as covers with name and count, newest first; click one for its photos.
 - Person and album photos use the same grid, zoom, grouping and single photo view as the library, with a back button.
 - One square grid of the whole timeline (archived, hidden and locked items are left out, like Immich's own timeline). The grid fills the window; under the title bar the photos blur progressively, strongest at the top.
-- Eight fixed zoom steps (16 to 220 pt cells): the − / + buttons, ⌘− / ⌘=, or pinch on the trackpad. One pinch can move several steps. Each step is one continuous zoom: the old grid and the new one scale together around the photo you clicked or pinched (the − / + buttons zoom around the middle of the window).
+- Eight zoom steps (16 to 220 pt cells): the − / + buttons, ⌘− / ⌘=, or pinch on the trackpad.
+- A pinch follows the fingers: the grid grows or shrinks with them, and the photo under the pointer stays under the pointer. Like in Photos, the grid fades into the next step on the way, with that photo in the same place in both; letting go settles on the closer step. The photo under the pointer keeps its column as far as the new column count allows (the photos around it move instead), so the rows don't always start at the left edge: the first row of that photo's group can start a few cells in. One pinch can move several steps. The buttons and ⌘− / ⌘= zoom one step in one continuous animation around the middle of the window (with Reduce Motion, a pinch moves in steps too).
 - In the five smallest steps a click zooms in one step and keeps the clicked photo where it was on screen. From 110 pt on, a click opens the photo.
 - Grouping: Days, Months or All. The date of the top row shows in a glass capsule under the window title.
 - Keyboard in the grid: arrow keys move a selection ring, Return or Space opens it, Esc clears it, ⌘↑ / ⌘↓ (or Home / End) jump to the top and bottom. After closing a photo the ring stays on it.
@@ -22,17 +23,18 @@ It keeps every small thumbnail (about 15 KB each) on this Mac, so scrolling read
 - ⋯ menu (top right) > Show Whole Photos: whole photos inside the squares instead of cropped.
 - ▶ marks videos.
 - Sync progress and the item count show under the window title (hidden in the single photo view).
-- The bottom controls are two glass capsules: zoom, and grouping (the options sit right in the capsule).
+- The bottom controls are two glass capsules: zoom, and grouping. The chosen grouping sits on a tinted piece of glass that slides over to the next choice, like an iOS tab bar.
 - Refresh (⌘R) reloads the list and downloads any new thumbnails. This also runs at launch.
 - Zoom, grouping and the whole-photo setting are remembered.
 
 ### Single photo view
 
-- The photo grows out of its cell and shrinks back into it when closed. The date sits in the middle of the title bar, the photo below it.
-- ← → or a two-finger swipe for the previous and next photo, Esc or ✕ to close. Space closes a photo or pauses a video.
-- Videos play in place with the system player controls (streamed from the server, like the web UI).
+- The photo grows out of its cell and shrinks back into it when closed. It fills the whole window, title bar included; the date and buttons sit over it.
+- Click the photo or video to hide the title bar, the buttons and the info panel, and click again to bring them back. While they are hidden, pointing at the title bar shows it until the pointer leaves. A click while dragging a zoomed photo doesn't count.
+- ← → or a two-finger swipe sideways for the previous and next photo. To close: ✕ (top left), Esc, or a two-finger swipe down; the photo follows the fingers and shrinks, and past a short distance letting go sends it back into the grid. Space closes a photo or pauses a video.
+- Videos play in place with the system player controls (streamed from the server, like the web UI). The player appears once the video has grown out of its cell.
 - Editing opens in the browser (Safari button).
-- Info panel (ⓘ or ⌘I, remembered): date and time, file name, size and megapixels, camera and lens, aperture, shutter, focal length, ISO, place with a small map (click to open in Maps), named people, and the description.
+- Info panel (ⓘ or ⌘I, remembered): date and time, file name, size and megapixels, camera and lens, aperture, shutter, focal length, ISO, place with a small map (click to open in Maps), the people in it (named or not; click one for their photos), and the description.
 - Zoom: pinch, double-click (3× at the pointer; again to go back) or ⌘= / ⌘−, up to 8×. Drag or scroll to move around. Zooming downloads the original for full sharpness (with `asset.download`; otherwise the large preview). Esc zooms out first, then closes.
 - ⌘C copies the photo (original or preview) for pasting into other apps. Drag the photo out to Finder, Mail, Messages and so on to save it as a file under its original name.
 
@@ -124,7 +126,12 @@ Searching, map, memories, Simplified Chinese interface, and noticing deletions m
 
 ## Version history
 
-### v0.4 (current)
+### v0.5 (current)
+
+- Single photo view: the photo fills the window, a click hides and shows the controls, ✕ moved to the top left, swipe down to close, clickable people (unnamed ones too) in the info panel, and a video no longer shows twice while it opens.
+- Grid: pinching follows the fingers around the photo under the pointer and crossfades between zoom steps, like in Photos, and that photo keeps its column when the step changes; the grouping selection is a piece of glass that slides to the new choice.
+
+### v0.4
 
 - Updates inside the app with Sparkle: automatic checks, Check for Updates…, release notes, install and relaunch. `scripts/release.sh` publishes a version.
 - The DMG runs on Intel Macs too (until v0.3 it was Apple silicon only).

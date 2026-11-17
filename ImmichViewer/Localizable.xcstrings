@@ -642,16 +642,6 @@
         }
       }
     },
-    "Plus %lld unnamed": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "另有 %lld 位未命名"
-          }
-        }
-      }
-    },
     "Refresh": {
       "localizations": {
         "zh-Hant": {
@@ -688,6 +678,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "伺服器已停止"
+          }
+        }
+      }
+    },
+    "Show Their Photos": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "顯示這個人的照片"
           }
         }
       }

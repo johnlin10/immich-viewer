@@ -12,13 +12,14 @@ struct ViewerState {
     var image: CGImage?
 }
 
-/// One photo over the whole window. It grows out of its grid cell and shrinks back into it.
-/// ← → or a two-finger swipe step through the timeline, Esc closes. Videos play in place.
+/// One photo over the whole window, title bar included. It grows out of its grid cell and shrinks back into it.
+/// ← → or a two-finger swipe step through the timeline; Esc, ✕ or a two-finger swipe down closes. Videos play in place.
+/// A click hides the title bar, buttons and info panel; pointing at the title bar shows them while the pointer is there.
 /// Pinch or double-click zooms (the original loads for that), ⌘I shows details, ⌘C copies, dragging the photo out saves it.
 struct PhotoViewer: View {
     let library: Library
     let assets: [Asset]
-    /// Height of the title bar; the photo stays below it, the date sits in it.
+    /// Height of the title bar, where the date and buttons sit over the photo.
     let topInset: CGFloat
     let bridge: GridBridge
     let onClosed: () -> Void
@@ -30,8 +31,16 @@ struct PhotoViewer: View {
     @State private var sliding = false
     /// Horizontal drag or slide of the photo.
     @State private var offset: CGFloat = 0
-    /// Where the photo may be, below the title bar and left of the info panel.
+    /// Where the photo may be: the window left of the info panel.
     @State private var area = CGRect.zero
+    /// How far a two-finger swipe has pulled the photo down; far enough closes the viewer.
+    @State private var dismiss: CGFloat = 0
+    /// The opening animation is over. The video player waits for it, so only the thumbnail grows out of the grid.
+    @State private var settled = false
+    /// A click hid the title bar, buttons and info panel.
+    @State private var chromeHidden = false
+    /// The pointer is over the title bar, which shows it while the rest stays hidden.
+    @State private var pointerInBar = false
     @State private var player: AVPlayer?
     @State private var swipe = SwipeMonitor()
     @State private var detail: AssetDetail?
@@ -45,6 +54,7 @@ struct PhotoViewer: View {
     @AppStorage("videoAutoplay") private var autoplay = true
     @AppStorage("videoMuted") private var muted = false
     @AppStorage("videoLoop") private var loop = false
+    @Environment(\.showPerson) private var showPerson
 
     private static let spring = Animation.spring(duration: 0.35, bounce: 0.1)
     private static let panelWidth: CGFloat = 300
@@ -70,18 +80,19 @@ struct PhotoViewer: View {
         if assets.indices.contains(index) {
             let asset = assets[index]
             GeometryReader { geo in
-                let panel = showInfo && shown ? Self.panelWidth : 0
-                let space = CGRect(x: 0, y: topInset, width: max(geo.size.width - panel, 1), height: max(geo.size.height - topInset, 1))
+                let panel = panelShown ? Self.panelWidth : 0
+                let space = CGRect(x: 0, y: 0, width: max(geo.size.width - panel, 1), height: max(geo.size.height, 1))
                 let fitted = fitted(in: space)
-                let rect = shown ? zoomed(fitted).offsetBy(dx: offset, dy: 0) : (origin ?? fitted)
+                let rect = shown ? pulled(zoomed(fitted).offsetBy(dx: offset, dy: 0)) : (origin ?? fitted)
                 ZStack {
-                    Color.black.opacity(shown ? 1 : 0)
+                    // the grid shows through more the further the photo is pulled down
+                    Color.black.opacity(shown ? 1 - min(max(dismiss, 0) / 400, 0.7) : 0)
                     if let image {
                         Image(nsImage: image).resizable().scaledToFill()
                             .frame(width: rect.width, height: rect.height).clipped()
                             .position(x: rect.midX, y: rect.midY)
                             .opacity(shown || origin != nil ? 1 : 0)
-                            // an enlarged photo stays in its area; otherwise it may fly over the title bar
+                            // an enlarged photo stays left of the info panel
                             .mask(alignment: .topLeading) {
                                 let clip = zoom > 1 ? space : CGRect(origin: .zero, size: geo.size)
                                 Rectangle().frame(width: clip.width, height: clip.height).offset(x: clip.minX, y: clip.minY)
@@ -94,15 +105,21 @@ struct PhotoViewer: View {
                         onMagnify: { magnify($0, $1, at: $2) },
                         onDoubleClick: { toggleZoom(at: $0) },
                         onPan: { panBy($0, $1) },
+                        onTap: toggleChrome,
+                        onHover: { p in
+                            let inBar = p.map { $0.y < topInset } ?? false
+                            if inBar != pointerInBar { withAnimation(.easeOut(duration: 0.2)) { pointerInBar = inBar } }
+                        },
+                        titleBar: chromeShown,
                         dragItem: { point in
                             guard !asset.isVideo, let image, rect.contains(point) else { return nil }
                             return (promise(for: asset), image, rect)
                         })
-                    if let player, shown {
+                    if let player, shown, settled {
                         // over the thumbnail, which shows until the first frame arrives
-                        PlayerView(player: player)
-                            .frame(width: fitted.width, height: fitted.height)
-                            .position(x: fitted.midX + offset, y: fitted.midY)
+                        PlayerView(player: player, onTap: toggleChrome)
+                            .frame(width: rect.width, height: rect.height)
+                            .position(x: rect.midX, y: rect.midY)
                     }
                     if loadingFull {
                         ProgressView().controlSize(.small)
@@ -112,9 +129,12 @@ struct PhotoViewer: View {
                     }
                 }
                 .overlay(alignment: .topTrailing) {
-                    if showInfo && shown {
-                        InfoPanel(asset: asset, detail: detail)
-                            .frame(width: Self.panelWidth, height: space.height)
+                    if panelShown {
+                        InfoPanel(asset: asset, detail: detail) { person in
+                            close()
+                            showPerson(person)
+                        }
+                            .frame(width: Self.panelWidth, height: max(geo.size.height - topInset, 1))
                             .offset(y: topInset)
                             .transition(.move(edge: .trailing))
                     }
@@ -143,24 +163,32 @@ struct PhotoViewer: View {
                     Text(asset.date.formatted(Self.dateStyle))
                         .font(.headline).monospacedDigit()
                         .foregroundStyle(.white)
+                        .shadow(color: .black.opacity(0.6), radius: 3) // readable over a bright photo
                         .opacity(shown ? 1 : 0)
                 }
                 .sharedBackgroundVisibility(.hidden)
+                ToolbarItem(placement: .navigation) {
+                    Button(action: close) { Image(systemName: "xmark") }
+                        .help("Close (Esc)")
+                }
                 ToolbarItemGroup(placement: .primaryAction) {
-                    Button { withAnimation(Self.spring) { showInfo.toggle() } } label: {
+                    Button {
+                        withAnimation(Self.spring) {
+                            showInfo = !panelShown
+                            chromeHidden = false
+                        }
+                    } label: {
                         Image(systemName: showInfo ? "info.circle.fill" : "info.circle")
                     }
                     .keyboardShortcut("i")
                     .help("Info (⌘I)")
                     Button { library.openInBrowser(asset) } label: { Image(systemName: "safari") }
                         .help("Open in Browser (Edit, Delete)")
-                    Button(action: close) { Image(systemName: "xmark") }
-                        .help("Close (Esc)")
                 }
             }
             .onAppear {
-                swipe.start(onPan: { panBy($0, $1) }, onChange: drag, onEnd: dragEnded)
-                withAnimation(Self.spring) { shown = true }
+                swipe.start(onPan: { panBy($0, $1) }, onChange: drag, onEnd: dragEnded, onPull: pull, onPullEnd: pullEnded)
+                withAnimation(Self.spring) { shown = true } completion: { settled = true }
             }
             .onDisappear {
                 swipe.stop()
@@ -191,6 +219,16 @@ struct PhotoViewer: View {
     }
 
     private var center: CGPoint { CGPoint(x: area.midX, y: area.midY) }
+    private var chromeShown: Bool { !chromeHidden || pointerInBar }
+    private var panelShown: Bool { showInfo && shown && !chromeHidden }
+
+    /// `r` pulled down by a swipe, shrinking to half size as it goes.
+    private func pulled(_ r: CGRect) -> CGRect {
+        guard dismiss != 0 else { return r }
+        let s = max(0.5, 1 - max(dismiss, 0) / max(area.height, 1))
+        let w = r.width * s, h = r.height * s
+        return CGRect(x: r.midX - w / 2, y: r.midY + dismiss - h / 2, width: w, height: h)
+    }
 
     /// The photo's rectangle when it fills `area` without cropping.
     private func fitted(in area: CGRect) -> CGRect {
@@ -285,12 +323,34 @@ struct PhotoViewer: View {
 
     private func close() {
         guard shown else { return }
+        chromeHidden = false
+        pointerInBar = false
         origin = bridge.reveal(index) // the grid may have scrolled; nil fades out instead
         offset = 0
         resetZoom()
         player?.pause()
         player = nil // the thumbnail flies back into the grid
         withAnimation(Self.spring) { shown = false } completion: { onClosed() }
+    }
+
+    /// A click on the photo: hide or show the title bar, buttons and info panel.
+    private func toggleChrome() {
+        guard shown, !sliding else { return }
+        withAnimation(.easeInOut(duration: 0.25)) {
+            chromeHidden.toggle()
+            pointerInBar = false
+        }
+    }
+
+    /// A two-finger swipe down (`dy` > 0) pulls the photo after the fingers; up only gives a little.
+    private func pull(_ dy: CGFloat) {
+        guard shown, !sliding, zoom == 1 else { return }
+        dismiss = dy > 0 ? dy : dy / 4
+    }
+
+    private func pullEnded(_ dy: CGFloat) {
+        guard shown, !sliding, dismiss != 0 else { return }
+        if dy > 100 { close() } else { withAnimation(Self.spring) { dismiss = 0 } }
     }
 
     private func togglePlay() {
@@ -326,7 +386,7 @@ struct PhotoViewer: View {
         }
         sliding = true
         player?.pause()
-        let width = area.width + (showInfo ? Self.panelWidth : 0)
+        let width = area.width + (panelShown ? Self.panelWidth : 0)
         withAnimation(.easeIn(duration: 0.12)) { offset = -CGFloat(d) * width } completion: {
             index = next
             resetZoom()
@@ -348,25 +408,29 @@ struct PhotoViewer: View {
     }
 }
 
-/// Two-finger horizontal swipes anywhere in the window, also over the video player; scrolling pans a zoomed photo.
-/// While the viewer is open it takes every scroll event, so the grid underneath stays put.
+/// Two-finger swipes anywhere in the window, also over the video player: sideways to change photos, down to close.
+/// Scrolling pans a zoomed photo. While the viewer is open it takes every scroll event, so the grid underneath stays put.
 @MainActor
 final class SwipeMonitor {
     private var monitor: Any?
     private var dx: CGFloat = 0
+    /// How far the fingers moved down, whatever the scroll direction setting.
+    private var dy: CGFloat = 0
     private var horizontal: Bool?
 
-    func start(onPan: @escaping (CGFloat, CGFloat) -> Bool, onChange: @escaping (CGFloat) -> Void, onEnd: @escaping (CGFloat) -> Void) {
+    func start(onPan: @escaping (CGFloat, CGFloat) -> Bool, onChange: @escaping (CGFloat) -> Void, onEnd: @escaping (CGFloat) -> Void,
+               onPull: @escaping (CGFloat) -> Void, onPullEnd: @escaping (CGFloat) -> Void) {
         stop()
         monitor = NSEvent.addLocalMonitorForEvents(matching: .scrollWheel) { [weak self] event in
             if self?.horizontal != true, onPan(event.scrollingDeltaX, event.scrollingDeltaY) { return nil }
             guard let self, event.hasPreciseScrollingDeltas, event.momentumPhase.isEmpty else { return nil }
             if event.phase.contains(.began) {
                 dx = 0
+                dy = 0
                 horizontal = nil
             }
             if event.phase.contains(.ended) || event.phase.contains(.cancelled) {
-                if horizontal == true { onEnd(dx) }
+                if horizontal == true { onEnd(dx) } else if horizontal == false { onPullEnd(dy) }
                 horizontal = nil
                 return nil
             }
@@ -376,6 +440,9 @@ final class SwipeMonitor {
             if horizontal == true {
                 dx += event.scrollingDeltaX
                 onChange(dx)
+            } else if horizontal == false {
+                dy += event.isDirectionInvertedFromDevice ? event.scrollingDeltaY : -event.scrollingDeltaY
+                onPull(dy)
             }
             return nil
         }
@@ -387,13 +454,19 @@ final class SwipeMonitor {
     }
 }
 
-/// Mouse and trackpad over the photo: pinch, double-click, drag to pan or to drag the photo out.
-/// Also keeps clicks from reaching the grid underneath. Coordinates match SwiftUI's (origin top left).
+/// Mouse and trackpad over the photo: pinch, click, double-click, drag to pan or to drag the photo out, and where the pointer is.
+/// Also keeps clicks from reaching the grid underneath, and fades the window's title bar. Coordinates match SwiftUI's (origin top left).
 struct ViewerInput: NSViewRepresentable {
     let isZoomed: () -> Bool
     let onMagnify: (NSEvent.Phase, CGFloat, CGPoint) -> Void
     let onDoubleClick: (CGPoint) -> Void
     let onPan: (CGFloat, CGFloat) -> Bool
+    /// A single click that didn't drag, sent once it is clear no second click follows.
+    let onTap: () -> Void
+    /// The pointer moved (nil: it left the window).
+    let onHover: (CGPoint?) -> Void
+    /// Whether the title bar (window buttons and toolbar) shows.
+    let titleBar: Bool
     /// What to drag out from a point: the promised file, its picture and where it is.
     let dragItem: (CGPoint) -> (NSFilePromiseProvider, NSImage, CGRect)?
 
@@ -401,17 +474,58 @@ struct ViewerInput: NSViewRepresentable {
         var input: ViewerInput?
         private var last: CGPoint?
         private var dragStart: CGPoint?
+        private var down: CGPoint?
+        private var moved = false
+        private var pendingTap: DispatchWorkItem?
+        private var tracking: NSTrackingArea?
         override var isFlipped: Bool { true }
+
+        var titleBar = true {
+            didSet {
+                guard titleBar != oldValue else { return }
+                NSAnimationContext.runAnimationGroup { context in
+                    context.duration = 0.25
+                    titleBarView?.animator().alphaValue = titleBar ? 1 : 0
+                }
+            }
+        }
+
+        /// The window's title bar with its buttons and toolbar.
+        private var titleBarView: NSView? { window?.standardWindowButton(.closeButton)?.superview }
+
+        override func viewWillMove(toWindow newWindow: NSWindow?) {
+            if newWindow == nil { titleBarView?.alphaValue = 1 } // the grid always has its title bar
+            super.viewWillMove(toWindow: newWindow)
+        }
+
+        override func updateTrackingAreas() {
+            super.updateTrackingAreas()
+            if let tracking { removeTrackingArea(tracking) }
+            // by position only, so it also reports the pointer over the title bar
+            let area = NSTrackingArea(rect: .zero, options: [.mouseMoved, .mouseEnteredAndExited, .activeInKeyWindow, .inVisibleRect],
+                                      owner: self)
+            addTrackingArea(area)
+            tracking = area
+        }
+
+        override func mouseMoved(with event: NSEvent) { input?.onHover(point(event)) }
+        override func mouseExited(with event: NSEvent) { input?.onHover(nil) }
 
         private func point(_ event: NSEvent) -> CGPoint { convert(event.locationInWindow, from: nil) }
 
         override func mouseDown(with event: NSEvent) {
             last = point(event)
             dragStart = last
-            if event.clickCount == 2 { input?.onDoubleClick(point(event)) }
+            down = last
+            moved = false
+            if event.clickCount == 2 {
+                pendingTap?.cancel()
+                input?.onDoubleClick(point(event))
+            }
         }
 
         override func mouseDragged(with event: NSEvent) {
+            if let down, hypot(point(event).x - down.x, point(event).y - down.y) > 4 { moved = true }
             guard let input, let last, let start = dragStart else { return }
             let p = point(event)
             if input.isZoomed() {
@@ -426,8 +540,15 @@ struct ViewerInput: NSViewRepresentable {
         }
 
         override func mouseUp(with event: NSEvent) {
+            if event.clickCount == 1, !moved {
+                // wait: a double-click zooms instead
+                let tap = DispatchWorkItem { [weak self] in self?.input?.onTap() }
+                pendingTap = tap
+                DispatchQueue.main.asyncAfter(deadline: .now() + NSEvent.doubleClickInterval, execute: tap)
+            }
             last = nil
             dragStart = nil
+            down = nil
         }
 
         override func magnify(with event: NSEvent) { input?.onMagnify(event.phase, event.magnification, point(event)) }
@@ -439,7 +560,10 @@ struct ViewerInput: NSViewRepresentable {
     }
 
     func makeNSView(context: Context) -> InputView { InputView() }
-    func updateNSView(_ view: InputView, context: Context) { view.input = self }
+    func updateNSView(_ view: InputView, context: Context) {
+        view.input = self
+        view.titleBar = titleBar
+    }
 }
 
 /// The file behind a drag-out, written when the receiving app asks for it.
@@ -470,19 +594,51 @@ final class FilePromise: NSFilePromiseProvider, NSFilePromiseProviderDelegate {
     }
 }
 
-/// The system video player with its floating controls.
+/// The system video player with its floating controls. A click on the picture (not the controls) calls `onTap`.
 struct PlayerView: NSViewRepresentable {
     let player: AVPlayer
+    let onTap: () -> Void
 
-    func makeNSView(context: Context) -> AVPlayerView {
-        let view = AVPlayerView()
+    /// AVPlayerView keeps clicks to itself, so a window event monitor watches for one that lands on the picture
+    /// rather than on the floating controls (buttons in a glass panel).
+    final class TapPlayerView: AVPlayerView {
+        var onTap: () -> Void = {}
+        private var monitor: Any?
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            if let monitor { NSEvent.removeMonitor(monitor) }
+            monitor = nil
+            guard window != nil else { return }
+            monitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseUp) { [weak self] event in
+                if let self, event.window === self.window, event.clickCount == 1, self.onPicture(event) { self.onTap() }
+                return event
+            }
+        }
+
+        private func onPicture(_ event: NSEvent) -> Bool {
+            guard let root = window?.contentView?.superview,
+                  var view = root.hitTest(root.convert(event.locationInWindow, from: nil)) else { return false }
+            while view !== self {
+                let name = String(describing: type(of: view))
+                if view is NSControl || name.contains("Glass") || name.contains("Movable") { return false }
+                guard let up = view.superview else { return false } // not in the player at all
+                view = up
+            }
+            return true
+        }
+    }
+
+    func makeNSView(context: Context) -> TapPlayerView {
+        let view = TapPlayerView()
         view.controlsStyle = .floating
         view.videoGravity = .resizeAspect
         return view
     }
 
-    func updateNSView(_ view: AVPlayerView, context: Context) {
+    func updateNSView(_ view: TapPlayerView, context: Context) {
         if view.player !== player { view.player = player }
+        view.onTap = onTap
     }
 }
 
@@ -490,6 +646,8 @@ struct PlayerView: NSViewRepresentable {
 struct InfoPanel: View {
     let asset: Asset
     let detail: AssetDetail?
+    /// A person was clicked: show their photos.
+    let onPerson: (Person) -> Void
     private static let dayStyle: Date.FormatStyle = {
         var s = Date.FormatStyle(date: .complete, time: .omitted)
         s.timeZone = .gmt
@@ -528,7 +686,7 @@ struct InfoPanel: View {
                             .id(asset.id)
                     }
                     if let people = detail.people, !people.isEmpty {
-                        People(people: people)
+                        People(people: people, onPerson: onPerson)
                     }
                     if let text = exif?.description, !text.isEmpty {
                         Text(text).textSelection(.enabled)
@@ -628,24 +786,30 @@ struct InfoPanel: View {
         }
     }
 
+    /// Everyone in the photo, named or not; click one for their photos.
     private struct People: View {
         @Environment(Library.self) private var library
         let people: [Person]
+        let onPerson: (Person) -> Void
 
         var body: some View {
-            let named = people.filter { !$0.name.isEmpty }
             VStack(alignment: .leading, spacing: 8) {
                 Label("People", systemImage: "person.2").foregroundStyle(.secondary)
-                ForEach(named) { person in
-                    HStack(spacing: 8) {
-                        Thumb(id: person.id, store: library.faces)
-                            .frame(width: 26, height: 26)
-                            .clipShape(Circle())
-                        Text(person.name)
+                ForEach(people) { person in
+                    Button { onPerson(person) } label: {
+                        HStack(spacing: 8) {
+                            Thumb(id: person.id, store: library.faces)
+                                .frame(width: 26, height: 26)
+                                .clipShape(Circle())
+                            Text(person.name.isEmpty ? String(localized: "Unnamed") : person.name)
+                                .foregroundStyle(person.name.isEmpty ? .secondary : .primary)
+                            Spacer()
+                            Image(systemName: "chevron.right").font(.caption).foregroundStyle(.tertiary)
+                        }
+                        .contentShape(Rectangle())
                     }
-                }
-                if named.count < people.count {
-                    Text("Plus \(people.count - named.count) unnamed").font(.callout).foregroundStyle(.secondary)
+                    .buttonStyle(.plain)
+                    .help("Show Their Photos")
                 }
             }
         }
