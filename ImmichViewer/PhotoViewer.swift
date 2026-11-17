@@ -61,6 +61,7 @@ struct PhotoViewer: View {
     @State private var full: (id: String, data: Data)?
     @State private var loadingFull = false
     @AppStorage("showInfo") private var showInfo = false
+    @AppStorage("fitWholePhoto") private var fit = false
     @AppStorage("videoAutoplay") private var autoplay = true
     @AppStorage("videoMuted") private var muted = false
     @AppStorage("videoLoop") private var loop = false
@@ -97,7 +98,8 @@ struct PhotoViewer: View {
                 let panel = panelShown ? Self.panelWidth : 0
                 let space = CGRect(x: 0, y: 0, width: max(geo.size.width - panel, 1), height: max(geo.size.height, 1))
                 let fitted = fitted(in: space)
-                let rect = shown ? pulled(zoomed(fitted).offsetBy(dx: offset, dy: 0)) : (origin ?? fitted)
+                // with Show Whole Photos the grid shows the whole photo inside its square, so it grows from and returns to that
+                let rect = shown ? pulled(zoomed(fitted).offsetBy(dx: offset, dy: 0)) : (origin.map { fit ? self.fitted(in: $0) : $0 } ?? fitted)
                 ZStack {
                     // the grid shows through more the further the photo is pulled down
                     Color.black.opacity(shown ? 1 - min(max(dismiss, 0) / 400, 0.7) : 0)
@@ -156,7 +158,12 @@ struct PhotoViewer: View {
                                       Task { await library.rate(asset.id, stars, was: detail?.exifInfo?.rating, undo: undo) }
                                   },
                                   onDate: { act(.adjustDate) },
-                                  onPlace: { act(.setLocation) })
+                                  onPlace: { act(.setLocation) },
+                                  onAddTag: { act(.addTag) },
+                                  onUntag: { tag in Task { await library.untag([asset.id], tag, undo: undo) } },
+                                  onChangePerson: { person in
+                                      if let face = person.faces?.first { act(.changePerson(face: face.id, from: person.id)) }
+                                  })
                             .frame(width: Self.panelWidth, height: max(geo.size.height - topInset, 1))
                             .offset(y: topInset)
                             .transition(.move(edge: .trailing))
@@ -247,10 +254,13 @@ struct PhotoViewer: View {
                 player?.pause()
             }
             .task(id: [asset.id, "\(library.edits)"]) { // again after a change, to show what the server made of it
-                if shownID != asset.id { detail = nil }
+                let again = shownID == asset.id
+                if !again { detail = nil }
                 shownID = asset.id
                 let new = await library.detail(asset)
                 if !Task.isCancelled { detail = new }
+                // a rotated photo looks different now
+                if again, full?.id != asset.id, let preview = await library.preview(asset), !Task.isCancelled { image = preview }
             }
             .onChange(of: revision) { found() }
             .task(id: asset.id) {
@@ -728,6 +738,9 @@ struct InfoPanel: View {
     let onRate: (Int?) -> Void
     let onDate: () -> Void
     let onPlace: () -> Void
+    let onAddTag: () -> Void
+    let onUntag: (Tag) -> Void
+    let onChangePerson: (Person) -> Void
     @State private var draft = ""
     @FocusState private var editing: Bool
     private static let dayStyle: Date.FormatStyle = {
@@ -780,8 +793,9 @@ struct InfoPanel: View {
                     }
                     Button(exif?.latitude == nil ? "Add Location…" : "Change Location…", action: onPlace)
                         .buttonStyle(.link)
+                    Tags(tags: detail.tags ?? [], onAdd: onAddTag, onRemove: onUntag)
                     if let people = detail.people, !people.isEmpty {
-                        People(people: people, onPerson: onPerson)
+                        People(people: people, onPerson: onPerson, onChange: onChangePerson)
                     }
                 } else {
                     ProgressView().frame(maxWidth: .infinity)
@@ -904,11 +918,35 @@ struct InfoPanel: View {
         }
     }
 
+    /// The photo's tags; ✕ takes one off.
+    private struct Tags: View {
+        let tags: [Tag]
+        let onAdd: () -> Void
+        let onRemove: (Tag) -> Void
+
+        var body: some View {
+            VStack(alignment: .leading, spacing: 8) {
+                Label("Tags", systemImage: "tag").foregroundStyle(.secondary)
+                ForEach(tags) { tag in
+                    HStack {
+                        Text(tag.value)
+                        Spacer()
+                        Button { onRemove(tag) } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(.tertiary) }
+                            .buttonStyle(.plain)
+                            .help("Remove Tag")
+                    }
+                }
+                Button("Add Tag…", action: onAdd).buttonStyle(.link)
+            }
+        }
+    }
+
     /// Everyone in the photo, named or not; click one for their photos.
     private struct People: View {
         @Environment(Library.self) private var library
         let people: [Person]
         let onPerson: (Person) -> Void
+        let onChange: (Person) -> Void
 
         var body: some View {
             VStack(alignment: .leading, spacing: 8) {
@@ -928,6 +966,7 @@ struct InfoPanel: View {
                     }
                     .buttonStyle(.plain)
                     .help("Show Their Photos")
+                    .contextMenu { Button("Change Person…") { onChange(person) } }
                 }
             }
         }

@@ -51,13 +51,13 @@ final class ThumbnailStore: @unchecked Sendable {
         return image
     }
 
-    /// Bytes on disk.
-    /// Drops a picture that changed on the server (a person's new profile photo), so the next request downloads it again.
+    /// Drops a picture that changed on the server (a new profile photo, a rotated photo), so the next request downloads it again.
     func forget(_ id: String) {
         try? FileManager.default.removeItem(at: file(id))
-        memory.removeObject(forKey: key(id, 0))
+        for pixels in [0, 128, 256] { memory.removeObject(forKey: key(id, pixels)) }
     }
 
+    /// Bytes on disk.
     func diskSize() -> Int {
         let files = FileManager.default.enumerator(at: dir, includingPropertiesForKeys: [.totalFileAllocatedSizeKey])
         return (files?.allObjects as? [URL] ?? []).reduce(0) {

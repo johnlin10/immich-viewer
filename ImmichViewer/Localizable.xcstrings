@@ -16,12 +16,6 @@
     },
     "%lld Stars": {
       "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld 顆星"
-          }
-        },
         "en": {
           "variations": {
             "plural": {
@@ -38,6 +32,12 @@
                 }
               }
             }
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 顆星"
           }
         }
       }
@@ -152,6 +152,26 @@
         }
       }
     },
+    "%lld tags": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 個標籤"
+          }
+        }
+      }
+    },
+    "A slash makes a tag inside another one.": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "用斜線可以把標籤放在另一個標籤底下。"
+          }
+        }
+      }
+    },
     "API Key": {
       "localizations": {
         "zh-Hant": {
@@ -168,6 +188,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "加入位置…"
+          }
+        }
+      }
+    },
+    "Add Tag": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "加入標籤"
+          }
+        }
+      }
+    },
+    "Add Tag…": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "加入標籤…"
           }
         }
       }
@@ -328,6 +368,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "更改位置…"
+          }
+        }
+      }
+    },
+    "Change Person": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更改人物"
+          }
+        }
+      }
+    },
+    "Change Person…": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更改人物…"
           }
         }
       }
@@ -538,6 +598,16 @@
         }
       }
     },
+    "Delete %lld Photos Permanently?": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "要永久刪除 %lld 張照片嗎？"
+          }
+        }
+      }
+    },
     "Delete %lld Photos?": {
       "localizations": {
         "zh-Hant": {
@@ -558,6 +628,36 @@
         }
       }
     },
+    "Delete Permanently": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "永久刪除"
+          }
+        }
+      }
+    },
+    "Delete Permanently…": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "永久刪除…"
+          }
+        }
+      }
+    },
+    "Delete Tag…": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "刪除標籤…"
+          }
+        }
+      }
+    },
     "Delete This Album?": {
       "localizations": {
         "zh-Hant": {
@@ -568,12 +668,32 @@
         }
       }
     },
+    "Delete This Photo Permanently?": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "要永久刪除這張照片嗎？"
+          }
+        }
+      }
+    },
     "Delete This Photo?": {
       "localizations": {
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
             "value": "要刪除這張照片嗎？"
+          }
+        }
+      }
+    },
+    "Delete This Tag?": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "要刪除這個標籤嗎？"
           }
         }
       }
@@ -598,12 +718,38 @@
         }
       }
     },
+    "Download": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下載"
+          }
+        }
+      }
+    },
     "Download and Install Updates Automatically": {
       "localizations": {
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
             "value": "自動下載並安裝更新"
+          }
+        }
+      }
+    },
+    "Downloading %lld of %lld": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Downloading %1$lld of %2$lld"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在下載第 %lld 個，共 %lld 個"
           }
         }
       }
@@ -686,6 +832,36 @@
           "stringUnit": {
             "state": "translated",
             "value": "編輯人物…"
+          }
+        }
+      }
+    },
+    "Empty Trash": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清空垃圾桶"
+          }
+        }
+      }
+    },
+    "Empty Trash…": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清空垃圾桶…"
+          }
+        }
+      }
+    },
+    "Empty the Trash?": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "要清空垃圾桶嗎？"
           }
         }
       }
@@ -780,6 +956,16 @@
         }
       }
     },
+    "Import…": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "輸入…"
+          }
+        }
+      }
+    },
     "In the Immich web UI, open Account Settings > API Keys and create a new key with asset.read, asset.view, person.read and album.read. To copy or drag out originals, also add asset.download (without it, the large preview is used). The key is kept in the keychain.": {
       "localizations": {
         "zh-Hant": {
@@ -856,6 +1042,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "標示影片（▶）"
+          }
+        }
+      }
+    },
+    "Merge People": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "合併人物"
+          }
+        }
+      }
+    },
+    "Merge With…": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "與…合併"
           }
         }
       }
@@ -940,6 +1146,16 @@
         }
       }
     },
+    "No Tags": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "沒有標籤"
+          }
+        }
+      }
+    },
     "No place found.": {
       "localizations": {
         "zh-Hant": {
@@ -991,6 +1207,7 @@
       }
     },
     "Open in Browser (Edit, Delete)": {
+      "extractionState": "stale",
       "localizations": {
         "zh-Hant": {
           "stringUnit": {
@@ -1080,6 +1297,16 @@
         }
       }
     },
+    "Remove Tag": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移除標籤"
+          }
+        }
+      }
+    },
     "Remove from Album": {
       "localizations": {
         "zh-Hant": {
@@ -1106,6 +1333,56 @@
           "stringUnit": {
             "state": "translated",
             "value": "從喜好項目移除（.）"
+          }
+        }
+      }
+    },
+    "Restore": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "復原"
+          }
+        }
+      }
+    },
+    "Restore All": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全部復原"
+          }
+        }
+      }
+    },
+    "Rotate": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "旋轉"
+          }
+        }
+      }
+    },
+    "Rotate Left": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "向左旋轉"
+          }
+        }
+      }
+    },
+    "Rotate Right": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "向右旋轉"
           }
         }
       }
@@ -1410,6 +1687,26 @@
         }
       }
     },
+    "Tag": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "標籤"
+          }
+        }
+      }
+    },
+    "Tags": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "標籤"
+          }
+        }
+      }
+    },
     "That isn’t a server address.": {
       "localizations": {
         "zh-Hant": {
@@ -1430,12 +1727,32 @@
         }
       }
     },
+    "The person you choose becomes %@: their photos move over and they are gone. This can’t be undone.": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你選的人物會併入「%@」：他們的照片會移過來，原本的人物會消失。此動作無法還原。"
+          }
+        }
+      }
+    },
     "The photos in it stay in your library.": {
       "localizations": {
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
             "value": "裡面的照片會留在圖庫中。"
+          }
+        }
+      }
+    },
+    "The photos with it stay in your library.": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有這個標籤的照片會保留在圖庫中。"
           }
         }
       }
@@ -1480,6 +1797,16 @@
         }
       }
     },
+    "This can’t be undone.": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此動作無法還原。"
+          }
+        }
+      }
+    },
     "This is the first photo’s date. All %lld photos move by the same amount.": {
       "localizations": {
         "zh-Hant": {
@@ -1506,6 +1833,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "縮圖存在這台 Mac 上，捲動時不必向伺服器要。清除後，照片會在下次顯示時重新下載；重新整理（⌘R）會一次全部補回。"
+          }
+        }
+      }
+    },
+    "Trash": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "垃圾桶"
+          }
+        }
+      }
+    },
+    "Trips/Japan": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "旅行/日本"
           }
         }
       }
@@ -1550,6 +1897,32 @@
         }
       }
     },
+    "Upload": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上傳"
+          }
+        }
+      }
+    },
+    "Uploading %lld of %lld": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Uploading %1$lld of %2$lld"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在上傳第 %lld 個，共 %lld 個"
+          }
+        }
+      }
+    },
     "Version": {
       "localizations": {
         "zh-Hant": {
@@ -1576,6 +1949,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "正在等待伺服器…"
+          }
+        }
+      }
+    },
+    "Who is this?": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "這是誰？"
           }
         }
       }

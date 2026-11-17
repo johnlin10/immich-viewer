@@ -14,6 +14,7 @@ final class Library {
     private(set) var syncing = false
     private(set) var people: [Person] = []
     private(set) var albums: [Album] = []
+    private(set) var tags: [Tag] = []
     /// Why people or albums couldn't be loaded (for example a key without `person.read`).
     private(set) var collectionsError: String?
     let thumbs: ThumbnailStore
@@ -201,6 +202,7 @@ final class Library {
             async let albums = api.albums()
             (self.people, self.albums) = try await (people, albums)
             collectionsError = nil
+            tags = (try? await api.tags()) ?? [] // a key without tag.read just shows no tags
         } catch {
             collectionsError = error.localizedDescription
         }
@@ -317,6 +319,21 @@ final class Library {
         if trashEnabled { register(undo, String(localized: "Delete")) { await $0.restore(ids, undo: undo) } }
     }
 
+    /// Gone for good, from the trash or (with the trash off) from anywhere.
+    func deleteForever(_ ids: [String]) async {
+        guard await change({ try await $0.send("DELETE", "assets", json: ["ids": ids, "force": true]) }) else { return }
+        let set = Set(ids)
+        patch { $0.removeAll { set.contains($0.id) } }
+    }
+
+    func emptyTrash() async {
+        _ = await change { try await $0.send("POST", "trash/empty") }
+    }
+
+    func restoreAll() async {
+        if await change({ try await $0.send("POST", "trash/restore") }) { await refresh() }
+    }
+
     func restore(_ ids: [String], undo: UndoManager?) async {
         guard await change({ try await $0.send("POST", "trash/restore/assets", json: ["ids": ids]) }) else { return }
         await refresh()
@@ -417,5 +434,125 @@ final class Library {
         guard await change({ try await $0.send("PUT", "people/\(person)", json: ["featureFaceAssetId": asset]) }) else { return }
         faces.forget(person)
         await loadCollections()
+    }
+
+    // MARK: Tags
+
+    /// Tags the photos with `name` ("Trips/Japan" nests), making the tag if it is new.
+    func tag(_ ids: [String], _ name: String, undo: UndoManager?) async {
+        var tag: Tag?
+        guard await change({ api in
+            tag = try JSONDecoder().decode([Tag].self, from: await api.send("PUT", "tags", json: ["tags": [name]])).first
+            if let tag { try await api.send("PUT", "tags/assets", json: ["tagIds": [tag.id], "assetIds": ids]) }
+        }), let tag else { return }
+        if let list = try? await api?.tags() { tags = list }
+        register(undo, String(localized: "Add Tag")) { await $0.untag(ids, tag, undo: undo) }
+    }
+
+    func untag(_ ids: [String], _ tag: Tag, undo: UndoManager?) async {
+        guard await change({ try await $0.send("DELETE", "tags/\(tag.id)/assets", json: ["ids": ids]) }) else { return }
+        register(undo, String(localized: "Remove Tag")) { await $0.tag(ids, tag.value, undo: undo) }
+    }
+
+    /// The tag goes; its photos stay.
+    func delete(_ tag: Tag) async {
+        if await change({ try await $0.send("DELETE", "tags/\(tag.id)") }) { tags.removeAll { $0.id == tag.id } }
+    }
+
+    // MARK: People
+
+    /// `others` become `person`: their faces move over and they are gone. Can't be undone.
+    func merge(_ others: [String], into person: String) async {
+        guard await change({ try await $0.send("POST", "people/\(person)/merge", json: ["ids": others]) }) else { return }
+        faces.forget(person)
+        await loadCollections()
+    }
+
+    /// A face in a photo is someone else's.
+    func reassign(face: String, to person: String, from old: String, undo: UndoManager?) async {
+        guard await change({ try await $0.send("PUT", "faces/\(face)", json: ["id": person]) }) else { return }
+        await loadCollections()
+        register(undo, String(localized: "Change Person")) { await $0.reassign(face: face, to: old, from: person, undo: undo) }
+    }
+
+    // MARK: Rotating, downloading and uploading
+
+    /// Turns photos `angle` degrees clockwise, on top of earlier edits. The server keeps the original file as it was.
+    func rotate(_ ids: [String], by angle: Int, undo: UndoManager?) async {
+        guard await change({ api in
+            for id in ids {
+                let old = (try JSONSerialization.jsonObject(with: await api.get("assets/\(id)/edits")) as? [String: Any])?["edits"]
+                var edits = (old as? [[String: Any]] ?? []).map { ["action": $0["action"] ?? "", "parameters": $0["parameters"] ?? [:]] }
+                let i = edits.firstIndex { $0["action"] as? String == "rotate" }
+                let was = i.flatMap { (edits[$0]["parameters"] as? [String: Any])?["angle"] as? Int } ?? 0
+                let now = ((was + angle) % 360 + 360) % 360
+                if let i { edits.remove(at: i) }
+                if now != 0 { edits.append(["action": "rotate", "parameters": ["angle": now]]) }
+                if edits.isEmpty {
+                    try await api.send("DELETE", "assets/\(id)/edits")
+                } else {
+                    try await api.send("PUT", "assets/\(id)/edits", json: ["edits": edits])
+                }
+            }
+        }) else { return }
+        register(undo, String(localized: "Rotate")) { await $0.rotate(ids, by: -angle, undo: undo) }
+        // ponytail: the server makes the new thumbnails in the background; one fixed wait, then they are fetched again
+        try? await Task.sleep(for: .seconds(3))
+        for id in ids {
+            api?.forgetCached(id)
+            thumbs.forget(id)
+        }
+        revision += 1
+        edits += 1
+    }
+
+    /// Saves the original files to Downloads and shows them in Finder.
+    func download(_ ids: [String]) async {
+        guard let api else { return }
+        var saved: [URL] = []
+        for (n, id) in ids.enumerated() {
+            status = String(localized: "Downloading \(n + 1) of \(ids.count)")
+            do {
+                let (file, name) = try await api.download(id)
+                let target = Self.unused(URL.downloadsDirectory.appending(path: name))
+                try FileManager.default.moveItem(at: file, to: target)
+                saved.append(target)
+            } catch {
+                editError = error.localizedDescription
+                break
+            }
+        }
+        status = String(localized: "\(assets.count) items")
+        if !saved.isEmpty { NSWorkspace.shared.activateFileViewerSelecting(saved) }
+    }
+
+    /// `url`, or "name 2.jpg", "name 3.jpg"… if that is taken.
+    private static func unused(_ url: URL) -> URL {
+        let folder = url.deletingLastPathComponent(), base = url.deletingPathExtension().lastPathComponent, ext = url.pathExtension
+        var url = url, n = 2
+        while FileManager.default.fileExists(atPath: url.path) {
+            url = folder.appending(path: ext.isEmpty ? "\(base) \(n)" : "\(base) \(n).\(ext)")
+            n += 1
+        }
+        return url
+    }
+
+    /// Uploads files (into `album` too, if given), then syncs. Files the server already has count as uploaded.
+    func upload(_ files: [URL], album: String?) async {
+        guard let api, !files.isEmpty else { return }
+        var ids: [String] = []
+        var failures: [String] = []
+        for (n, file) in files.enumerated() {
+            status = String(localized: "Uploading \(n + 1) of \(files.count)")
+            do {
+                ids.append(try await api.upload(file))
+            } catch {
+                failures.append("\(file.lastPathComponent): \(error.localizedDescription)")
+            }
+        }
+        if !failures.isEmpty { editError = failures.prefix(10).joined(separator: "\n") }
+        if let album, !ids.isEmpty { _ = await albumAssets("PUT", album, ids) }
+        edits += 1
+        await refresh()
     }
 }

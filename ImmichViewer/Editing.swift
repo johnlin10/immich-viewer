@@ -6,6 +6,9 @@ enum BrowserContext: Hashable {
     case library
     case person(String)
     case album(String)
+    case tag(String)
+    case archive
+    case trash
 }
 
 /// Something done to the chosen photos, from the right-click menu, the keyboard or the photo view.
@@ -21,6 +24,15 @@ enum PhotoAction {
     case removeFromAlbum
     case makeCover
     case makeProfilePhoto
+    case unarchive
+    case restore
+    case download
+    case addTag
+    case removeTag
+    /// Degrees clockwise.
+    case rotate(Int)
+    /// A face in the photo is someone else's.
+    case changePerson(face: String, from: String)
 }
 
 /// The chosen photos' menu: right-click in the grid, ⋯ in the photo view.
@@ -32,29 +44,47 @@ struct PhotoMenu: View {
     let perform: (PhotoAction) -> Void
 
     var body: some View {
-        Button(allFavorite ? "Remove from Favorites" : "Add to Favorites", systemImage: allFavorite ? "heart.slash" : "heart") {
-            perform(.favorite)
-        }
-        Menu("Add to Album", systemImage: "rectangle.stack.badge.plus") {
-            Button("New Album…") { perform(.newAlbum) }
+        if context == .trash {
+            Button("Restore", systemImage: "arrow.uturn.backward") { perform(.restore) }
+            Button("Download", systemImage: "arrow.down.circle") { perform(.download) }
             Divider()
-            ForEach(library.albums) { album in
-                Button(album.albumName) { perform(.add(album: album.id)) }
+            Button("Delete Permanently…", systemImage: "trash") { perform(.trash) }
+        } else {
+            Button(allFavorite ? "Remove from Favorites" : "Add to Favorites", systemImage: allFavorite ? "heart.slash" : "heart") {
+                perform(.favorite)
             }
+            Menu("Add to Album", systemImage: "rectangle.stack.badge.plus") {
+                Button("New Album…") { perform(.newAlbum) }
+                Divider()
+                ForEach(library.albums) { album in
+                    Button(album.albumName) { perform(.add(album: album.id)) }
+                }
+            }
+            Button("Add Tag…", systemImage: "tag") { perform(.addTag) }
+            if case .album = context {
+                Button("Remove from Album", systemImage: "rectangle.stack.badge.minus") { perform(.removeFromAlbum) }
+                if count == 1 { Button("Make Album Cover", systemImage: "photo.badge.checkmark") { perform(.makeCover) } }
+            }
+            if case .tag = context {
+                Button("Remove Tag", systemImage: "tag.slash") { perform(.removeTag) }
+            }
+            if case .person = context, count == 1 {
+                Button("Make Profile Photo", systemImage: "person.crop.circle") { perform(.makeProfilePhoto) }
+            }
+            Divider()
+            Button("Rotate Left", systemImage: "rotate.left") { perform(.rotate(270)) }
+            Button("Rotate Right", systemImage: "rotate.right") { perform(.rotate(90)) }
+            Button("Adjust Date and Time…", systemImage: "calendar") { perform(.adjustDate) }
+            Button("Set Location…", systemImage: "mappin.and.ellipse") { perform(.setLocation) }
+            Divider()
+            Button("Download", systemImage: "arrow.down.circle") { perform(.download) }
+            if context == .archive {
+                Button("Unarchive", systemImage: "archivebox") { perform(.unarchive) }
+            } else {
+                Button("Archive", systemImage: "archivebox") { perform(.archive) }
+            }
+            Button("Delete…", systemImage: "trash") { perform(.trash) }
         }
-        if case .album = context {
-            Button("Remove from Album", systemImage: "rectangle.stack.badge.minus") { perform(.removeFromAlbum) }
-            if count == 1 { Button("Make Album Cover", systemImage: "photo.badge.checkmark") { perform(.makeCover) } }
-        }
-        if case .person = context, count == 1 {
-            Button("Make Profile Photo", systemImage: "person.crop.circle") { perform(.makeProfilePhoto) }
-        }
-        Divider()
-        Button("Adjust Date and Time…", systemImage: "calendar") { perform(.adjustDate) }
-        Button("Set Location…", systemImage: "mappin.and.ellipse") { perform(.setLocation) }
-        Divider()
-        Button("Archive", systemImage: "archivebox") { perform(.archive) }
-        Button("Delete…", systemImage: "trash") { perform(.trash) }
     }
 }
 
@@ -68,6 +98,10 @@ enum EditSheet: Identifiable {
     case newAlbum([String])
     case editAlbum(Album)
     case editPerson(Person)
+    case tag([String])
+    /// Someone else becomes this person.
+    case merge(Person)
+    case changePerson(face: String, from: String)
 
     var id: String {
         switch self {
@@ -76,6 +110,9 @@ enum EditSheet: Identifiable {
         case .newAlbum(let ids): "album" + (ids.first ?? "")
         case .editAlbum(let album): "album" + album.id
         case .editPerson(let person): "person" + person.id
+        case .tag(let ids): "tag" + (ids.first ?? "")
+        case .merge(let person): "merge" + person.id
+        case .changePerson(let face, _): "face" + face
         }
     }
 }
@@ -107,6 +144,19 @@ extension View {
             case let .editPerson(person):
                 PersonSheet(person: person) { new in
                     Task { await library.update(new, was: person, undo: undo) }
+                }
+            case let .tag(ids):
+                TagSheet(tags: library.tags) { name in
+                    Task { await library.tag(ids, name, undo: undo) }
+                }
+            case let .merge(person):
+                PersonPicker(title: "Merge People", note: "The person you choose becomes \(person.name.isEmpty ? String(localized: "Unnamed") : person.name): their photos move over and they are gone. This can’t be undone.",
+                             people: library.people.filter { $0.id != person.id }) { other in
+                    Task { await library.merge([other.id], into: person.id) }
+                }
+            case let .changePerson(face, old):
+                PersonPicker(title: "Change Person", note: "Who is this?", people: library.people.filter { $0.id != old }) { new in
+                    Task { await library.reassign(face: face, to: new.id, from: old, undo: undo) }
                 }
             }
         }
@@ -257,6 +307,59 @@ private struct PersonSheet: View {
             new.name = name.trimmingCharacters(in: .whitespaces)
             new.birthDate = hasBirthday ? birthday.formatted(Self.day) : nil
             onSave(new)
+        }
+    }
+}
+
+/// A tag name, new or one of the existing ones.
+private struct TagSheet: View {
+    let tags: [Tag]
+    let onSave: (String) -> Void
+    @State private var name = ""
+
+    var body: some View {
+        Form {
+            TextField("Tag", text: $name, prompt: Text("Trips/Japan"))
+                .textInputSuggestions {
+                    ForEach(tags.filter { name.isEmpty || $0.value.localizedCaseInsensitiveContains(name) }.prefix(12)) {
+                        Text($0.value).textInputCompletion($0.value)
+                    }
+                }
+            Text("A slash makes a tag inside another one.").font(.callout).foregroundStyle(.secondary)
+        }
+        .frame(width: 360)
+        .sheetButtons(title: "Add Tag", canSave: !name.trimmingCharacters(in: .whitespaces).isEmpty) {
+            onSave(name.trimmingCharacters(in: .whitespaces))
+        }
+    }
+}
+
+/// Picks one person, by face and name.
+private struct PersonPicker: View {
+    let title: LocalizedStringKey
+    let note: LocalizedStringKey
+    let people: [Person]
+    let onSave: (Person) -> Void
+    @Environment(Library.self) private var library
+    @State private var chosen: Person.ID?
+    @State private var query = ""
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(note).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            TextField("Search", text: $query)
+            List(people.filter { query.isEmpty || $0.name.localizedCaseInsensitiveContains(query) }, selection: $chosen) { person in
+                HStack(spacing: 8) {
+                    Thumb(id: person.id, store: library.faces).frame(width: 28, height: 28).clipShape(Circle())
+                    Text(person.name.isEmpty ? String(localized: "Unnamed") : person.name)
+                        .foregroundStyle(person.name.isEmpty ? .secondary : .primary)
+                }
+            }
+            .frame(height: 300)
+        }
+        .frame(width: 360)
+        .sheetButtons(title: title, canSave: chosen != nil) {
+            if let person = people.first(where: { $0.id == chosen }) { onSave(person) }
         }
     }
 }

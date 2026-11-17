@@ -23,6 +23,7 @@ struct PeopleGrid: View {
                     .buttonStyle(.plain)
                     .contextMenu {
                         Button("Edit Person…") { sheet = .editPerson(person) }
+                        Button("Merge With…") { sheet = .merge(person) }
                         Button("Hide Person") { Task { await library.update(person, hidden: true, was: person, undo: undo) } }
                     }
                 }
@@ -88,6 +89,30 @@ struct AlbumGrid: View {
     }
 }
 
+/// Every tag by its full path. Click one for its photos.
+struct TagList: View {
+    @Environment(Library.self) private var library
+    @State private var deleting: Tag?
+
+    var body: some View {
+        List(library.tags) { tag in
+            NavigationLink(value: tag) { Label(tag.value, systemImage: "tag") }
+                .contextMenu { Button("Delete Tag…") { deleting = tag } }
+        }
+        .alert("Delete This Tag?", isPresented: Binding { deleting != nil } set: { if !$0 { deleting = nil } }) {
+            Button("Delete", role: .destructive) {
+                if let tag = deleting { Task { await library.delete(tag) } }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("The photos with it stay in your library.")
+        }
+        .overlay { if library.tags.isEmpty { ContentUnavailableView("No Tags", systemImage: "tag") } }
+        .navigationTitle("Tags")
+        .navigationSubtitle("\(library.tags.count) tags")
+    }
+}
+
 /// One person's or album's photos in the usual grid, loaded when the page opens and again after each change.
 struct CollectionTimeline: View {
     @Environment(Library.self) private var library
@@ -102,7 +127,8 @@ struct CollectionTimeline: View {
         let name = switch context {
         case .person(let id): library.people.first { $0.id == id }?.name ?? fallbackTitle
         case .album(let id): library.albums.first { $0.id == id }?.albumName ?? fallbackTitle
-        case .library: fallbackTitle
+        case .tag(let id): library.tags.first { $0.id == id }?.value ?? fallbackTitle
+        case .library, .archive, .trash: fallbackTitle
         }
         return name.isEmpty ? String(localized: "Unnamed") : name
     }
@@ -111,7 +137,10 @@ struct CollectionTimeline: View {
         switch context {
         case .person(let id): ["personId": id, "visibility": "timeline"]
         case .album(let id): ["albumId": id]
+        case .tag(let id): ["tagId": id]
         case .library: ["visibility": "timeline"]
+        case .archive: ["visibility": "archive"]
+        case .trash: ["isTrashed": "true"]
         }
     }
 

@@ -17,6 +17,7 @@ struct ImmichViewerApp: App {
                 Button("Check for Updates…") { updates.checkForUpdates(nil) }
             }
             ViewCommands(library: library)
+            ImportCommands(library: library)
             ServerCommands(library: library)
         }
         Settings {
@@ -31,6 +32,8 @@ struct BrowserActions {
     var toTop: () -> Void
     var toBottom: () -> Void
     var askDate: () -> Void
+    /// Uploads go into this album too.
+    var album: String?
 }
 
 extension FocusedValues {
@@ -85,6 +88,27 @@ struct ViewCommands: Commands {
     }
 }
 
+/// File > Import…: uploads files to the server, into the open album if there is one.
+struct ImportCommands: Commands {
+    let library: Library
+    @FocusedValue(\.browser) private var browser
+
+    var body: some Commands {
+        CommandGroup(after: .newItem) {
+            Button("Import…") {
+                let panel = NSOpenPanel()
+                panel.allowsMultipleSelection = true
+                panel.allowedContentTypes = [.image, .movie]
+                panel.prompt = String(localized: "Upload")
+                guard panel.runModal() == .OK else { return }
+                Task { await library.upload(panel.urls, album: browser?.album) }
+            }
+            .keyboardShortcut("i", modifiers: [.command, .shift])
+            .disabled(library.api == nil)
+        }
+    }
+}
+
 /// The Server menu: the start and stop commands from Settings > Server.
 struct ServerCommands: Commands {
     let library: Library
@@ -110,16 +134,14 @@ struct ServerCommands: Commands {
 
 /// The sidebar's pages.
 enum Page: Hashable {
-    case library, people, albums
+    case library, people, albums, tags, archive, trash
 }
 
 struct ContentView: View {
     @Environment(Library.self) private var library
     @State private var page: Page? = .library
     /// What's open on top of each page; back returns to where you were.
-    @State private var libraryPath: [Person] = []
-    @State private var personPath: [Person] = []
-    @State private var albumPath = NavigationPath()
+    @State private var paths: [Page: NavigationPath] = [:]
     @AppStorage("appearance") private var appearance = "system"
 
     var body: some View {
@@ -132,36 +154,27 @@ struct ContentView: View {
                         Label("Library", systemImage: "photo.on.rectangle").tag(Page.library)
                         Label("People", systemImage: "person.crop.circle").tag(Page.people)
                         Label("Albums", systemImage: "rectangle.stack").tag(Page.albums)
+                        Label("Tags", systemImage: "tag").tag(Page.tags)
+                        Label("Archive", systemImage: "archivebox").tag(Page.archive)
+                        Label("Trash", systemImage: "trash").tag(Page.trash)
                     }
                     .navigationSplitViewColumnWidth(min: 150, ideal: 180, max: 260)
                 } detail: {
-                    switch page ?? .library {
-                    case .library:
-                        NavigationStack(path: $libraryPath) {
-                            TimelineBrowser(title: String(localized: "Library"), subtitle: library.status, assets: library.assets,
-                                            revision: library.revision, context: .library)
-                                .navigationDestination(for: Person.self, destination: personPage)
-                        }
-                    case .people:
-                        NavigationStack(path: $personPath) {
-                            PeopleGrid().navigationDestination(for: Person.self, destination: personPage)
-                        }
-                    case .albums:
-                        NavigationStack(path: $albumPath) {
-                            AlbumGrid()
-                                .navigationDestination(for: Album.self) { album in
-                                    CollectionTimeline(context: .album(album.id), fallbackTitle: album.albumName)
-                                }
-                                .navigationDestination(for: Person.self, destination: personPage)
-                        }
+                    let current = page ?? .library
+                    NavigationStack(path: Binding { paths[current] ?? NavigationPath() } set: { paths[current] = $0 }) {
+                        root(current)
+                            .navigationDestination(for: Person.self) {
+                                CollectionTimeline(context: .person($0.id), fallbackTitle: $0.name)
+                            }
+                            .navigationDestination(for: Album.self) {
+                                CollectionTimeline(context: .album($0.id), fallbackTitle: $0.albumName)
+                            }
+                            .navigationDestination(for: Tag.self) {
+                                CollectionTimeline(context: .tag($0.id), fallbackTitle: $0.value)
+                            }
                     }
-                }
-                .environment(\.showPerson) { person in
-                    switch page ?? .library {
-                    case .library: libraryPath.append(person)
-                    case .people: personPath.append(person)
-                    case .albums: albumPath.append(person)
-                    }
+                    .id(current) // each page its own stack
+                    .environment(\.showPerson) { paths[current, default: NavigationPath()].append($0) }
                 }
             }
         }
@@ -175,8 +188,17 @@ struct ContentView: View {
         .onChange(of: appearance, initial: true) { applyAppearance(appearance) }
     }
 
-    private func personPage(_ person: Person) -> some View {
-        CollectionTimeline(context: .person(person.id), fallbackTitle: person.name)
+    @ViewBuilder private func root(_ page: Page) -> some View {
+        switch page {
+        case .library:
+            TimelineBrowser(title: String(localized: "Library"), subtitle: library.status, assets: library.assets,
+                            revision: library.revision, context: .library)
+        case .people: PeopleGrid()
+        case .albums: AlbumGrid()
+        case .tags: TagList()
+        case .archive: CollectionTimeline(context: .archive, fallbackTitle: String(localized: "Archive"))
+        case .trash: CollectionTimeline(context: .trash, fallbackTitle: String(localized: "Trash"))
+        }
     }
 }
 
@@ -204,6 +226,8 @@ struct TimelineBrowser: View {
     @State private var sheet: EditSheet?
     /// Photos waiting for Delete to be confirmed.
     @State private var trashing: [String]?
+    /// Photos waiting for Delete Permanently to be confirmed; empty for the whole trash.
+    @State private var purging: [String]?
     @State private var deletingAlbum = false
     @Environment(\.undoManager) private var undo
     @Environment(\.dismiss) private var dismiss
@@ -281,7 +305,8 @@ struct TimelineBrowser: View {
             viewerOpen: viewer != nil,
             toTop: { bridge.jump(to: 0) },
             toBottom: { bridge.jump(to: grid.assets.count - 1) },
-            askDate: { askingDate = true }))
+            askDate: { askingDate = true },
+            album: album?.id))
         .sheet(isPresented: $askingDate) {
             JumpToDate(assets: grid.assets, current: bridge.top) { if let i = index(of: $0, in: grid.assets) { bridge.jump(to: i) } }
         }
@@ -296,6 +321,17 @@ struct TimelineBrowser: View {
             Text(library.trashEnabled
                  ? "They go to the server’s trash, which keeps them for 30 days unless the server is set otherwise. ⌘Z puts them back."
                  : "The server’s trash is turned off, so they are deleted for good.")
+        }
+        .alert(purging?.isEmpty == true ? "Empty the Trash?" : purging?.count == 1 ? "Delete This Photo Permanently?"
+               : "Delete \(purging?.count ?? 0) Photos Permanently?",
+               isPresented: Binding { purging != nil } set: { if !$0 { purging = nil } }) {
+            Button(purging?.isEmpty == true ? "Empty Trash" : "Delete Permanently", role: .destructive) {
+                guard let ids = purging else { return }
+                Task { ids.isEmpty ? await library.emptyTrash() : await library.deleteForever(ids) }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This can’t be undone.")
         }
         .alert("Delete This Album?", isPresented: $deletingAlbum) {
             Button("Delete", role: .destructive) {
@@ -331,12 +367,18 @@ struct TimelineBrowser: View {
         if let person {
             Divider()
             Button("Edit Person…") { sheet = .editPerson(person) }
+            Button("Merge With…") { sheet = .merge(person) }
             Button("Hide Person") {
                 Task {
                     await library.update(person, hidden: true, was: person, undo: undo)
                     dismiss()
                 }
             }
+        }
+        if context == .trash {
+            Divider()
+            Button("Restore All") { Task { await library.restoreAll() } }
+            Button("Empty Trash…") { purging = [] }
         }
     }
 
@@ -349,7 +391,18 @@ struct TimelineBrowser: View {
             let all = indices.allSatisfy { grid.assets[$0].isFavorite == true }
             Task { await library.favorite(ids, !all, undo: undo) }
         case .archive: Task { await library.archive(ids, true, undo: undo) }
-        case .trash: trashing = ids
+        case .trash:
+            if context == .trash { purging = ids } else { trashing = ids }
+        case .unarchive: Task { await library.archive(ids, false, undo: undo) }
+        case .restore: Task { await library.restore(ids, undo: undo) }
+        case .download: Task { await library.download(ids) }
+        case .addTag: sheet = .tag(ids)
+        case .removeTag:
+            if case .tag(let id) = context, let tag = library.tags.first(where: { $0.id == id }) {
+                Task { await library.untag(ids, tag, undo: undo) }
+            }
+        case .rotate(let angle): Task { await library.rotate(ids, by: angle, undo: undo) }
+        case let .changePerson(face, old): sheet = .changePerson(face: face, from: old)
         case .add(let album): Task { await library.add(ids, to: album, undo: undo) }
         case .newAlbum: sheet = .newAlbum(ids)
         case .adjustDate: sheet = .date(ids, grid.assets[first].date)

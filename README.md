@@ -8,7 +8,7 @@ It keeps every small thumbnail (about 15 KB each) on this Mac, so scrolling read
 
 ## What it does (v0.6)
 
-- A sidebar with Library, People and Albums.
+- A sidebar with Library, People, Albums, Tags, Archive and Trash.
 - People: everyone Immich recognised (hidden people left out) as round faces; click one for their photos.
 - Albums: own and shared albums as covers with name and count, newest first; click one for its photos.
 - Person and album photos use the same grid, zoom, grouping and single photo view as the library, with a back button. A person opened from a photo opens on top of the page you were on, so back returns to the same place in the Library, an album or another person. While a photo is open only ✕ shows, which closes the photo.
@@ -32,14 +32,20 @@ It keeps every small thumbnail (about 15 KB each) on this Mac, so scrolling read
 Changes go straight to the server and show in the app right away. Edit > Undo (⌘Z) takes back the last one, and Redo puts it back. If the server refuses a change (for example a key without the permission), an alert shows its message.
 
 - Choose photos in the grid: ⌘-click adds or removes one, ⇧-click adds everything up to the clicked photo, ⌘A chooses all. The title shows how many are chosen. A plain click chooses just that photo.
-- Right-click a photo (or the chosen ones) for: Add to / Remove from Favorites, Add to Album (or a New Album… with them), Adjust Date and Time…, Set Location…, Archive and Delete…. In an album also Remove from Album and Make Album Cover; on a person's page Make Profile Photo.
+- Right-click a photo (or the chosen ones) for: Add to / Remove from Favorites, Add to Album (or a New Album… with them), Add Tag…, Rotate Left / Right, Adjust Date and Time…, Set Location…, Download, Archive and Delete…. In an album also Remove from Album and Make Album Cover; on a tag's page Remove Tag; on a person's page Make Profile Photo.
 - Keys in the grid and the single photo view: . (period) toggles Favorite, ⌘⌫ deletes.
 - Delete asks first. Deleted photos go to the server's trash (Immich keeps them 30 days by default), and Undo brings them back. If the server has the trash turned off, the alert says the deletion is permanent and there is no undo.
-- Archived photos leave the timeline, like in Immich.
+- Archived photos leave the timeline, like in Immich, and show on the Archive page, where the menu has Unarchive.
+- Trash page: right-click for Restore and Delete Permanently…; the ⋯ menu has Restore All and Empty Trash…. Permanent deletion asks first and can't be undone.
+- Tags: Add Tag… takes a new or existing tag (a slash nests it, like "Trips/Japan"). The Tags page lists them; click one for its photos, right-click to delete it. The info panel shows a photo's tags, ✕ removes one.
+- Rotate: the server keeps the original file and stores the turn as an edit (newer Immich servers only), then makes new thumbnails, which the app fetches again after a few seconds.
+- Download saves the original files to the Downloads folder (a name already there gets " 2") and shows them in Finder.
+- File > Import… (⇧⌘I) uploads photos and videos. On an album's page they go into that album too. Files the server already has aren't uploaded twice.
 - Adjust Date and Time: the first photo gets the new date and time, and the other chosen photos move by the same amount.
 - Set Location: search for a place, or click the map to put the pin.
 - In the single photo view, the info panel edits the description (saved on Return or when leaving the field) and the rating (click a star; click it again to clear), and the date and the place open their sheets. The ⋯ button has the same menu as a right-click, plus Open in Browser.
-- People: right-click a face on the People page for Edit Person… (name and birthday) and Hide Person. On a person's page the same are in the ⋯ menu.
+- People: right-click a face on the People page for Edit Person… (name and birthday), Merge With… and Hide Person. On a person's page the same are in the ⋯ menu. Merge With… picks someone who becomes this person (their photos move over); it can't be undone.
+- A face recognised as the wrong person: in the info panel, right-click the person and choose Change Person….
 - Albums: + on the Albums page makes a new album. Right-click a cover, or use ⋯ on the album's page, for Edit Album… (name and description) and Delete Album…. Deleting an album keeps its photos.
 
 ### Single photo view
@@ -64,7 +70,7 @@ Changes go straight to the server and show in the app right away. Edit > Undo (�
 
 ## Setup
 
-1. In the Immich web UI, open Account Settings > API Keys and create a new key. Browsing needs `asset.read`, `asset.view`, `person.read` and `album.read`; add `asset.download` if you want zooming, copying and dragging out to use the originals. Editing needs `asset.update`, `asset.delete`, `person.update`, `album.create`, `album.update`, `album.delete`, `albumAsset.create` and `albumAsset.delete`. Leave out the ones you don't want: those changes then fail with the server's message. A key with all permissions works too.
+1. In the Immich web UI, open Account Settings > API Keys and create a new key. Browsing needs `asset.read`, `asset.view`, `person.read` and `album.read`; add `asset.download` if you want zooming, copying and dragging out to use the originals. Editing needs `asset.update`, `asset.delete`, `asset.upload`, `asset.download`, `tag.*`, `person.update`, `person.merge`, `face.update`, `album.create`, `album.update`, `album.delete`, `albumAsset.create` and `albumAsset.delete`. Leave out the ones you don't want: those changes then fail with the server's message. A key with all permissions works too.
 2. Download the DMG from the [Releases page](https://github.com/johnlin10/immich-viewer/releases) and drag the app to Applications, or open `ImmichViewer.xcodeproj` in Xcode and run it (⌘R). The app is signed with a development certificate only, so the first time macOS blocks it: open System Settings > Privacy & Security and click Open Anyway.
 3. Enter the server address and the key. The key is saved in the login keychain. Change it later in Settings (⌘,).
 
@@ -141,11 +147,18 @@ swiftc ImmichViewer/TimelineModel.swift ImmichViewer/ThumbnailStore.swift Immich
 
 Searching, map, memories, Simplified Chinese interface, and noticing deletions made in the browser until the next refresh. Thumbnails of deleted photos stay in the cache.
 
-Planned editing: a Trash page, tags, merging people and moving faces, crop and rotate, downloading and uploading, then stacks, sharing, duplicates and memories.
+Planned editing: cropping, dropping files on the window to upload, then stacks, sharing, duplicates and memories.
 
 ## Version history
 
-### v0.6.1 (current)
+### v0.6.2 (current)
+
+- Archive, Trash and Tags pages. Restore, delete permanently, empty the trash.
+- Add and remove tags, rotate photos, download originals, upload with File > Import….
+- Merge people, and move a face to the right person.
+- With Show Whole Photos on, opening and closing a photo animates from the whole photo, not the filled square.
+
+### v0.6.1
 
 - Faces of the people in a photo in the bottom left corner of the single photo view.
 - Opening a person from a photo keeps your place: back returns to the Library (or album) where you were. In a person's or album's photo, ✕ is the only button on the left, so it can't jump back two pages.

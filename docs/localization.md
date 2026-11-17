@@ -76,6 +76,13 @@ Use the same word everywhere in a language. Taiwan and mainland terms differ, so
 | Adjust Date and Time… | 調整日期與時間… | 调整日期与时间… |
 | Set Location… | 設定位置… | 设置位置… |
 | Album cover | 相簿封面 | 相册封面 |
+| Tag | 標籤 | 标签 |
+| Restore (from Trash) | 復原 | 恢复 |
+| Delete Permanently | 永久刪除 | 永久删除 |
+| Import… (upload) | 輸入… | 导入… |
+| Download | 下載 | 下载 |
+| Rotate Left / Right | 向左 / 向右旋轉 | 向左 / 向右旋转 |
+| Merge (people) | 合併 | 合并 |
 
 ## Layout to check in each language
 
