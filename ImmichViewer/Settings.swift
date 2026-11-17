@@ -1,13 +1,15 @@
 import AppKit
+import Sparkle
 import SwiftUI
 
 /// The Settings window (⌘,).
 struct SettingsView: View {
+    let updater: SPUUpdater
     @AppStorage("settingsTab") private var tab = "general"
 
     var body: some View {
         TabView(selection: $tab) {
-            Tab("General", systemImage: "gearshape", value: "general") { GeneralSettings() }
+            Tab("General", systemImage: "gearshape", value: "general") { GeneralSettings(updater: updater) }
             Tab("Video", systemImage: "play.rectangle", value: "video") { VideoSettings() }
             Tab("Storage", systemImage: "internaldrive", value: "storage") { StorageSettings() }
             Tab("Connection", systemImage: "network", value: "connection") { ConnectionForm().padding(20) }
@@ -27,6 +29,10 @@ func applyAppearance(_ value: String) {
 }
 
 private struct GeneralSettings: View {
+    let updater: SPUUpdater
+    // Sparkle keeps these in its own preferences; copied here so the switches redraw
+    @State private var checkUpdates = false
+    @State private var installUpdates = false
     @AppStorage("appearance") private var appearance = "system"
     @AppStorage("gridSpacing") private var spacing = 1.0
     @AppStorage("cornerRadius") private var radius = 0.0
@@ -58,9 +64,24 @@ private struct GeneralSettings: View {
                 Toggle("Show Whole Photos", isOn: $fit)
                 Toggle("Mark Videos (▶)", isOn: $badge)
             }
+
+            SwiftUI.Section("Updates") {
+                Toggle("Check for Updates Automatically", isOn: $checkUpdates)
+                    .onChange(of: checkUpdates) { updater.automaticallyChecksForUpdates = checkUpdates }
+                Toggle("Download and Install Updates Automatically", isOn: $installUpdates)
+                    .onChange(of: installUpdates) { updater.automaticallyDownloadsUpdates = installUpdates }
+                    .disabled(!checkUpdates)
+                LabeledContent("Version") {
+                    Text(verbatim: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "")
+                }
+            }
         }
         .formStyle(.grouped)
         .fixedSize(horizontal: false, vertical: true)
+        .onAppear {
+            checkUpdates = updater.automaticallyChecksForUpdates
+            installUpdates = updater.automaticallyDownloadsUpdates
+        }
     }
 }
 

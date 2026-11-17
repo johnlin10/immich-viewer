@@ -5,7 +5,7 @@ app = defines["app"]  # staged "Immich Viewer.app"
 format = "UDZO"
 files = [app]
 symlinks = {"Applications": "/Applications"}
-hide_extensions = ["Immich Viewer.app"]
+# no hide_extensions: it sets Finder info on the bundle, which fails `codesign --verify --strict`
 
 background = "scripts/dmg-background.tiff"  # 660×400 pt, 1x and 2x
 window_rect = ((200, 120), (660, 400))

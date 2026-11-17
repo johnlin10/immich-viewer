@@ -4,7 +4,7 @@
 set -euo pipefail
 cd "${0:A:h}/.."
 
-xcodebuild -project ImmichViewer.xcodeproj -scheme ImmichViewer -configuration Release -derivedDataPath build build | grep -E " error|BUILD"
+xcodebuild -project ImmichViewer.xcodeproj -scheme ImmichViewer -configuration Release -destination 'generic/platform=macOS' -derivedDataPath build build | grep -E " error|BUILD"
 app=build/Build/Products/Release/ImmichViewer.app
 version=$(plutil -extract CFBundleShortVersionString raw "$app/Contents/Info.plist")
 dmg=build/ImmichViewer-$version.dmg

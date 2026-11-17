@@ -9,6 +9,14 @@
 		<key>NSAllowsArbitraryLoads</key>
 		<true/>
 	</dict>
+	<!-- Sparkle updates: the feed scripts/release.sh attaches to every GitHub Release, and the public half of the signing key
+	     (the private half is in the release machine's keychain, account "immich-viewer") -->
+	<key>SUFeedURL</key>
+	<string>https://github.com/johnlin10/immich-viewer/releases/latest/download/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>fAp20C77IDuVr3IqKWAyICo1UsjjH73/gqASO7ArtiI=</string>
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
 	<!-- shown in the Local Network permission prompt (translated in InfoPlist.xcstrings) -->
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Immich Viewer connects to your Immich server on the local network.</string>

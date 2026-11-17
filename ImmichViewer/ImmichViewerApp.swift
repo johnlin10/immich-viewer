@@ -1,19 +1,25 @@
+import Sparkle
 import SwiftUI
 
 @main
 struct ImmichViewerApp: App {
     @State private var library = Library()
+    /// Sparkle: checks the feed in Info.plist (SUFeedURL) about once a day and installs signed updates.
+    private let updates = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
 
     var body: some Scene {
         WindowGroup {
             ContentView().environment(library)
         }
         .commands {
+            CommandGroup(after: .appInfo) {
+                Button("Check for Updates…") { updates.checkForUpdates(nil) }
+            }
             ViewCommands(library: library)
             ServerCommands(library: library)
         }
         Settings {
-            SettingsView().environment(library)
+            SettingsView(updater: updates.updater).environment(library)
         }
     }
 }

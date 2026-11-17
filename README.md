@@ -6,7 +6,7 @@ It keeps every small thumbnail (about 15 KB each) on this Mac, so scrolling read
 
 > **Language:** English and Traditional Chinese, following the macOS language (or the per-app language in System Settings > General > Language & Region). Simplified Chinese is planned; see [docs/localization.md](docs/localization.md).
 
-## What it does (v0.3)
+## What it does (v0.4)
 
 - A sidebar with Library, People and Albums.
 - People: everyone Immich recognised (hidden people left out) as round faces; click one for their photos.
@@ -38,7 +38,7 @@ It keeps every small thumbnail (about 15 KB each) on this Mac, so scrolling read
 
 ### Settings (⌘,)
 
-- General: appearance (System, Light, Dark); photo grid sort order (Newest First, Oldest First), spacing, corner radius, Show Whole Photos, Mark Videos (▶).
+- General: appearance (System, Light, Dark); photo grid sort order (Newest First, Oldest First), spacing, corner radius, Show Whole Photos, Mark Videos (▶); updates (check automatically, download and install automatically) and the version.
 - Video: Play Automatically, Start Muted, Loop.
 - Storage: thumbnail and face cache size, Show in Finder, Clear Cache… (thumbnails download again when shown, or all at once with ⌘R).
 - Connection: server address and API key. Connect tries them first and says what's wrong (server not reachable, wrong port, key not accepted, missing permission); the key is only saved once it works.
@@ -47,7 +47,7 @@ It keeps every small thumbnail (about 15 KB each) on this Mac, so scrolling read
 ## Setup
 
 1. In the Immich web UI, open Account Settings > API Keys and create a new key with only `asset.read`, `asset.view`, `person.read` and `album.read`. Add `asset.download` if you want zooming, copying and dragging out to use the originals.
-2. Open `ImmichViewer.xcodeproj` in Xcode and run it (⌘R), or install the DMG from the Releases page.
+2. Download the DMG from the [Releases page](https://github.com/johnlin10/immich-viewer/releases) and drag the app to Applications, or open `ImmichViewer.xcodeproj` in Xcode and run it (⌘R). The app is signed with a development certificate only, so the first time macOS blocks it: open System Settings > Privacy & Security and click Open Anyway.
 3. Enter the server address and the key. The key is saved in the login keychain. Change it later in Settings (⌘,).
 
 The first sync downloads all thumbnails, about 2.5 GB for 165,000 items. Progress shows under the window title.
@@ -77,6 +77,10 @@ SSH needs key login (no password prompt), for example with `ssh-copy-id nas`. If
 - Two switches: start the server when the app opens (only if it isn't answering), and stop it when the app quits (only if the app started it, so a server that was already running for phone backups stays up).
 - If a command fails, its output shows in Settings > Server.
 
+### Updates
+
+From v0.4 the app updates itself with [Sparkle](https://sparkle-project.org): it checks about once a day, shows what's new and installs the update when you agree (Immich Viewer > Check for Updates… checks right away). Settings > General can turn the checks off or install updates without asking. Each update is signed, and the app only installs one signed with this project's key. Versions before v0.4 don't have this; install v0.4 once by hand.
+
 ## Where data is kept
 
 - Thumbnails: `~/Library/Caches/ImmichViewer/thumbnails` (faces in `.../faces`)
@@ -97,6 +101,8 @@ swiftc ImmichViewer/TimelineModel.swift ImmichViewer/ThumbnailStore.swift Immich
 ```
 
 - Installer: `scripts/make-dmg.sh` builds Release and makes `build/ImmichViewer-<version>.dmg`, a window with the app, an Applications shortcut and a background (`scripts/dmg-background.tiff`) that says to drag it across. It needs [uv](https://docs.astral.sh/uv/) (`brew install uv`), which runs dmgbuild; the layout is in `scripts/dmg-settings.py`. The app is signed with a development certificate only, so on another Mac it has to be allowed once in System Settings > Privacy & Security.
+- Releasing: commit with the new `MARKETING_VERSION` (the build number follows it, since Sparkle compares that), push, then run `scripts/release.sh notes.md` in Terminal. It builds the DMG, signs it into the update feed `appcast.xml` (keeping the earlier entries from the latest Release) and publishes GitHub Release `vX.Y.Z` with the DMG, the feed and the notes. The app reads the feed from `releases/latest/download/appcast.xml`, so the newest Release is always the feed. `DRY_RUN=1` stops before publishing.
+- Update signing key: made once with Sparkle's `generate_keys --account immich-viewer`; the private key is in the login keychain, the public key is `SUPublicEDKey` in `Info.plist`. Back it up (`generate_keys --account immich-viewer -x <file>`, kept somewhere safe and never in the repo): without it, installed copies can't be updated any more. The first `release.sh` run asks for keychain access; allow it.
 
 | File | Contents |
 |---|---|
@@ -118,7 +124,12 @@ Searching, map, memories, Simplified Chinese interface, and noticing deletions m
 
 ## Version history
 
-### v0.3 (current)
+### v0.4 (current)
+
+- Updates inside the app with Sparkle: automatic checks, Check for Updates…, release notes, install and relaunch. `scripts/release.sh` publishes a version.
+- The DMG runs on Intel Macs too (until v0.3 it was Apple silicon only).
+
+### v0.3
 
 - Start and stop commands for the server (Settings > Server, Server menu), optionally run when the app opens and quits.
 - Servers on other computers: addresses without `http://`, plain `http` to any host, the Local Network permission, and Connect checks the address and key before saving.
