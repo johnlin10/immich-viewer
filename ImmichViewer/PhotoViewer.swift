@@ -19,9 +19,14 @@ struct ViewerState {
 struct PhotoViewer: View {
     let library: Library
     let assets: [Asset]
+    /// Changes when `assets` changes (an edit removed or moved photos), so the viewer finds its photo again.
+    let revision: Int
+    let context: BrowserContext
     /// Height of the title bar, where the date and buttons sit over the photo.
     let topInset: CGFloat
     let bridge: GridBridge
+    /// The grid's photo actions, for this photo; the place is where the photo is now.
+    let perform: (PhotoAction, [Int], CLLocationCoordinate2D?) -> Void
     let onClosed: () -> Void
 
     @State private var index: Int
@@ -44,6 +49,11 @@ struct PhotoViewer: View {
     @State private var player: AVPlayer?
     @State private var swipe = SwipeMonitor()
     @State private var detail: AssetDetail?
+    /// The photo shown, to find it again after an edit.
+    @State private var shownID = ""
+    /// Typing in the info panel: the single-key shortcuts (arrows, Space, ".") leave the keys to the text field.
+    @State private var typing = false
+    @Environment(\.undoManager) private var undo
     /// 1 = whole photo; above 1 the photo is enlarged and moved by `pan` from the middle.
     @State private var zoom: CGFloat = 1
     @State private var pan = CGSize.zero
@@ -65,11 +75,15 @@ struct PhotoViewer: View {
         return s
     }()
 
-    init(library: Library, assets: [Asset], topInset: CGFloat, bridge: GridBridge, start: ViewerState, onClosed: @escaping () -> Void) {
+    init(library: Library, assets: [Asset], revision: Int, context: BrowserContext, topInset: CGFloat, bridge: GridBridge,
+         start: ViewerState, perform: @escaping (PhotoAction, [Int], CLLocationCoordinate2D?) -> Void, onClosed: @escaping () -> Void) {
         self.library = library
         self.assets = assets
+        self.revision = revision
+        self.context = context
         self.topInset = topInset
         self.bridge = bridge
+        self.perform = perform
         self.onClosed = onClosed
         _index = State(initialValue: start.index)
         _origin = State(initialValue: start.origin)
@@ -130,10 +144,19 @@ struct PhotoViewer: View {
                 }
                 .overlay(alignment: .topTrailing) {
                     if panelShown {
-                        InfoPanel(asset: asset, detail: detail) { person in
-                            close()
-                            showPerson(person)
-                        }
+                        InfoPanel(asset: asset, detail: detail, typing: $typing,
+                                  onPerson: { person in
+                                      close()
+                                      showPerson(person)
+                                  },
+                                  onDescribe: { text in
+                                      Task { await library.describe(asset.id, text, was: detail?.exifInfo?.description ?? "", undo: undo) }
+                                  },
+                                  onRate: { stars in
+                                      Task { await library.rate(asset.id, stars, was: detail?.exifInfo?.rating, undo: undo) }
+                                  },
+                                  onDate: { act(.adjustDate) },
+                                  onPlace: { act(.setLocation) })
                             .frame(width: Self.panelWidth, height: max(geo.size.height - topInset, 1))
                             .offset(y: topInset)
                             .transition(.move(edge: .trailing))
@@ -148,11 +171,16 @@ struct PhotoViewer: View {
             .background {
                 // keys anywhere in the window
                 Group {
-                    Button("") { go(-1) }.keyboardShortcut(.leftArrow, modifiers: [])
-                    Button("") { go(1) }.keyboardShortcut(.rightArrow, modifiers: [])
-                    Button("", action: escape).keyboardShortcut(.cancelAction)
-                    Button("") { asset.isVideo ? togglePlay() : close() }.keyboardShortcut(.space, modifiers: [])
-                    Button("") { copy(asset) }.keyboardShortcut("c")
+                    Group {
+                        Button("") { go(-1) }.keyboardShortcut(.leftArrow, modifiers: [])
+                        Button("") { go(1) }.keyboardShortcut(.rightArrow, modifiers: [])
+                        Button("", action: escape).keyboardShortcut(.cancelAction)
+                        Button("") { asset.isVideo ? togglePlay() : close() }.keyboardShortcut(.space, modifiers: [])
+                        Button("") { copy(asset) }.keyboardShortcut("c")
+                        Button("") { act(.favorite) }.keyboardShortcut(".", modifiers: [])
+                        Button("") { act(.trash) }.keyboardShortcut(.delete)
+                    }
+                    .disabled(typing)
                     Button("") { setZoom(zoom * 2, at: center) }.keyboardShortcut("=")
                     Button("") { setZoom(zoom / 2, at: center) }.keyboardShortcut("-")
                 }
@@ -172,6 +200,12 @@ struct PhotoViewer: View {
                         .help("Close (Esc)")
                 }
                 ToolbarItemGroup(placement: .primaryAction) {
+                    let favorite = asset.isFavorite == true
+                    Button { act(.favorite) } label: {
+                        Label(favorite ? "Remove from Favorites" : "Add to Favorites", systemImage: favorite ? "heart.fill" : "heart")
+                            .labelStyle(.iconOnly)
+                    }
+                    .help(favorite ? "Remove from Favorites (.)" : "Add to Favorites (.)")
                     Button {
                         withAnimation(Self.spring) {
                             showInfo = !panelShown
@@ -182,8 +216,15 @@ struct PhotoViewer: View {
                     }
                     .keyboardShortcut("i")
                     .help("Info (⌘I)")
-                    Button { library.openInBrowser(asset) } label: { Image(systemName: "safari") }
-                        .help("Open in Browser (Edit, Delete)")
+                    Menu {
+                        PhotoMenu(library: library, count: 1, allFavorite: asset.isFavorite == true, context: context) { act($0) }
+                        Divider()
+                        Button("Open in Browser", systemImage: "safari") { library.openInBrowser(asset) }
+                    } label: {
+                        Image(systemName: "ellipsis")
+                    }
+                    .menuIndicator(.hidden)
+                    .help("More")
                 }
             }
             .onAppear {
@@ -194,10 +235,13 @@ struct PhotoViewer: View {
                 swipe.stop()
                 player?.pause()
             }
-            .task(id: asset.id) {
-                detail = nil
-                detail = await library.detail(asset)
+            .task(id: [asset.id, "\(library.edits)"]) { // again after a change, to show what the server made of it
+                if shownID != asset.id { detail = nil }
+                shownID = asset.id
+                let new = await library.detail(asset)
+                if !Task.isCancelled { detail = new }
             }
+            .onChange(of: revision) { found() }
             .task(id: asset.id) {
                 player?.pause()
                 player = nil
@@ -219,6 +263,25 @@ struct PhotoViewer: View {
     }
 
     private var center: CGPoint { CGPoint(x: area.midX, y: area.midY) }
+
+    /// Does a grid action to this photo.
+    private func act(_ action: PhotoAction) {
+        let place = detail?.exifInfo.flatMap { e in e.latitude.flatMap { lat in e.longitude.map { CLLocationCoordinate2D(latitude: lat, longitude: $0) } } }
+        perform(action, [index], place)
+    }
+
+    /// After an edit: the photo may have moved (new date) or gone (deleted, archived); then the next one shows.
+    private func found() {
+        if let i = assets.firstIndex(where: { $0.id == shownID }) {
+            index = i
+        } else if assets.isEmpty {
+            onClosed()
+        } else {
+            index = min(index, assets.count - 1)
+            resetZoom()
+            image = library.thumbs.anyCached(assets[index].id).map { NSImage(cgImage: $0, size: .zero) }
+        }
+    }
     private var chromeShown: Bool { !chromeHidden || pointerInBar }
     private var panelShown: Bool { showInfo && shown && !chromeHidden }
 
@@ -643,11 +706,19 @@ struct PlayerView: NSViewRepresentable {
 }
 
 /// ⌘I: when, what file, which camera, where and who, from the asset's EXIF in Immich.
+/// The description, stars, date and place can be changed here.
 struct InfoPanel: View {
     let asset: Asset
     let detail: AssetDetail?
+    @Binding var typing: Bool
     /// A person was clicked: show their photos.
     let onPerson: (Person) -> Void
+    let onDescribe: (String) -> Void
+    let onRate: (Int?) -> Void
+    let onDate: () -> Void
+    let onPlace: () -> Void
+    @State private var draft = ""
+    @FocusState private var editing: Bool
     private static let dayStyle: Date.FormatStyle = {
         var s = Date.FormatStyle(date: .complete, time: .omitted)
         s.timeZone = .gmt
@@ -662,11 +733,22 @@ struct InfoPanel: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(asset.date.formatted(Self.dayStyle)).font(.title3.weight(.semibold))
-                    Text(asset.date.formatted(Self.timeStyle)).foregroundStyle(.secondary)
+                Button(action: onDate) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(asset.date.formatted(Self.dayStyle)).font(.title3.weight(.semibold))
+                        Text(asset.date.formatted(Self.timeStyle)).foregroundStyle(.secondary)
+                    }
+                    .contentShape(Rectangle())
                 }
+                .buttonStyle(.plain)
+                .help("Adjust Date and Time…")
                 if let detail {
+                    TextField("Add a Description", text: $draft, axis: .vertical)
+                        .textFieldStyle(.plain)
+                        .lineLimit(1...8)
+                        .focused($editing)
+                        .onSubmit { editing = false }
+                    Stars(rating: detail.exifInfo?.rating, onRate: onRate)
                     let exif = detail.exifInfo
                     Row(symbol: asset.isVideo ? "video" : "photo", title: detail.originalFileName, lines: [fileLine(exif)])
                     if let camera = camera(exif) {
@@ -683,13 +765,12 @@ struct InfoPanel: View {
                     }
                     if let lat = exif?.latitude, let lon = exif?.longitude {
                         PlaceMap(coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lon), name: place(exif!))
-                            .id(asset.id)
+                            .id("\(asset.id)\(lat)\(lon)")
                     }
+                    Button(exif?.latitude == nil ? "Add Location…" : "Change Location…", action: onPlace)
+                        .buttonStyle(.link)
                     if let people = detail.people, !people.isEmpty {
                         People(people: people, onPerson: onPerson)
-                    }
-                    if let text = exif?.description, !text.isEmpty {
-                        Text(text).textSelection(.enabled)
                     }
                 } else {
                     ProgressView().frame(maxWidth: .infinity)
@@ -700,6 +781,32 @@ struct InfoPanel: View {
         }
         .background(.ultraThinMaterial)
         .environment(\.colorScheme, .dark) // always over the black viewer
+        .onChange(of: detail?.exifInfo?.description, initial: true) { if !editing { draft = $1 ?? "" } }
+        .onChange(of: editing) {
+            typing = editing
+            if !editing, let detail, draft != detail.exifInfo?.description ?? "" { onDescribe(draft) } // saved when the field is left
+        }
+        .onDisappear { typing = false }
+    }
+
+    /// 1–5 stars; clicking the current number of stars clears them.
+    private struct Stars: View {
+        let rating: Int?
+        let onRate: (Int?) -> Void
+
+        var body: some View {
+            HStack(spacing: 2) {
+                ForEach(1...5, id: \.self) { n in
+                    Button { onRate(rating == n ? nil : n) } label: {
+                        Image(systemName: n <= (rating ?? 0) ? "star.fill" : "star")
+                            .foregroundStyle(n <= (rating ?? 0) ? Color.yellow : .secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(rating == n ? "Clear Rating" : "\(n) Stars")
+                    .help(rating == n ? "Clear Rating" : "\(n) Stars")
+                }
+            }
+        }
     }
 
     private func fileLine(_ exif: AssetDetail.Exif?) -> String? {

@@ -5,8 +5,10 @@ import Foundation
 /// the same way Immich's web timeline does it, so grouping by day never depends on this Mac's time zone.
 struct Asset: Codable, Sendable {
     let id: String
-    let date: Date
+    var date: Date
     let isVideo: Bool
+    /// Optional so lists saved before v0.6 still load.
+    var isFavorite: Bool?
 }
 
 /// Immich sends times like `2026-11-10T21:45:03` or `...03.886` with no zone; like the web UI, read them as UTC.
@@ -39,9 +41,8 @@ enum Grouping: String, CaseIterable {
     }
 }
 
-/// Cell sizes in points for the zoom steps, smallest first. Below `openLevel` a click zooms in; from it on, a click opens the photo.
+/// Cell sizes in points for the zoom steps, smallest first.
 let zoomLevels: [Double] = [16, 24, 36, 52, 76, 110, 160, 220]
-let openLevel = 5
 
 struct Section {
     let title: String

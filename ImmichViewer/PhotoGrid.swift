@@ -14,6 +14,10 @@ struct PhotoGrid: NSViewRepresentable {
     let active: Bool
     let onZoom: (Int) -> Void
     let onOpen: (Int, CGRect?, CGImage?) -> Void
+    /// A key for the chosen photos (indices into `data.assets`): "." favorite, ⌘⌫ delete.
+    let onAction: (PhotoAction, [Int]) -> Void
+    /// The right-click menu for the chosen photos.
+    let menu: ([Int]) -> NSMenu?
     let bridge: GridBridge
 
     func makeCoordinator() -> GridController { GridController(library: library) }
@@ -29,7 +33,9 @@ struct PhotoGrid: NSViewRepresentable {
         collection.register(ThumbCell.self, forItemWithIdentifier: ThumbCell.id)
         collection.register(HeaderView.self, forSupplementaryViewOfKind: NSCollectionView.elementKindSectionHeader,
                             withIdentifier: HeaderView.id)
-        collection.onClick = { [weak controller] in controller?.clicked(at: $0) }
+        collection.onClick = { [weak controller] in controller?.clicked(at: $0, $1, count: $2) }
+        collection.onMenu = { [weak controller] in controller?.menu(at: $0) }
+        collection.onSelectAll = { [weak controller] in controller?.selectAll() }
         collection.onMagnify = { [weak controller] in controller?.pinched(phase: $0, magnification: $1, at: $2) }
         collection.onKey = { [weak controller] in controller?.key($0) ?? false }
 
@@ -50,6 +56,8 @@ struct PhotoGrid: NSViewRepresentable {
         let controller = context.coordinator
         controller.onZoom = onZoom
         controller.onOpen = onOpen
+        controller.onAction = onAction
+        controller.menu = menu
         controller.active = active
         controller.update(data: data, level: level, header: showHeaders ? 40 : 0, style: style, insets: insets)
     }
@@ -71,6 +79,8 @@ final class GridBridge {
     var top = 0
     /// How far down the grid is scrolled, 0...1.
     var fraction = 0.0
+    /// How many photos are chosen.
+    var chosen = 0
 
     /// Selects photo `index`, scrolls it into view and returns where it is, for the viewer's closing animation.
     func reveal(_ index: Int) -> CGRect? { controller?.reveal(index) }
@@ -98,6 +108,8 @@ final class GridController: NSObject, NSCollectionViewDataSource, NSCollectionVi
     var active = true
     var onZoom: (Int) -> Void = { _ in }
     var onOpen: (Int, CGRect?, CGImage?) -> Void = { _, _, _ in }
+    var onAction: (PhotoAction, [Int]) -> Void = { _, _ in }
+    var menu: ([Int]) -> NSMenu? = { _ in nil }
 
     private var data = GridData(id: -1)
     private var level = -1
@@ -112,7 +124,9 @@ final class GridController: NSObject, NSCollectionViewDataSource, NSCollectionVi
     private var pinchWatchdog: DispatchWorkItem?
     private var style = GridStyle()
     private var insets = NSEdgeInsets()
-    /// The keyboard selection, an index into `data.assets`.
+    /// The chosen photos, with a ring: one from the arrow keys or a click, more with ⌘-click, ⇧-click or ⌘A.
+    private var picked = Set<String>()
+    /// Where the arrow keys and ⇧-click start from, an index into `data.assets`.
     private var selected: Int?
     /// The photo to keep in place on the next zoom, and its distance from the top of the visible area.
     private var pendingAnchor: (path: IndexPath, screenY: Double)?
@@ -149,6 +163,7 @@ final class GridController: NSObject, NSCollectionViewDataSource, NSCollectionVi
                 || data.sections[shift.section].range != self.data.sections[shift.section].range { layout.shift = nil }
             self.data = data
             selected = selectedID.flatMap { id in data.assets.firstIndex { $0.id == id } }
+            if !picked.isEmpty { picked.formIntersection(data.assets.lazy.map(\.id)) } // deleted or archived ones go
             self.level = level
             requestedLevel = level
             layout.target = zoomLevels[level]
@@ -329,13 +344,35 @@ final class GridController: NSObject, NSCollectionViewDataSource, NSCollectionVi
         return IndexPath(item: i - data.sections[s].range.lowerBound, section: s)
     }
 
-    /// Moves the selection ring.
+    /// Chooses just photo `i` (or none).
     private func select(_ i: Int?) {
-        guard i != selected, let collection else { return }
-        for old in [selected, i].compactMap({ $0 }) {
-            if let p = indexPath(old), let cell = collection.item(at: p) as? ThumbCell { cell.ring = old == i }
-        }
         selected = i
+        setPicked(i.map { [data.assets[$0].id] } ?? [])
+    }
+
+    private func setPicked(_ ids: Set<String>) {
+        picked = ids
+        bridge?.chosen = ids.count
+        guard let collection else { return }
+        for case let cell as ThumbCell in collection.visibleItems() {
+            if let p = collection.indexPath(for: cell) { cell.ring = ids.contains(data.assets[index(p)].id) }
+        }
+    }
+
+    /// The chosen photos as indices, in grid order.
+    private var chosen: [Int] { data.assets.indices.filter { picked.contains(data.assets[$0].id) } }
+
+    func selectAll() {
+        guard active else { return }
+        setPicked(Set(data.assets.map(\.id)))
+    }
+
+    /// Right-click: the chosen photos' menu; a photo that isn't chosen becomes the only one.
+    func menu(at point: NSPoint) -> NSMenu? {
+        guard active, let collection, let path = collection.indexPathForItem(at: point) else { return nil }
+        let i = index(path)
+        if !picked.contains(data.assets[i].id) { select(i) }
+        return menu(chosen)
     }
 
     /// Selects photo `i` and scrolls just enough to show it.
@@ -373,12 +410,17 @@ final class GridController: NSObject, NSCollectionViewDataSource, NSCollectionVi
     }
 
     /// Arrow keys move the selection, Return or Space open it, ⌘↑ ⌘↓ go to the ends, Esc clears it.
+    /// "." favorites the chosen photos (or takes them out of Favorites), ⌘⌫ deletes them.
     func key(_ event: NSEvent) -> Bool {
         guard active, !data.assets.isEmpty else { return false }
         let last = data.assets.count - 1
         let command = event.modifierFlags.contains(.command)
         // the first arrow press picks the photo at the top left
         let current = selected ?? topAnchor().map { index($0.path) } ?? 0
+        if event.charactersIgnoringModifiers == ".", !command, !picked.isEmpty {
+            onAction(.favorite, chosen)
+            return true
+        }
         switch event.keyCode {
         case 123: selectAndShow(selected == nil ? current : max(current - 1, 0))
         case 124: selectAndShow(selected == nil ? current : min(current + 1, last))
@@ -395,6 +437,7 @@ final class GridController: NSObject, NSCollectionViewDataSource, NSCollectionVi
             guard let selected, let p = indexPath(selected) else { return false }
             open(p)
         case 53: select(nil)
+        case 51 where command && !picked.isEmpty: onAction(.trash, chosen) // ⌘⌫
         default: return false
         }
         return true
@@ -449,13 +492,24 @@ final class GridController: NSObject, NSCollectionViewDataSource, NSCollectionVi
         onZoom(target)
     }
 
-    func clicked(at point: NSPoint) {
-        guard let collection, let path = collection.indexPathForItem(at: point) else { return }
-        if level >= openLevel {
-            open(path)
-        } else {
-            requestZoom(level + 1, at: point)
+    /// Like Photos: a click chooses the photo, a double click opens it, ⌘ and ⇧ add to the choice.
+    func clicked(at point: NSPoint, _ modifiers: NSEvent.ModifierFlags, count: Int) {
+        guard let collection, let path = collection.indexPathForItem(at: point) else {
+            if modifiers.isDisjoint(with: [.command, .shift]) { select(nil) } // a click between photos clears the choice
+            return
         }
+        let i = index(path), id = data.assets[i].id
+        if modifiers.contains(.command) {
+            var ids = picked
+            if ids.remove(id) == nil { ids.insert(id) }
+            selected = i
+            return setPicked(ids)
+        }
+        if modifiers.contains(.shift) {
+            let from = selected ?? i
+            return setPicked(picked.union(data.assets[min(from, i)...max(from, i)].map(\.id)))
+        }
+        if count >= 2 { open(path) } else { select(i) }
     }
 
     /// A pinch in progress, as pictures in the zoom overlay: `base` is the grid at one zoom step, `target` the next step
@@ -698,7 +752,7 @@ final class GridController: NSObject, NSCollectionViewDataSource, NSCollectionVi
     func collectionView(_ collectionView: NSCollectionView, itemForRepresentedObjectAt p: IndexPath) -> NSCollectionViewItem {
         let cell = collectionView.makeItem(withIdentifier: ThumbCell.id, for: p) as! ThumbCell
         cell.style = style
-        cell.ring = index(p) == selected
+        cell.ring = picked.contains(data.assets[index(p)].id)
         cell.show(data.assets[index(p)], pixels: pixels, library: library)
         return cell
     }
@@ -739,7 +793,9 @@ final class PassthroughView: NSView {
 
 /// Handles clicks itself: NSCollectionView's own mouse tracking (for selection) would swallow them.
 final class GridCollectionView: NSCollectionView {
-    var onClick: (NSPoint) -> Void = { _ in }
+    var onClick: (NSPoint, NSEvent.ModifierFlags, Int) -> Void = { _, _, _ in }
+    var onMenu: (NSPoint) -> NSMenu? = { _ in nil }
+    var onSelectAll: () -> Void = {}
     var onMagnify: (NSEvent.Phase, Double, NSPoint) -> Void = { _, _, _ in }
     var onKey: (NSEvent) -> Bool = { _ in false }
     private var downPoint: NSPoint?
@@ -763,9 +819,18 @@ final class GridCollectionView: NSCollectionView {
 
     override func mouseUp(with event: NSEvent) {
         let point = convert(event.locationInWindow, from: nil)
-        if let down = downPoint, hypot(point.x - down.x, point.y - down.y) < 5 { onClick(point) }
+        if let down = downPoint, hypot(point.x - down.x, point.y - down.y) < 5 { onClick(point, event.modifierFlags, event.clickCount) }
         downPoint = nil
     }
+
+    override func menu(for event: NSEvent) -> NSMenu? { onMenu(convert(event.locationInWindow, from: nil)) }
+
+    /// Edit > Select All (⌘A).
+    override func selectAll(_ sender: Any?) { onSelectAll() }
+
+
+    // NSCollectionView turns Select All off when it isn't selectable itself
+    @objc func validateMenuItem(_ item: NSMenuItem) -> Bool { true }
 
     override func magnify(with event: NSEvent) {
         onMagnify(event.phase, Double(event.magnification), convert(event.locationInWindow, from: nil))

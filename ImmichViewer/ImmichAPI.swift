@@ -1,8 +1,10 @@
 import Foundation
 import Security
 
-/// The few Immich endpoints the viewer needs.
-/// The API key needs `asset.read`, `asset.view`, `person.read` and `album.read`; `asset.download` is optional (originals).
+/// The Immich endpoints the app uses.
+/// Browsing needs `asset.read`, `asset.view`, `person.read` and `album.read`; `asset.download` is optional (originals).
+/// Editing needs `asset.update`, `asset.delete`, `person.update`, `album.create`, `album.update`, `album.delete`,
+/// `albumAsset.create` and `albumAsset.delete`; without them the change fails with the server's message.
 struct ImmichAPI: Sendable {
     let server: URL
     let key: String
@@ -48,13 +50,24 @@ struct ImmichAPI: Sendable {
     }
 
     func get(_ path: String, _ query: [String: String] = [:]) async throws -> Data {
+        try await send("GET", path, query: query)
+    }
+
+    /// A change: `json` is the request body (NSNull for null). Returns the response body.
+    @discardableResult
+    func send(_ method: String, _ path: String, query: [String: String] = [:], json: [String: Any]? = nil) async throws -> Data {
         var url = server.appending(path: "api/" + path)
         if !query.isEmpty { url.append(queryItems: query.map { URLQueryItem(name: $0.key, value: $0.value) }) }
         var request = URLRequest(url: url)
+        request.httpMethod = method
         request.setValue(key, forHTTPHeaderField: "x-api-key")
+        if let json {
+            request.httpBody = try JSONSerialization.data(withJSONObject: json)
+            request.setValue("application/json", forHTTPHeaderField: "content-type")
+        }
         let (data, response) = try await URLSession.shared.data(for: request)
         let status = (response as? HTTPURLResponse)?.statusCode ?? 0
-        guard status == 200 else {
+        guard (200..<300).contains(status) else {
             struct Body: Decodable { let message: String? }
             throw HTTPError(status: status, message: (try? JSONDecoder().decode(Body.self, from: data))?.message ?? "")
         }
@@ -83,6 +96,7 @@ struct ImmichAPI: Sendable {
             let fileCreatedAt: [String]
             let localOffsetHours: [Double]
             let isImage: [Bool]
+            let isFavorite: [Bool]?
         }
         let buckets = try JSONDecoder().decode([Bucket].self, from: await get("timeline/buckets", filter))
         let assets = try await withThrowingTaskGroup(of: [Asset].self) { group in
@@ -94,7 +108,8 @@ struct ImmichAPI: Sendable {
                     return c.id.indices.compactMap { i in
                         guard let utc = parser.date(c.fileCreatedAt[i]) else { return nil }
                         // local wall-clock time, kept in UTC like the web timeline does
-                        return Asset(id: c.id[i], date: utc.addingTimeInterval(c.localOffsetHours[i] * 3600), isVideo: !c.isImage[i])
+                        return Asset(id: c.id[i], date: utc.addingTimeInterval(c.localOffsetHours[i] * 3600), isVideo: !c.isImage[i],
+                                     isFavorite: c.isFavorite?[i] == true)
                     }
                 }
             }
@@ -119,6 +134,12 @@ struct ImmichAPI: Sendable {
         return all
     }
 
+    /// Whether deleting moves to the trash. With the trash turned off on the server, deleting is permanent.
+    func trashEnabled() async throws -> Bool {
+        struct Features: Decodable { let trash: Bool }
+        return try JSONDecoder().decode(Features.self, from: await get("server/features")).trash
+    }
+
     /// Own albums and albums shared with you, most recent first.
     func albums() async throws -> [Album] {
         let albums = try JSONDecoder().decode([Album].self, from: await get("albums"))
@@ -128,27 +149,33 @@ struct ImmichAPI: Sendable {
 
 struct Person: Codable, Identifiable, Hashable, Sendable {
     let id: String
-    let name: String
+    var name: String
+    /// yyyy-MM-dd
+    var birthDate: String?
 }
 
 struct AssetDetail: Decodable, Sendable {
     let originalFileName: String
-    let exifInfo: Exif?
+    var isFavorite: Bool?
+    var exifInfo: Exif?
     let people: [Person]?
 
     /// Numbers are Doubles so ints and floats both decode.
     struct Exif: Decodable, Sendable {
-        let make, model, lensModel, exposureTime, city, state, country, description: String?
-        let fNumber, focalLength, iso, exifImageWidth, exifImageHeight, fileSizeInByte, latitude, longitude: Double?
+        var make, model, lensModel, exposureTime, city, state, country, description: String?
+        var fNumber, focalLength, iso, exifImageWidth, exifImageHeight, fileSizeInByte, latitude, longitude: Double?
+        /// 1–5 stars, -1 rejected, nil unrated.
+        var rating: Int?
     }
 }
 
 struct Album: Codable, Identifiable, Hashable, Sendable {
     let id: String
-    let albumName: String
-    let albumThumbnailAssetId: String?
-    let assetCount: Int
-    let endDate: String?
+    var albumName: String
+    var description: String?
+    var albumThumbnailAssetId: String?
+    var assetCount: Int
+    var endDate: String?
 }
 
 /// The API key lives in the login keychain, never in a plain file.

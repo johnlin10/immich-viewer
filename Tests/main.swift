@@ -54,7 +54,7 @@ precondition(parse.date("2026-11-11T05:45:03+08:00") == expected)
 precondition(abs(parse.date("2026-11-10T21:45:03.886")!.timeIntervalSince(expected) - 0.886) < 0.001)
 precondition(parse.date("not a date") == nil)
 
-precondition(zoomLevels == zoomLevels.sorted() && zoomLevels.indices.contains(openLevel))
+precondition(zoomLevels == zoomLevels.sorted())
 precondition(ThumbnailStore.pixels(forSide: 16, scale: 2) == 128 && ThumbnailStore.pixels(forSide: 76, scale: 2) == 256)
 precondition(ThumbnailStore.pixels(forSide: 110, scale: 2) == 0)
 

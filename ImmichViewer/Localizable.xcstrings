@@ -14,6 +14,34 @@
         }
       }
     },
+    "%lld Stars": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 顆星"
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Star"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Stars"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld albums": {
       "localizations": {
         "en": {
@@ -114,12 +142,92 @@
         }
       }
     },
+    "%lld selected": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已選取 %lld 項"
+          }
+        }
+      }
+    },
     "API Key": {
       "localizations": {
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
             "value": "API 金鑰"
+          }
+        }
+      }
+    },
+    "Add Location…": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "加入位置…"
+          }
+        }
+      }
+    },
+    "Add a Description": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "加入說明"
+          }
+        }
+      }
+    },
+    "Add to Album": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "加入相簿"
+          }
+        }
+      }
+    },
+    "Add to Favorites": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "加入喜好項目"
+          }
+        }
+      }
+    },
+    "Add to Favorites (.)": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "加入喜好項目（.）"
+          }
+        }
+      }
+    },
+    "Adjust Date and Time": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "調整日期與時間"
+          }
+        }
+      }
+    },
+    "Adjust Date and Time…": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "調整日期與時間…"
           }
         }
       }
@@ -154,6 +262,36 @@
         }
       }
     },
+    "Archive": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "封存"
+          }
+        }
+      }
+    },
+    "Birthday": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "生日"
+          }
+        }
+      }
+    },
+    "Born on": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "出生日期"
+          }
+        }
+      }
+    },
     "Calculating…": {
       "localizations": {
         "zh-Hant": {
@@ -180,6 +318,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "無法載入"
+          }
+        }
+      }
+    },
+    "Change Location…": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更改位置…"
           }
         }
       }
@@ -224,12 +372,32 @@
         }
       }
     },
+    "Clear Rating": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清除評分"
+          }
+        }
+      }
+    },
     "Clear all cached thumbnails?": {
       "localizations": {
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
             "value": "清除所有快取的縮圖？"
+          }
+        }
+      }
+    },
+    "Click the map to place the pin.": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "點一下地圖來放置大頭針。"
           }
         }
       }
@@ -294,6 +462,16 @@
         }
       }
     },
+    "Couldn’t Make the Change": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法完成變更"
+          }
+        }
+      }
+    },
     "Couldn’t reach %@: %@ Check the address and port, and that the server is running. For a server on another computer, also check that Immich Viewer is on in System Settings > Privacy & Security > Local Network.": {
       "localizations": {
         "en": {
@@ -330,12 +508,92 @@
         }
       }
     },
+    "Date and time": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "日期與時間"
+          }
+        }
+      }
+    },
     "Days": {
       "localizations": {
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
             "value": "依日"
+          }
+        }
+      }
+    },
+    "Delete": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "刪除"
+          }
+        }
+      }
+    },
+    "Delete %lld Photos?": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "要刪除 %lld 張照片嗎？"
+          }
+        }
+      }
+    },
+    "Delete Album…": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "刪除相簿…"
+          }
+        }
+      }
+    },
+    "Delete This Album?": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "要刪除這本相簿嗎？"
+          }
+        }
+      }
+    },
+    "Delete This Photo?": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "要刪除這張照片嗎？"
+          }
+        }
+      }
+    },
+    "Delete…": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "刪除…"
+          }
+        }
+      }
+    },
+    "Description": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "說明"
           }
         }
       }
@@ -382,12 +640,72 @@
         }
       }
     },
+    "Edit Album": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "編輯相簿"
+          }
+        }
+      }
+    },
+    "Edit Album…": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "編輯相簿…"
+          }
+        }
+      }
+    },
+    "Edit Description": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "編輯說明"
+          }
+        }
+      }
+    },
+    "Edit Person": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "編輯人物"
+          }
+        }
+      }
+    },
+    "Edit Person…": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "編輯人物…"
+          }
+        }
+      }
+    },
     "Faces": {
       "localizations": {
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
             "value": "人物頭像"
+          }
+        }
+      }
+    },
+    "Favorite": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "喜好"
           }
         }
       }
@@ -452,6 +770,16 @@
         }
       }
     },
+    "Hide Person": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "隱藏人物"
+          }
+        }
+      }
+    },
     "In the Immich web UI, open Account Settings > API Keys and create a new key with asset.read, asset.view, person.read and album.read. To copy or drag out originals, also add asset.download (without it, the large preview is used). The key is kept in the keychain.": {
       "localizations": {
         "zh-Hant": {
@@ -502,6 +830,26 @@
         }
       }
     },
+    "Make Album Cover": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "設為相簿封面"
+          }
+        }
+      }
+    },
+    "Make Profile Photo": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "設為人物照片"
+          }
+        }
+      }
+    },
     "Mark Videos (▶)": {
       "localizations": {
         "zh-Hant": {
@@ -528,6 +876,36 @@
           "stringUnit": {
             "state": "translated",
             "value": "更多"
+          }
+        }
+      }
+    },
+    "Name": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "名稱"
+          }
+        }
+      }
+    },
+    "New Album": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新增相簿"
+          }
+        }
+      }
+    },
+    "New Album…": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新增相簿…"
           }
         }
       }
@@ -562,6 +940,26 @@
         }
       }
     },
+    "No place found.": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "找不到這個地點。"
+          }
+        }
+      }
+    },
+    "OK": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "好"
+          }
+        }
+      }
+    },
     "Oldest First": {
       "localizations": {
         "zh-Hant": {
@@ -582,6 +980,16 @@
         }
       }
     },
+    "Open in Browser": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在瀏覽器開啟"
+          }
+        }
+      }
+    },
     "Open in Browser (Edit, Delete)": {
       "localizations": {
         "zh-Hant": {
@@ -598,6 +1006,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "在「地圖」中開啟"
+          }
+        }
+      }
+    },
+    "Original": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "原本"
           }
         }
       }
@@ -642,12 +1060,82 @@
         }
       }
     },
+    "Rate": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "評分"
+          }
+        }
+      }
+    },
     "Refresh": {
       "localizations": {
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
             "value": "重新整理"
+          }
+        }
+      }
+    },
+    "Remove from Album": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "從相簿移除"
+          }
+        }
+      }
+    },
+    "Remove from Favorites": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "從喜好項目移除"
+          }
+        }
+      }
+    },
+    "Remove from Favorites (.)": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "從喜好項目移除（.）"
+          }
+        }
+      }
+    },
+    "Save": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "儲存"
+          }
+        }
+      }
+    },
+    "Search": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "搜尋"
+          }
+        }
+      }
+    },
+    "Search for a place": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "搜尋地點"
           }
         }
       }
@@ -678,6 +1166,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "伺服器已停止"
+          }
+        }
+      }
+    },
+    "Set Location": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "設定位置"
+          }
+        }
+      }
+    },
+    "Set Location…": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "設定位置…"
           }
         }
       }
@@ -922,6 +1430,16 @@
         }
       }
     },
+    "The photos in it stay in your library.": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "裡面的照片會留在圖庫中。"
+          }
+        }
+      }
+    },
     "The server didn’t accept this API key.": {
       "localizations": {
         "zh-Hant": {
@@ -942,6 +1460,36 @@
         }
       }
     },
+    "The server’s trash is turned off, so they are deleted for good.": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "伺服器的垃圾桶已關閉，所以會永久刪除。"
+          }
+        }
+      }
+    },
+    "They go to the server’s trash, which keeps them for 30 days unless the server is set otherwise. ⌘Z puts them back.": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "照片會移到伺服器的垃圾桶，除非伺服器另有設定，否則保留 30 天。按 ⌘Z 可以復原。"
+          }
+        }
+      }
+    },
+    "This is the first photo’s date. All %lld photos move by the same amount.": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "這是第一張照片的日期。%lld 張照片都會移動相同的時間。"
+          }
+        }
+      }
+    },
     "Thumbnails": {
       "localizations": {
         "zh-Hant": {
@@ -958,6 +1506,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "縮圖存在這台 Mac 上，捲動時不必向伺服器要。清除後，照片會在下次顯示時重新下載；重新整理（⌘R）會一次全部補回。"
+          }
+        }
+      }
+    },
+    "Unarchive": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "取消封存"
+          }
+        }
+      }
+    },
+    "Unfavorite": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "取消喜好"
           }
         }
       }

@@ -1,12 +1,12 @@
 # Immich Viewer
 
-A native macOS photo wall for an Immich server. It only browses; deleting, editing, naming people and changing albums stay in the Immich web UI.
+A native macOS photo wall for an Immich server. Browse the whole library smoothly, and make everyday changes in place: favorites, descriptions, ratings, dates, places, archiving and deleting, people's names, and albums.
 
 It keeps every small thumbnail (about 15 KB each) on this Mac, so scrolling reads from disk instead of asking the server for each one.
 
 > **Language:** English and Traditional Chinese, following the macOS language (or the per-app language in System Settings > General > Language & Region). Simplified Chinese is planned; see [docs/localization.md](docs/localization.md).
 
-## What it does (v0.5)
+## What it does (v0.6)
 
 - A sidebar with Library, People and Albums.
 - People: everyone Immich recognised (hidden people left out) as round faces; click one for their photos.
@@ -15,7 +15,7 @@ It keeps every small thumbnail (about 15 KB each) on this Mac, so scrolling read
 - One square grid of the whole timeline (archived, hidden and locked items are left out, like Immich's own timeline). The grid fills the window; under the title bar the photos blur progressively, strongest at the top.
 - Eight zoom steps (16 to 220 pt cells): the − / + buttons, ⌘− / ⌘=, or pinch on the trackpad.
 - A pinch follows the fingers: the grid grows or shrinks with them, and the photo under the pointer stays under the pointer. Like in Photos, the grid fades into the next step on the way, with that photo in the same place in both; letting go settles on the closer step. The photo under the pointer keeps its column as far as the new column count allows (the photos around it move instead), so the rows don't always start at the left edge: the first row of that photo's group can start a few cells in. One pinch can move several steps. The buttons and ⌘− / ⌘= zoom one step in one continuous animation around the middle of the window (with Reduce Motion, a pinch moves in steps too).
-- In the five smallest steps a click zooms in one step and keeps the clicked photo where it was on screen. From 110 pt on, a click opens the photo.
+- Clicks work like in Photos: a click chooses a photo (a blue ring), a double click, Return or Space opens it, and a click between photos clears the choice.
 - Grouping: Days, Months or All. The date of the top row shows in a glass capsule under the window title.
 - Keyboard in the grid: arrow keys move a selection ring, Return or Space opens it, Esc clears it, ⌘↑ / ⌘↓ (or Home / End) jump to the top and bottom. After closing a photo the ring stays on it.
 - Time scrubber on the right edge instead of a scroll bar: hover to see the years, drag to go anywhere; while dragging, the month shows next to the handle.
@@ -27,14 +27,29 @@ It keeps every small thumbnail (about 15 KB each) on this Mac, so scrolling read
 - Refresh (⌘R) reloads the list and downloads any new thumbnails. This also runs at launch.
 - Zoom, grouping and the whole-photo setting are remembered.
 
+### Editing
+
+Changes go straight to the server and show in the app right away. Edit > Undo (⌘Z) takes back the last one, and Redo puts it back. If the server refuses a change (for example a key without the permission), an alert shows its message.
+
+- Choose photos in the grid: ⌘-click adds or removes one, ⇧-click adds everything up to the clicked photo, ⌘A chooses all. The title shows how many are chosen. A plain click chooses just that photo.
+- Right-click a photo (or the chosen ones) for: Add to / Remove from Favorites, Add to Album (or a New Album… with them), Adjust Date and Time…, Set Location…, Archive and Delete…. In an album also Remove from Album and Make Album Cover; on a person's page Make Profile Photo.
+- Keys in the grid and the single photo view: . (period) toggles Favorite, ⌘⌫ deletes.
+- Delete asks first. Deleted photos go to the server's trash (Immich keeps them 30 days by default), and Undo brings them back. If the server has the trash turned off, the alert says the deletion is permanent and there is no undo.
+- Archived photos leave the timeline, like in Immich.
+- Adjust Date and Time: the first photo gets the new date and time, and the other chosen photos move by the same amount.
+- Set Location: search for a place, or click the map to put the pin.
+- In the single photo view, the info panel edits the description (saved on Return or when leaving the field) and the rating (click a star; click it again to clear), and the date and the place open their sheets. The ⋯ button has the same menu as a right-click, plus Open in Browser.
+- People: right-click a face on the People page for Edit Person… (name and birthday) and Hide Person. On a person's page the same are in the ⋯ menu.
+- Albums: + on the Albums page makes a new album. Right-click a cover, or use ⋯ on the album's page, for Edit Album… (name and description) and Delete Album…. Deleting an album keeps its photos.
+
 ### Single photo view
 
 - The photo grows out of its cell and shrinks back into it when closed. It fills the whole window, title bar included; the date and buttons sit over it.
 - Click the photo or video to hide the title bar, the buttons and the info panel, and click again to bring them back. While they are hidden, pointing at the title bar shows it until the pointer leaves. A click while dragging a zoomed photo doesn't count.
 - ← → or a two-finger swipe sideways for the previous and next photo. To close: ✕ (top left), Esc, or a two-finger swipe down; the photo follows the fingers and shrinks, and past a short distance letting go sends it back into the grid. Space closes a photo or pauses a video.
 - Videos play in place with the system player controls (streamed from the server, like the web UI). The player appears once the video has grown out of its cell.
-- Editing opens in the browser (Safari button).
-- Info panel (ⓘ or ⌘I, remembered): date and time, file name, size and megapixels, camera and lens, aperture, shutter, focal length, ISO, place with a small map (click to open in Maps), the people in it (named or not; click one for their photos), and the description.
+- The ⋯ button has the editing menu and Open in Browser for anything else.
+- Info panel (ⓘ or ⌘I, remembered): date and time, description, rating, file name, size and megapixels, camera and lens, aperture, shutter, focal length, ISO, place with a small map (click to open in Maps), and the people in it (named or not; click one for their photos).
 - Zoom: pinch, double-click (3× at the pointer; again to go back) or ⌘= / ⌘−, up to 8×. Drag or scroll to move around. Zooming downloads the original for full sharpness (with `asset.download`; otherwise the large preview). Esc zooms out first, then closes.
 - ⌘C copies the photo (original or preview) for pasting into other apps. Drag the photo out to Finder, Mail, Messages and so on to save it as a file under its original name.
 
@@ -48,7 +63,7 @@ It keeps every small thumbnail (about 15 KB each) on this Mac, so scrolling read
 
 ## Setup
 
-1. In the Immich web UI, open Account Settings > API Keys and create a new key with only `asset.read`, `asset.view`, `person.read` and `album.read`. Add `asset.download` if you want zooming, copying and dragging out to use the originals.
+1. In the Immich web UI, open Account Settings > API Keys and create a new key. Browsing needs `asset.read`, `asset.view`, `person.read` and `album.read`; add `asset.download` if you want zooming, copying and dragging out to use the originals. Editing needs `asset.update`, `asset.delete`, `person.update`, `album.create`, `album.update`, `album.delete`, `albumAsset.create` and `albumAsset.delete`. Leave out the ones you don't want: those changes then fail with the server's message. A key with all permissions works too.
 2. Download the DMG from the [Releases page](https://github.com/johnlin10/immich-viewer/releases) and drag the app to Applications, or open `ImmichViewer.xcodeproj` in Xcode and run it (⌘R). The app is signed with a development certificate only, so the first time macOS blocks it: open System Settings > Privacy & Security and click Open Anyway.
 3. Enter the server address and the key. The key is saved in the login keychain. Change it later in Settings (⌘,).
 
@@ -117,6 +132,7 @@ swiftc ImmichViewer/TimelineModel.swift ImmichViewer/ThumbnailStore.swift Immich
 | `PhotoGrid.swift` | NSCollectionView grid, zoom, clicks, pinch, keyboard selection, cells, headers |
 | `PhotoViewer.swift` | Single photo view, zoom and pan, info panel, copy and drag-out, video player, swipes |
 | `Collections.swift` | People and album pages, one person's or album's grid |
+| `Editing.swift` | Photo menu, date, location, album and person sheets |
 | `TimelineModel.swift` | Asset, grouping, grid geometry, row moves, date lookup, year marks |
 | `Localizable.xcstrings` | Interface text and its translations |
 
@@ -124,9 +140,16 @@ swiftc ImmichViewer/TimelineModel.swift ImmichViewer/ThumbnailStore.swift Immich
 
 Searching, map, memories, Simplified Chinese interface, and noticing deletions made in the browser until the next refresh. Thumbnails of deleted photos stay in the cache.
 
+Planned editing: a Trash page, tags, merging people and moving faces, crop and rotate, downloading and uploading, then stacks, sharing, duplicates and memories.
+
 ## Version history
 
-### v0.5 (current)
+### v0.6 (current)
+
+- Editing: choose several photos (⌘-click, ⇧-click, ⌘A) and right-click them; favorites, ratings, descriptions, dates, places, archive and delete (to the trash, with undo); people's names, birthdays, hiding and profile photos; new albums, renaming, descriptions, covers, adding and removing photos, deleting albums. Undo and Redo for each change.
+- Clicks like in Photos: a click chooses a photo and a double click opens it (until v0.5 a click opened it, or zoomed in at the five smallest steps).
+
+### v0.5
 
 - Single photo view: the photo fills the window, a click hides and shows the controls, ✕ moved to the top left, swipe down to close, clickable people (unnamed ones too) in the info panel, and a video no longer shows twice while it opens.
 - Grid: pinching follows the fingers around the photo under the pointer and crossfades between zoom steps, like in Photos, and that photo keeps its column when the step changes; the grouping selection is a piece of glass that slides to the new choice.

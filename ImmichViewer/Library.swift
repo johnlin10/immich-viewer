@@ -1,5 +1,6 @@
 import AppKit
 import AVFoundation
+import CoreLocation
 import Observation
 
 /// Connection settings, starting and stopping the server, the asset list and the thumbnail cache.
@@ -173,8 +174,7 @@ final class Library {
         }
         assets = list
         revision += 1
-        try? FileManager.default.createDirectory(at: listFile.deletingLastPathComponent(), withIntermediateDirectories: true)
-        try? JSONEncoder().encode(list).write(to: listFile, options: .atomic)
+        saveList()
         await loadCollections()
 
         await thumbs.downloadMissing(list.map(\.id), api: api) { done, total, failed in
@@ -187,9 +187,15 @@ final class Library {
         }
     }
 
+    private func saveList() {
+        try? FileManager.default.createDirectory(at: listFile.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try? JSONEncoder().encode(assets).write(to: listFile, options: .atomic)
+    }
+
     /// People and albums; a failure only shows on those pages, the timeline keeps working.
     func loadCollections() async {
         guard let api else { return }
+        trashEnabled = (try? await api.trashEnabled()) ?? true
         do {
             async let people = api.people()
             async let albums = api.albums()
@@ -244,5 +250,172 @@ final class Library {
     func openInBrowser(_ asset: Asset) {
         guard let api else { return }
         NSWorkspace.shared.open(api.server.appending(path: "photos/\(asset.id)"))
+    }
+
+    // MARK: Editing. Each change goes to the server first; the local list follows only if it worked.
+    // Changes register their opposite with `undo` (the window's ⌘Z), and the opposite registers the change again (⇧⌘Z).
+
+    /// Why the last change failed, for an alert.
+    var editError: String?
+    /// Counts changes, so person and album pages and the info panel reload.
+    private(set) var edits = 0
+    /// False when the server deletes for good (its trash is turned off).
+    private(set) var trashEnabled = true
+
+    /// Runs a change on the server. False, with `editError` set, if it failed.
+    private func change(_ work: (ImmichAPI) async throws -> Void) async -> Bool {
+        guard let api else { return false }
+        do {
+            try await work(api)
+            edits += 1
+            return true
+        } catch {
+            editError = error.localizedDescription
+            return false
+        }
+    }
+
+    private func register(_ undo: UndoManager?, _ name: String, _ action: @escaping @MainActor (Library) async -> Void) {
+        undo?.registerUndo(withTarget: self) { library in Task { @MainActor in await action(library) } }
+        undo?.setActionName(name)
+    }
+
+    /// Changes the timeline as the server just did, without reloading it.
+    private func patch(_ change: (inout [Asset]) -> Void) {
+        change(&assets)
+        revision += 1
+        saveList()
+        if !syncing { status = String(localized: "\(assets.count) items") }
+    }
+
+    func favorite(_ ids: [String], _ on: Bool, undo: UndoManager?) async {
+        guard await change({ try await $0.send("PUT", "assets", json: ["ids": ids, "isFavorite": on]) }) else { return }
+        let set = Set(ids)
+        patch { list in for i in list.indices where set.contains(list[i].id) { list[i].isFavorite = on } }
+        // ponytail: undo sets all of them back the other way, also ones that already were
+        register(undo, on ? String(localized: "Favorite") : String(localized: "Unfavorite")) { await $0.favorite(ids, !on, undo: undo) }
+    }
+
+    /// Archived photos leave the timeline (they stay in albums and on the web UI's Archive page).
+    func archive(_ ids: [String], _ on: Bool, undo: UndoManager?) async {
+        guard await change({ try await $0.send("PUT", "assets", json: ["ids": ids, "visibility": on ? "archive" : "timeline"]) })
+        else { return }
+        if on {
+            let set = Set(ids)
+            patch { $0.removeAll { set.contains($0.id) } }
+        } else {
+            await refresh()
+        }
+        register(undo, on ? String(localized: "Archive") : String(localized: "Unarchive")) { await $0.archive(ids, !on, undo: undo) }
+    }
+
+    /// Moves photos to the trash (Immich empties it after 30 days), or deletes them for good if the server's trash is off.
+    func trash(_ ids: [String], undo: UndoManager?) async {
+        guard await change({ try await $0.send("DELETE", "assets", json: ["ids": ids, "force": false]) }) else { return }
+        let set = Set(ids)
+        patch { $0.removeAll { set.contains($0.id) } }
+        if trashEnabled { register(undo, String(localized: "Delete")) { await $0.restore(ids, undo: undo) } }
+    }
+
+    func restore(_ ids: [String], undo: UndoManager?) async {
+        guard await change({ try await $0.send("POST", "trash/restore/assets", json: ["ids": ids]) }) else { return }
+        await refresh()
+        register(undo, String(localized: "Delete")) { await $0.trash(ids, undo: undo) }
+    }
+
+    /// Moves the photos' dates and times by the same amount, keeping their time zones.
+    func shiftDates(_ ids: [String], minutes: Int, undo: UndoManager?) async {
+        guard minutes != 0, await change({ try await $0.send("PUT", "assets", json: ["ids": ids, "dateTimeRelative": minutes]) })
+        else { return }
+        let set = Set(ids)
+        patch { list in
+            for i in list.indices where set.contains(list[i].id) { list[i].date += Double(minutes) * 60 }
+            list.sort { $0.date > $1.date }
+        }
+        register(undo, String(localized: "Adjust Date and Time")) { await $0.shiftDates(ids, minutes: -minutes, undo: undo) }
+    }
+
+    /// `old`: where a single photo was, so undo can put it back (a photo without a place can't be made placeless again).
+    func locate(_ ids: [String], at place: CLLocationCoordinate2D, was old: CLLocationCoordinate2D?, undo: UndoManager?) async {
+        guard await change({ try await $0.send("PUT", "assets", json: ["ids": ids, "latitude": place.latitude, "longitude": place.longitude]) })
+        else { return }
+        if let old { register(undo, String(localized: "Set Location")) { await $0.locate(ids, at: old, was: place, undo: undo) } }
+    }
+
+    func describe(_ id: String, _ text: String, was old: String, undo: UndoManager?) async {
+        guard await change({ try await $0.send("PUT", "assets/\(id)", json: ["description": text]) }) else { return }
+        register(undo, String(localized: "Edit Description")) { await $0.describe(id, old, was: text, undo: undo) }
+    }
+
+    /// 1–5 stars, or nil for none.
+    func rate(_ id: String, _ stars: Int?, was old: Int?, undo: UndoManager?) async {
+        guard await change({ try await $0.send("PUT", "assets/\(id)", json: ["rating": stars ?? NSNull()]) }) else { return }
+        register(undo, String(localized: "Rate")) { await $0.rate(id, old, was: stars, undo: undo) }
+    }
+
+    /// The ids the server says it added or removed (ones already in, or not in, the album don't count).
+    private func albumAssets(_ method: String, _ album: String, _ ids: [String]) async -> [String] {
+        struct Result: Decodable { let id: String; let success: Bool }
+        var done: [String] = []
+        guard await change({ api in
+            let data = try await api.send(method, "albums/\(album)/assets", json: ["ids": ids])
+            done = (try? JSONDecoder().decode([Result].self, from: data))?.filter(\.success).map(\.id) ?? ids
+        }) else { return [] }
+        await loadCollections()
+        return done
+    }
+
+    func add(_ ids: [String], to album: String, undo: UndoManager?) async {
+        let added = await albumAssets("PUT", album, ids)
+        if !added.isEmpty { register(undo, String(localized: "Add to Album")) { await $0.remove(added, from: album, undo: undo) } }
+    }
+
+    func remove(_ ids: [String], from album: String, undo: UndoManager?) async {
+        let removed = await albumAssets("DELETE", album, ids)
+        if !removed.isEmpty { register(undo, String(localized: "Remove from Album")) { await $0.add(removed, to: album, undo: undo) } }
+    }
+
+    /// A new album, with `ids` in it. Nil if it failed.
+    func createAlbum(_ name: String, description: String, with ids: [String]) async -> Album? {
+        var album: Album?
+        guard await change({ api in
+            let data = try await api.send("POST", "albums", json: ["albumName": name, "description": description, "assetIds": ids])
+            album = try JSONDecoder().decode(Album.self, from: data)
+        }) else { return nil }
+        await loadCollections()
+        return album
+    }
+
+    /// Name, description and cover.
+    func update(_ album: Album, was old: Album, undo: UndoManager?) async {
+        var json: [String: Any] = ["albumName": album.albumName, "description": album.description ?? ""]
+        if let cover = album.albumThumbnailAssetId { json["albumThumbnailAssetId"] = cover }
+        guard await change({ try await $0.send("PATCH", "albums/\(album.id)", json: json) }) else { return }
+        await loadCollections()
+        register(undo, String(localized: "Edit Album")) { await $0.update(old, was: album, undo: undo) }
+    }
+
+    /// The album goes; its photos stay.
+    func delete(_ album: Album) async {
+        guard await change({ try await $0.send("DELETE", "albums/\(album.id)") }) else { return }
+        await loadCollections()
+    }
+
+    /// Name, birthday and hidden (a hidden person leaves the People page).
+    func update(_ person: Person, hidden: Bool = false, was old: Person, undo: UndoManager?) async {
+        guard await change({ try await $0.send("PUT", "people/\(person.id)",
+                                               json: ["name": person.name, "birthDate": person.birthDate ?? NSNull(), "isHidden": hidden]) })
+        else { return }
+        await loadCollections()
+        register(undo, hidden ? String(localized: "Hide Person") : String(localized: "Edit Person")) {
+            await $0.update(old, was: person, undo: undo)
+        }
+    }
+
+    /// Uses this person's face in `asset` as their picture.
+    func setProfilePhoto(_ person: String, from asset: String) async {
+        guard await change({ try await $0.send("PUT", "people/\(person)", json: ["featureFaceAssetId": asset]) }) else { return }
+        faces.forget(person)
+        await loadCollections()
     }
 }

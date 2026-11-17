@@ -68,6 +68,14 @@ Use the same word everywhere in a language. Taiwan and mainland terms differ, so
 | Original | 原始檔 | 原始文件 |
 | File name | 檔名 | 文件名 |
 | Open in browser | 在瀏覽器開啟 | 在浏览器中打开 |
+| Favorites | 喜好項目 | 个人收藏 |
+| Archive / Unarchive | 封存 / 取消封存 | 归档 / 取消归档 |
+| Trash | 垃圾桶 | 废纸篓 |
+| Description | 說明 | 说明 |
+| Rating | 評分 | 评分 |
+| Adjust Date and Time… | 調整日期與時間… | 调整日期与时间… |
+| Set Location… | 設定位置… | 设置位置… |
+| Album cover | 相簿封面 | 相册封面 |
 
 ## Layout to check in each language
 

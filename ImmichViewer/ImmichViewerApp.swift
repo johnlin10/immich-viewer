@@ -1,3 +1,4 @@
+import MapKit
 import Sparkle
 import SwiftUI
 
@@ -134,18 +135,18 @@ struct ContentView: View {
                 } detail: {
                     switch page ?? .library {
                     case .library:
-                        TimelineBrowser(title: String(localized: "Library"), subtitle: library.status, assets: library.assets, revision: library.revision)
+                        TimelineBrowser(title: String(localized: "Library"), subtitle: library.status, assets: library.assets,
+                                        revision: library.revision, context: .library)
                     case .people:
                         NavigationStack(path: $personPath) {
                             PeopleGrid().navigationDestination(for: Person.self) { person in
-                                CollectionTimeline(title: person.name.isEmpty ? String(localized: "Unnamed") : person.name,
-                                                   filter: ["personId": person.id, "visibility": "timeline"])
+                                CollectionTimeline(context: .person(person.id), fallbackTitle: person.name)
                             }
                         }
                     case .albums:
                         NavigationStack {
                             AlbumGrid().navigationDestination(for: Album.self) { album in
-                                CollectionTimeline(title: album.albumName, filter: ["albumId": album.id])
+                                CollectionTimeline(context: .album(album.id), fallbackTitle: album.albumName)
                             }
                         }
                     }
@@ -157,6 +158,11 @@ struct ContentView: View {
             }
         }
         .frame(minWidth: 700, minHeight: 400)
+        .alert("Couldn’t Make the Change", isPresented: Binding { library.editError != nil } set: { if !$0 { library.editError = nil } }) {
+            Button("OK") {}
+        } message: {
+            Text(library.editError ?? "")
+        }
         .task { await library.launch() }
         .onChange(of: appearance, initial: true) { applyAppearance(appearance) }
     }
@@ -171,6 +177,7 @@ struct TimelineBrowser: View {
     let assets: [Asset]
     /// Changes whenever `assets` is replaced, so the grid regroups.
     let revision: Int
+    let context: BrowserContext
     @AppStorage("zoomLevel") private var level = 4
     @AppStorage("grouping") private var grouping = Grouping.day
     @AppStorage("fitWholePhoto") private var fit = false
@@ -182,6 +189,12 @@ struct TimelineBrowser: View {
     @State private var viewer: ViewerState?
     @State private var bridge = GridBridge()
     @State private var askingDate = false
+    @State private var sheet: EditSheet?
+    /// Photos waiting for Delete to be confirmed.
+    @State private var trashing: [String]?
+    @State private var deletingAlbum = false
+    @Environment(\.undoManager) private var undo
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         GeometryReader { geo in
@@ -193,6 +206,12 @@ struct TimelineBrowser: View {
                       insets: NSEdgeInsets(top: titleBar + 44, left: 0, bottom: 64, right: 0),
                       active: viewer == nil,
                       onZoom: { level = $0 }, onOpen: { viewer = ViewerState(index: $0, origin: $1, image: $2) },
+                      onAction: { perform($0, $1) },
+                      menu: { indices in
+                          NSHostingMenu(rootView: PhotoMenu(library: library, count: indices.count,
+                                                            allFavorite: indices.allSatisfy { grid.assets[$0].isFavorite == true },
+                                                            context: context) { perform($0, indices) })
+                      },
                       bridge: bridge)
                 .ignoresSafeArea(edges: .vertical)
                 .overlay(alignment: .top) { TitleBarBlur(height: titleBar) }
@@ -221,6 +240,7 @@ struct TimelineBrowser: View {
                             ToolbarItem(placement: .primaryAction) {
                                 Menu {
                                     Toggle("Show Whole Photos", isOn: $fit)
+                                    collectionMenu
                                 } label: {
                                     Image(systemName: "ellipsis")
                                 }
@@ -232,14 +252,14 @@ struct TimelineBrowser: View {
                 }
                 .overlay {
                     if let viewer {
-                        PhotoViewer(library: library, assets: grid.assets, topInset: titleBar, bridge: bridge,
-                                    start: viewer) { self.viewer = nil }
+                        PhotoViewer(library: library, assets: grid.assets, revision: grid.id, context: context, topInset: titleBar,
+                                    bridge: bridge, start: viewer, perform: perform) { self.viewer = nil }
                     }
                 }
         }
         // the single photo view puts its own date in the middle of the title bar
         .navigationTitle(viewer == nil ? title : "")
-        .navigationSubtitle(viewer == nil ? subtitle : "")
+        .navigationSubtitle(viewer != nil ? "" : bridge.chosen > 1 ? String(localized: "\(bridge.chosen) selected") : subtitle)
         .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
         .onChange(of: revision, initial: true) { regroup() }
         .onChange(of: grouping) { regroup() }
@@ -251,6 +271,86 @@ struct TimelineBrowser: View {
             askDate: { askingDate = true }))
         .sheet(isPresented: $askingDate) {
             JumpToDate(assets: grid.assets, current: bridge.top) { if let i = index(of: $0, in: grid.assets) { bridge.jump(to: i) } }
+        }
+        .editSheet($sheet, library: library, undo: undo)
+        .alert(trashing?.count == 1 ? "Delete This Photo?" : "Delete \(trashing?.count ?? 0) Photos?",
+               isPresented: Binding { trashing != nil } set: { if !$0 { trashing = nil } }) {
+            Button("Delete", role: .destructive) {
+                if let ids = trashing { Task { await library.trash(ids, undo: undo) } }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text(library.trashEnabled
+                 ? "They go to the server’s trash, which keeps them for 30 days unless the server is set otherwise. ⌘Z puts them back."
+                 : "The server’s trash is turned off, so they are deleted for good.")
+        }
+        .alert("Delete This Album?", isPresented: $deletingAlbum) {
+            Button("Delete", role: .destructive) {
+                guard let album else { return }
+                Task {
+                    await library.delete(album)
+                    dismiss()
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("The photos in it stay in your library.")
+        }
+    }
+
+    private var album: Album? {
+        guard case .album(let id) = context else { return nil }
+        return library.albums.first { $0.id == id }
+    }
+
+    private var person: Person? {
+        guard case .person(let id) = context else { return nil }
+        return library.people.first { $0.id == id }
+    }
+
+    /// The ⋯ menu's part for an album or person page.
+    @ViewBuilder private var collectionMenu: some View {
+        if let album {
+            Divider()
+            Button("Edit Album…") { sheet = .editAlbum(album) }
+            Button("Delete Album…") { deletingAlbum = true }
+        }
+        if let person {
+            Divider()
+            Button("Edit Person…") { sheet = .editPerson(person) }
+            Button("Hide Person") {
+                Task {
+                    await library.update(person, hidden: true, was: person, undo: undo)
+                    dismiss()
+                }
+            }
+        }
+    }
+
+    /// Does `action` to photos `indices` (into `grid.assets`). `place`: where the photo is now, from the photo view.
+    private func perform(_ action: PhotoAction, _ indices: [Int], place: CLLocationCoordinate2D? = nil) {
+        let ids = indices.filter(grid.assets.indices.contains).map { grid.assets[$0].id }
+        guard let first = indices.first, !ids.isEmpty else { return }
+        switch action {
+        case .favorite:
+            let all = indices.allSatisfy { grid.assets[$0].isFavorite == true }
+            Task { await library.favorite(ids, !all, undo: undo) }
+        case .archive: Task { await library.archive(ids, true, undo: undo) }
+        case .trash: trashing = ids
+        case .add(let album): Task { await library.add(ids, to: album, undo: undo) }
+        case .newAlbum: sheet = .newAlbum(ids)
+        case .adjustDate: sheet = .date(ids, grid.assets[first].date)
+        case .setLocation: sheet = .location(ids, place)
+        case .removeFromAlbum:
+            if case .album(let album) = context { Task { await library.remove(ids, from: album, undo: undo) } }
+        case .makeCover:
+            if var new = album {
+                new.albumThumbnailAssetId = ids[0]
+                let old = album!
+                Task { await library.update(new, was: old, undo: undo) }
+            }
+        case .makeProfilePhoto:
+            if case .person(let person) = context { Task { await library.setProfilePhoto(person, from: ids[0]) } }
         }
     }
 

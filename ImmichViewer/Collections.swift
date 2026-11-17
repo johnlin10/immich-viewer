@@ -3,6 +3,8 @@ import SwiftUI
 /// Everyone Immich recognised (hidden people left out), as round faces. Click one for their photos.
 struct PeopleGrid: View {
     @Environment(Library.self) private var library
+    @Environment(\.undoManager) private var undo
+    @State private var sheet: EditSheet?
 
     var body: some View {
         ScrollView {
@@ -19,10 +21,15 @@ struct PeopleGrid: View {
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
+                    .contextMenu {
+                        Button("Edit Person…") { sheet = .editPerson(person) }
+                        Button("Hide Person") { Task { await library.update(person, hidden: true, was: person, undo: undo) } }
+                    }
                 }
             }
             .padding(20)
         }
+        .editSheet($sheet, library: library, undo: undo)
         .overlay { Empty(count: library.people.count, error: library.collectionsError, title: "No People") }
         .navigationTitle("People")
         .navigationSubtitle("\(library.people.count) people")
@@ -32,6 +39,9 @@ struct PeopleGrid: View {
 /// Own and shared albums as covers with name and count. Click one for its photos.
 struct AlbumGrid: View {
     @Environment(Library.self) private var library
+    @Environment(\.undoManager) private var undo
+    @State private var sheet: EditSheet?
+    @State private var deleting: Album?
 
     var body: some View {
         ScrollView {
@@ -51,9 +61,26 @@ struct AlbumGrid: View {
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
+                    .contextMenu {
+                        Button("Edit Album…") { sheet = .editAlbum(album) }
+                        Button("Delete Album…") { deleting = album }
+                    }
                 }
             }
             .padding(20)
+        }
+        .toolbar {
+            Button { sheet = .newAlbum([]) } label: { Image(systemName: "plus") }
+                .help("New Album")
+        }
+        .editSheet($sheet, library: library, undo: undo)
+        .alert("Delete This Album?", isPresented: Binding { deleting != nil } set: { if !$0 { deleting = nil } }) {
+            Button("Delete", role: .destructive) {
+                if let album = deleting { Task { await library.delete(album) } }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("The photos in it stay in your library.")
         }
         .overlay { Empty(count: library.albums.count, error: library.collectionsError, title: "No Albums") }
         .navigationTitle("Albums")
@@ -61,18 +88,38 @@ struct AlbumGrid: View {
     }
 }
 
-/// One person's or album's photos in the usual grid, loaded when the page opens.
+/// One person's or album's photos in the usual grid, loaded when the page opens and again after each change.
 struct CollectionTimeline: View {
     @Environment(Library.self) private var library
-    let title: String
-    let filter: [String: String]
+    let context: BrowserContext
+    /// The name it had when it was opened, in case it isn't in the list any more.
+    let fallbackTitle: String
     @State private var assets: [Asset]?
+    @State private var loads = 0
     @State private var error: String?
+
+    private var title: String {
+        let name = switch context {
+        case .person(let id): library.people.first { $0.id == id }?.name ?? fallbackTitle
+        case .album(let id): library.albums.first { $0.id == id }?.albumName ?? fallbackTitle
+        case .library: fallbackTitle
+        }
+        return name.isEmpty ? String(localized: "Unnamed") : name
+    }
+
+    private var filter: [String: String] {
+        switch context {
+        case .person(let id): ["personId": id, "visibility": "timeline"]
+        case .album(let id): ["albumId": id]
+        case .library: ["visibility": "timeline"]
+        }
+    }
 
     var body: some View {
         Group {
             if let assets {
-                TimelineBrowser(title: title, subtitle: String(localized: "\(assets.count) items"), assets: assets, revision: 1)
+                TimelineBrowser(title: title, subtitle: String(localized: "\(assets.count) items"), assets: assets, revision: loads,
+                                context: context)
             } else if let error {
                 ContentUnavailableView("Can’t Load", systemImage: "exclamationmark.triangle", description: Text(error))
                     .navigationTitle(title)
@@ -80,8 +127,13 @@ struct CollectionTimeline: View {
                 ProgressView().navigationTitle(title)
             }
         }
-        .task {
-            do { assets = try await library.assets(filter) } catch { self.error = error.localizedDescription }
+        .task(id: library.edits) {
+            do {
+                assets = try await library.assets(filter)
+                loads += 1
+            } catch {
+                self.error = error.localizedDescription
+            }
         }
     }
 }
@@ -100,7 +152,7 @@ struct Thumb: View {
                 if let image { Image(decorative: image, scale: 1).resizable().scaledToFill() }
             }
             .clipped()
-            .task(id: id) {
+            .task(id: [id, "\(library.edits)"]) { // again after a change, for a new profile photo or album cover
                 guard !id.isEmpty, let api = library.api else { return }
                 image = await store.image(id, pixels: 0, api: api)
             }
