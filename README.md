@@ -11,7 +11,7 @@ It keeps every small thumbnail (about 15 KB each) on this Mac, so scrolling read
 - A sidebar with Library, People and Albums.
 - People: everyone Immich recognised (hidden people left out) as round faces; click one for their photos.
 - Albums: own and shared albums as covers with name and count, newest first; click one for its photos.
-- Person and album photos use the same grid, zoom, grouping and single photo view as the library, with a back button.
+- Person and album photos use the same grid, zoom, grouping and single photo view as the library, with a back button. A person opened from a photo opens on top of the page you were on, so back returns to the same place in the Library, an album or another person. While a photo is open only ✕ shows, which closes the photo.
 - One square grid of the whole timeline (archived, hidden and locked items are left out, like Immich's own timeline). The grid fills the window; under the title bar the photos blur progressively, strongest at the top.
 - Eight zoom steps (16 to 220 pt cells): the − / + buttons, ⌘− / ⌘=, or pinch on the trackpad.
 - A pinch follows the fingers: the grid grows or shrinks with them, and the photo under the pointer stays under the pointer. Like in Photos, the grid fades into the next step on the way, with that photo in the same place in both; letting go settles on the closer step. The photo under the pointer keeps its column as far as the new column count allows (the photos around it move instead), so the rows don't always start at the left edge: the first row of that photo's group can start a few cells in. One pinch can move several steps. The buttons and ⌘− / ⌘= zoom one step in one continuous animation around the middle of the window (with Reduce Motion, a pinch moves in steps too).
@@ -45,7 +45,8 @@ Changes go straight to the server and show in the app right away. Edit > Undo (�
 ### Single photo view
 
 - The photo grows out of its cell and shrinks back into it when closed. It fills the whole window, title bar included; the date and buttons sit over it.
-- Click the photo or video to hide the title bar, the buttons and the info panel, and click again to bring them back. While they are hidden, pointing at the title bar shows it until the pointer leaves. A click while dragging a zoomed photo doesn't count.
+- The people Immich found in the photo show as faces in the bottom left corner; click one for their photos.
+- Click the photo or video to hide the title bar, the buttons, the faces and the info panel, and click again to bring them back. While they are hidden, pointing at the title bar shows it until the pointer leaves. A click while dragging a zoomed photo doesn't count.
 - ← → or a two-finger swipe sideways for the previous and next photo. To close: ✕ (top left), Esc, or a two-finger swipe down; the photo follows the fingers and shrinks, and past a short distance letting go sends it back into the grid. Space closes a photo or pauses a video.
 - Videos play in place with the system player controls (streamed from the server, like the web UI). The player appears once the video has grown out of its cell.
 - The ⋯ button has the editing menu and Open in Browser for anything else.
@@ -144,7 +145,12 @@ Planned editing: a Trash page, tags, merging people and moving faces, crop and r
 
 ## Version history
 
-### v0.6 (current)
+### v0.6.1 (current)
+
+- Faces of the people in a photo in the bottom left corner of the single photo view.
+- Opening a person from a photo keeps your place: back returns to the Library (or album) where you were. In a person's or album's photo, ✕ is the only button on the left, so it can't jump back two pages.
+
+### v0.6
 
 - Editing: choose several photos (⌘-click, ⇧-click, ⌘A) and right-click them; favorites, ratings, descriptions, dates, places, archive and delete (to the trash, with undo); people's names, birthdays, hiding and profile photos; new albums, renaming, descriptions, covers, adding and removing photos, deleting albums. Undo and Redo for each change.
 - Clicks like in Photos: a click chooses a photo and a double click opens it (until v0.5 a click opened it, or zoomed in at the five smallest steps).

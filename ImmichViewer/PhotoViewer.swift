@@ -162,6 +162,17 @@ struct PhotoViewer: View {
                             .transition(.move(edge: .trailing))
                     }
                 }
+                .overlay(alignment: .bottomLeading) {
+                    if shown, !chromeHidden, let people = detail?.people, !people.isEmpty {
+                        FaceRow(people: people) { person in
+                            close()
+                            showPerson(person)
+                        }
+                        .frame(maxWidth: max(space.width - 32, 1), alignment: .leading)
+                        .padding(16)
+                        .transition(.opacity)
+                    }
+                }
                 .onChange(of: space, initial: true) {
                     area = space
                     clampPan()
@@ -920,5 +931,37 @@ struct InfoPanel: View {
                 }
             }
         }
+    }
+}
+
+/// The people in the photo as faces over its bottom left corner; click one for their photos.
+struct FaceRow: View {
+    @Environment(Library.self) private var library
+    let people: [Person]
+    let onPerson: (Person) -> Void
+
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                ForEach(people) { person in
+                    Button { onPerson(person) } label: {
+                        HStack(spacing: 6) {
+                            Thumb(id: person.id, store: library.faces)
+                                .frame(width: 24, height: 24)
+                                .clipShape(Circle())
+                            if !person.name.isEmpty { Text(person.name).lineLimit(1) }
+                        }
+                        .padding(.leading, 4)
+                        .padding(.trailing, person.name.isEmpty ? 4 : 10)
+                        .padding(.vertical, 4)
+                        .contentShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .glassEffect(.regular.interactive(), in: .capsule)
+                    .help(person.name.isEmpty ? String(localized: "Unnamed") : person.name)
+                }
+            }
+        }
+        .fixedSize(horizontal: false, vertical: true)
     }
 }

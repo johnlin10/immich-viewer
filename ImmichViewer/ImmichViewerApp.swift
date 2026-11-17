@@ -116,8 +116,10 @@ enum Page: Hashable {
 struct ContentView: View {
     @Environment(Library.self) private var library
     @State private var page: Page? = .library
-    /// The person open on the People page.
+    /// What's open on top of each page; back returns to where you were.
+    @State private var libraryPath: [Person] = []
     @State private var personPath: [Person] = []
+    @State private var albumPath = NavigationPath()
     @AppStorage("appearance") private var appearance = "system"
 
     var body: some View {
@@ -135,25 +137,31 @@ struct ContentView: View {
                 } detail: {
                     switch page ?? .library {
                     case .library:
-                        TimelineBrowser(title: String(localized: "Library"), subtitle: library.status, assets: library.assets,
-                                        revision: library.revision, context: .library)
+                        NavigationStack(path: $libraryPath) {
+                            TimelineBrowser(title: String(localized: "Library"), subtitle: library.status, assets: library.assets,
+                                            revision: library.revision, context: .library)
+                                .navigationDestination(for: Person.self, destination: personPage)
+                        }
                     case .people:
                         NavigationStack(path: $personPath) {
-                            PeopleGrid().navigationDestination(for: Person.self) { person in
-                                CollectionTimeline(context: .person(person.id), fallbackTitle: person.name)
-                            }
+                            PeopleGrid().navigationDestination(for: Person.self, destination: personPage)
                         }
                     case .albums:
-                        NavigationStack {
-                            AlbumGrid().navigationDestination(for: Album.self) { album in
-                                CollectionTimeline(context: .album(album.id), fallbackTitle: album.albumName)
-                            }
+                        NavigationStack(path: $albumPath) {
+                            AlbumGrid()
+                                .navigationDestination(for: Album.self) { album in
+                                    CollectionTimeline(context: .album(album.id), fallbackTitle: album.albumName)
+                                }
+                                .navigationDestination(for: Person.self, destination: personPage)
                         }
                     }
                 }
                 .environment(\.showPerson) { person in
-                    page = .people
-                    personPath = [person]
+                    switch page ?? .library {
+                    case .library: libraryPath.append(person)
+                    case .people: personPath.append(person)
+                    case .albums: albumPath.append(person)
+                    }
                 }
             }
         }
@@ -165,6 +173,10 @@ struct ContentView: View {
         }
         .task { await library.launch() }
         .onChange(of: appearance, initial: true) { applyAppearance(appearance) }
+    }
+
+    private func personPage(_ person: Person) -> some View {
+        CollectionTimeline(context: .person(person.id), fallbackTitle: person.name)
     }
 }
 
@@ -259,6 +271,7 @@ struct TimelineBrowser: View {
         }
         // the single photo view puts its own date in the middle of the title bar
         .navigationTitle(viewer == nil ? title : "")
+        .navigationBarBackButtonHidden(viewer != nil) // ✕ closes the photo; back would leave the page too
         .navigationSubtitle(viewer != nil ? "" : bridge.chosen > 1 ? String(localized: "\(bridge.chosen) selected") : subtitle)
         .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
         .onChange(of: revision, initial: true) { regroup() }
