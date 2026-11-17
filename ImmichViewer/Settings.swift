@@ -3,12 +3,15 @@ import SwiftUI
 
 /// The Settings window (⌘,).
 struct SettingsView: View {
+    @AppStorage("settingsTab") private var tab = "general"
+
     var body: some View {
-        TabView {
-            Tab("General", systemImage: "gearshape") { GeneralSettings() }
-            Tab("Video", systemImage: "play.rectangle") { VideoSettings() }
-            Tab("Storage", systemImage: "internaldrive") { StorageSettings() }
-            Tab("Connection", systemImage: "network") { ConnectionForm().padding(20) }
+        TabView(selection: $tab) {
+            Tab("General", systemImage: "gearshape", value: "general") { GeneralSettings() }
+            Tab("Video", systemImage: "play.rectangle", value: "video") { VideoSettings() }
+            Tab("Storage", systemImage: "internaldrive", value: "storage") { StorageSettings() }
+            Tab("Connection", systemImage: "network", value: "connection") { ConnectionForm().padding(20) }
+            Tab("Server", systemImage: "server.rack", value: "server") { ServerSettings() }
         }
         .frame(width: 460)
     }
@@ -122,24 +125,106 @@ private struct StorageSettings: View {
     }
 }
 
-/// Server address and API key.
+/// Server address and API key. Connect tries them before keeping the key.
 struct ConnectionForm: View {
     @Environment(Library.self) private var library
     @State private var server = ""
     @State private var key = ""
+    @State private var checking = false
+    @State private var error: String?
+    @State private var connected = false
 
     var body: some View {
         Form {
-            TextField("Server URL", text: $server)
+            TextField("Server URL", text: $server, prompt: Text(verbatim: "http://localhost:2283"))
+            // String(localized:) so the example addresses stay plain text instead of becoming links
+            Text(String(localized: "On this Mac: http://localhost:2283. On another computer in your network: its address and port, for example http://192.168.1.20:2283 or http://nas.local:2283. From outside your network: the https address of your reverse proxy, or the server’s Tailscale address."))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
             SecureField("API Key", text: $key)
             Text("In the Immich web UI, open Account Settings > API Keys and create a new key with asset.read, asset.view, person.read and album.read. To copy or drag out originals, also add asset.download (without it, the large preview is used). The key is kept in the keychain.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
-            Button("Connect") { library.connect(server: server, key: key) }
+            if let error {
+                Text(error)
+                    .foregroundStyle(.red)
+                    .textSelection(.enabled)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            HStack {
+                if checking {
+                    ProgressView().controlSize(.small)
+                } else if connected {
+                    Label("Connected", systemImage: "checkmark.circle.fill").foregroundStyle(.green)
+                }
+                Spacer()
+                Button("Connect") {
+                    checking = true
+                    error = nil
+                    connected = false
+                    Task {
+                        error = await library.connect(server: server, key: key)
+                        connected = error == nil
+                        checking = false
+                    }
+                }
                 .keyboardShortcut(.defaultAction)
-                .disabled(key.isEmpty || URL(string: server) == nil)
+                .disabled(key.isEmpty || ImmichAPI.address(server) == nil || checking)
+            }
         }
         .onAppear { server = library.serverURL }
+    }
+}
+
+/// Commands that start and stop the server, for the Server menu and for launch and quit.
+private struct ServerSettings: View {
+    @Environment(Library.self) private var library
+    @AppStorage("serverStart") private var start = ""
+    @AppStorage("serverStop") private var stop = ""
+    @AppStorage("serverStartAtLaunch") private var startAtLaunch = false
+    @AppStorage("serverStopAtQuit") private var stopAtQuit = false
+
+    var body: some View {
+        Form {
+            SwiftUI.Section {
+                TextField("Start", text: $start, prompt: Text(verbatim: "cd ~/immich-app && docker compose up -d"))
+                    .font(.body.monospaced())
+                TextField("Stop", text: $stop, prompt: Text(verbatim: "cd ~/immich-app && docker compose stop"))
+                    .font(.body.monospaced())
+            } footer: {
+                Text("Commands run in zsh, as in Terminal. For a server on another computer, run them over SSH with key login, for example: ssh nas 'cd immich-app && docker compose up -d'")
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            SwiftUI.Section {
+                Toggle("Start the server when Immich Viewer opens, if it isn’t running", isOn: $startAtLaunch)
+                    .disabled(start.isEmpty)
+                Toggle("Stop the server when Immich Viewer quits, if Immich Viewer started it", isOn: $stopAtQuit)
+                    .disabled(stop.isEmpty)
+            }
+            HStack {
+                if library.serverBusy {
+                    ProgressView().controlSize(.small)
+                    Text(library.status).foregroundStyle(.secondary)
+                }
+                Spacer()
+                Button("Start Now") { Task { await library.startServer() } }
+                    .disabled(start.isEmpty || library.serverBusy)
+                Button("Stop Now") { Task { await library.stopServer() } }
+                    .disabled(stop.isEmpty || library.serverBusy)
+            }
+            if let error = library.serverError {
+                Text(error)
+                    .font(.caption.monospaced())
+                    .foregroundStyle(.red)
+                    .textSelection(.enabled)
+                    .lineLimit(10)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .formStyle(.grouped)
+        .fixedSize(horizontal: false, vertical: true)
     }
 }

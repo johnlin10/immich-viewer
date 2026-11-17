@@ -18,6 +18,24 @@
           }
         }
       }
+    },
+    "NSLocalNetworkUsageDescription" : {
+      "comment" : "Local Network permission prompt",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Immich Viewer connects to your Immich server on the local network."
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Immich Viewer 需要連線到區域網路上的 Immich 伺服器。"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

@@ -8,7 +8,10 @@ struct ImmichViewerApp: App {
         WindowGroup {
             ContentView().environment(library)
         }
-        .commands { ViewCommands(library: library) }
+        .commands {
+            ViewCommands(library: library)
+            ServerCommands(library: library)
+        }
         Settings {
             SettingsView().environment(library)
         }
@@ -70,6 +73,29 @@ struct ViewCommands: Commands {
     }
 }
 
+/// The Server menu: the start and stop commands from Settings > Server.
+struct ServerCommands: Commands {
+    let library: Library
+    @AppStorage("serverStart") private var start = ""
+    @AppStorage("serverStop") private var stop = ""
+    @AppStorage("settingsTab") private var tab = "general"
+    @Environment(\.openSettings) private var openSettings
+
+    var body: some Commands {
+        CommandMenu("Server") {
+            Button("Start Server") { Task { await library.startServer() } }
+                .disabled(start.isEmpty || library.serverBusy)
+            Button("Stop Server") { Task { await library.stopServer() } }
+                .disabled(stop.isEmpty || library.serverBusy)
+            Divider()
+            Button("Start and Stop Commands…") {
+                tab = "server"
+                openSettings()
+            }
+        }
+    }
+}
+
 /// The sidebar's pages.
 enum Page: Hashable {
     case library, people, albums
@@ -114,7 +140,7 @@ struct ContentView: View {
             }
         }
         .frame(minWidth: 700, minHeight: 400)
-        .task { await library.refresh() }
+        .task { await library.launch() }
         .onChange(of: appearance, initial: true) { applyAppearance(appearance) }
     }
 }

@@ -71,4 +71,13 @@ let years = [y2025.addingTimeInterval(day), y2025, y2025.addingTimeInterval(-1),
 precondition(yearStarts(years).map { "\($0.year)@\($0.index)" } == ["2025@0", "2024@2"])
 precondition(yearStarts(years.reversed()).map { "\($0.year)@\($0.index)" } == ["2024@0", "2025@2"])
 
+// server addresses as people type them
+func address(_ s: String) -> String? { ImmichAPI.address(s)?.absoluteString }
+precondition(address("http://localhost:2283") == "http://localhost:2283")
+precondition(address(" nas.local:2283/ ") == "http://nas.local:2283")
+precondition(address("192.168.1.20:2283") == "http://192.168.1.20:2283")
+precondition(address("https://photos.example.com/api/") == "https://photos.example.com")
+precondition(address("HTTP://Box:2283") == "HTTP://Box:2283")
+precondition(address("") == nil && address("http://") == nil)
+
 print("all checks passed")

@@ -59,6 +59,9 @@ Use the same word everywhere in a language. Taiwan and mainland terms differ, so
 | Cache | 快取 | 缓存 |
 | Server | 伺服器 | 服务器 |
 | Server URL | 伺服器網址 | 服务器地址 |
+| Start / Stop (server) | 啟動 / 停止 | 启动 / 停止 |
+| Command | 指令 | 命令 |
+| Local Network | 區域網路 | 本地网络 |
 | API Key | API 金鑰 | API 密钥 |
 | Settings | 設定 | 设置 |
 | Copy | 拷貝 | 拷贝 |
@@ -69,7 +72,7 @@ Use the same word everywhere in a language. Taiwan and mainland terms differ, so
 ## Layout to check in each language
 
 - Bottom bar: the grouping capsule sizes to its text; check that it stays centred and doesn't clip.
-- Settings: labels next to sliders and switches, the long captions under Storage and Connection.
+- Settings: labels next to sliders and switches, the long captions under Storage, Connection and Server.
 - Info panel chips, the scrubber's month bubble, the date capsule.
 - People and album captions (one line, truncated).
 - Run once with Xcode's Double-Length pseudo-language to catch clipping.
@@ -83,7 +86,7 @@ Use the same word everywhere in a language. Taiwan and mainland terms differ, so
 ## Steps
 
 1. **v0.2.0: English source (done).** Switch the development language to English, move the existing Chinese into `zh-Hant`, make the code changes above. The app looks the same in Traditional Chinese and is complete in English.
-2. **v0.3.0: Simplified Chinese.** Add `zh-Hans` using the glossary, then check layout.
+2. **v0.4.0: Simplified Chinese.** Add `zh-Hans` using the glossary, then check layout.
 3. **README:** remove the "planned" note and say the interface follows the macOS language.
 
 From then on, every new UI string is written in English in the code, and its `zh-Hant` and `zh-Hans` translations go in the same commit.

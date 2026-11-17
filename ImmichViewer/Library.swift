@@ -2,7 +2,7 @@ import AppKit
 import AVFoundation
 import Observation
 
-/// Connection settings, the asset list and the thumbnail cache.
+/// Connection settings, starting and stopping the server, the asset list and the thumbnail cache.
 @MainActor @Observable
 final class Library {
     var serverURL = UserDefaults.standard.string(forKey: "server") ?? "http://localhost:2283"
@@ -47,16 +47,115 @@ final class Library {
             revision += 1
             status = String(localized: "\(list.count) items")
         }
+        NotificationCenter.default.addObserver(forName: NSApplication.willTerminateNotification, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.stopServerAtQuit() }
+        }
     }
 
-    func connect(server: String, key: String) {
-        guard let url = URL(string: server.trimmingCharacters(in: .whitespaces)) else { return }
+    /// Tries the address and key, and only keeps the key if the server takes it. Returns why it didn't work, or nil.
+    /// The address is kept either way, so the start command (Settings > Server) can wait on it.
+    func connect(server: String, key: String) async -> String? {
+        guard let url = ImmichAPI.address(server) else { return String(localized: "That isn’t a server address.") }
         serverURL = url.absoluteString
         UserDefaults.standard.set(serverURL, forKey: "server")
-        let key = key.trimmingCharacters(in: .whitespacesAndNewlines)
-        Keychain.save(key)
-        api = ImmichAPI(server: url, key: key)
+        let candidate = ImmichAPI(server: url, key: key.trimmingCharacters(in: .whitespacesAndNewlines))
+        if let problem = await candidate.check() { return problem }
+        Keychain.save(candidate.key)
+        api = candidate
         Task { await refresh() }
+        return nil
+    }
+
+    /// At launch: start the server first if Settings > Server says so and it isn't answering, then sync.
+    func launch() async {
+        if UserDefaults.standard.bool(forKey: "serverStartAtLaunch"), api != nil, !command("serverStart").isEmpty,
+           let url = URL(string: serverURL), !(await ImmichAPI.ping(url)) {
+            await startServer()
+        } else {
+            await refresh()
+        }
+    }
+
+    // MARK: Starting and stopping the server, with the commands from Settings > Server
+
+    private(set) var serverBusy = false
+    /// The output of the last start or stop command, when it failed.
+    private(set) var serverError: String?
+    /// Only a server this app started is stopped at quit.
+    private var startedServer = false
+
+    func command(_ key: String) -> String {
+        (UserDefaults.standard.string(forKey: key) ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// Runs the start command, waits until the server answers, then syncs.
+    func startServer() async {
+        guard !serverBusy, await run("serverStart", String(localized: "Starting the server…")) else { return }
+        startedServer = true
+        serverBusy = true
+        defer { serverBusy = false }
+        status = String(localized: "Waiting for the server…")
+        // ponytail: fixed 3 minute wait; make it a setting if a slow NAS needs longer
+        for _ in 0..<90 {
+            if let url = URL(string: serverURL), await ImmichAPI.ping(url) {
+                serverBusy = false
+                await refresh()
+                return
+            }
+            try? await Task.sleep(for: .seconds(2))
+        }
+        status = String(localized: "The server didn’t answer within 3 minutes")
+        serverError = status
+    }
+
+    func stopServer() async {
+        guard !serverBusy, await run("serverStop", String(localized: "Stopping the server…")) else { return }
+        startedServer = false
+        status = String(localized: "Server stopped")
+    }
+
+    /// At quit, without waiting: the command keeps running after the app is gone.
+    func stopServerAtQuit() {
+        guard startedServer, UserDefaults.standard.bool(forKey: "serverStopAtQuit"), !command("serverStop").isEmpty else { return }
+        try? Self.shell(command("serverStop")).run()
+    }
+
+    private func run(_ key: String, _ message: String) async -> Bool {
+        let text = command(key)
+        guard !text.isEmpty else { return false }
+        serverBusy = true
+        defer { serverBusy = false }
+        status = message
+        serverError = nil
+        let process = Self.shell(text)
+        let log = FileManager.default.temporaryDirectory.appending(path: "ImmichViewer-\(UUID().uuidString).log")
+        FileManager.default.createFile(atPath: log.path, contents: nil)
+        defer { try? FileManager.default.removeItem(at: log) }
+        // a file rather than a pipe: something the command leaves running in the background could hold a pipe open forever
+        let out = try? FileHandle(forWritingTo: log)
+        process.standardOutput = out
+        process.standardError = out
+        let code: Int32 = await withCheckedContinuation { done in
+            process.terminationHandler = { done.resume(returning: $0.terminationStatus) }
+            do { try process.run() } catch { done.resume(returning: -1) }
+        }
+        try? out?.close()
+        guard code != 0 else { return true }
+        let output = (try? String(contentsOf: log, encoding: .utf8))?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        status = String(localized: "The command failed (exit code \(code))")
+        serverError = output.isEmpty ? status : String(output.suffix(2000))
+        return false
+    }
+
+    /// A login zsh, so the PATH has Homebrew, Docker and OrbStack as in Terminal.
+    nonisolated private static func shell(_ command: String) -> Process {
+        let process = Process()
+        process.executableURL = URL(filePath: "/bin/zsh")
+        process.arguments = ["-lc", command]
+        process.standardInput = FileHandle.nullDevice
+        process.standardOutput = FileHandle.nullDevice
+        process.standardError = FileHandle.nullDevice
+        return process
     }
 
     /// Reloads the asset list, then downloads any thumbnails not cached yet.

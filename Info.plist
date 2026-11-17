@@ -2,11 +2,15 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<!-- allow plain http to localhost / LAN addresses, where Immich usually runs -->
+	<!-- plain http to any address the user enters: self-hosted servers often run http under a home name
+	     (nas.lan, a Tailscale name), which NSAllowsLocalNetworking alone would block -->
 	<key>NSAppTransportSecurity</key>
 	<dict>
-		<key>NSAllowsLocalNetworking</key>
+		<key>NSAllowsArbitraryLoads</key>
 		<true/>
 	</dict>
+	<!-- shown in the Local Network permission prompt (translated in InfoPlist.xcstrings) -->
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Immich Viewer connects to your Immich server on the local network.</string>
 </dict>
 </plist>

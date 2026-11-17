@@ -6,7 +6,7 @@ It keeps every small thumbnail (about 15 KB each) on this Mac, so scrolling read
 
 > **Language:** English and Traditional Chinese, following the macOS language (or the per-app language in System Settings > General > Language & Region). Simplified Chinese is planned; see [docs/localization.md](docs/localization.md).
 
-## What it does (v0.2)
+## What it does (v0.3)
 
 - A sidebar with Library, People and Albums.
 - People: everyone Immich recognised (hidden people left out) as round faces; click one for their photos.
@@ -41,21 +41,47 @@ It keeps every small thumbnail (about 15 KB each) on this Mac, so scrolling read
 - General: appearance (System, Light, Dark); photo grid sort order (Newest First, Oldest First), spacing, corner radius, Show Whole Photos, Mark Videos (▶).
 - Video: Play Automatically, Start Muted, Loop.
 - Storage: thumbnail and face cache size, Show in Finder, Clear Cache… (thumbnails download again when shown, or all at once with ⌘R).
-- Connection: server address and API key.
+- Connection: server address and API key. Connect tries them first and says what's wrong (server not reachable, wrong port, key not accepted, missing permission); the key is only saved once it works.
+- Server: commands that start and stop the server, see below.
 
 ## Setup
 
 1. In the Immich web UI, open Account Settings > API Keys and create a new key with only `asset.read`, `asset.view`, `person.read` and `album.read`. Add `asset.download` if you want zooming, copying and dragging out to use the originals.
-2. Open `ImmichViewer.xcodeproj` in Xcode and run it (⌘R).
-3. Enter the server address (default `http://localhost:2283`) and the key. The key is saved in the login keychain. Change it later in Settings (⌘,).
+2. Open `ImmichViewer.xcodeproj` in Xcode and run it (⌘R), or install the DMG from the Releases page.
+3. Enter the server address and the key. The key is saved in the login keychain. Change it later in Settings (⌘,).
 
 The first sync downloads all thumbnails, about 2.5 GB for 165,000 items. Progress shows under the window title.
+
+### Server address
+
+Use the same address you open the Immich web UI with:
+
+- Immich on this Mac: `http://localhost:2283`
+- Immich on another computer in your network (a NAS, a home server): its IP address or name and port, for example `http://192.168.1.20:2283` or `http://nas.local:2283`. The first time, macOS asks whether Immich Viewer may find devices on the local network; allow it. If you said no, turn it on in System Settings > Privacy & Security > Local Network.
+- From outside your network: the `https` address of your reverse proxy, or the server's Tailscale address.
+
+`http://` is added if you leave it out, and a trailing `/api` is ignored. Plain `http` works for any address, because home servers rarely have certificates; over the internet, use `https`.
+
+### Starting and stopping the server
+
+If Immich only runs while you need it, Settings > Server takes a start and a stop command. They run in zsh as in Terminal, so `docker` and `ssh` are found as usual.
+
+| Where Immich runs | Start | Stop |
+|---|---|---|
+| This Mac, Docker Compose in `~/immich-app` | `cd ~/immich-app && docker compose up -d` | `cd ~/immich-app && docker compose stop` |
+| Another computer, over SSH | `ssh nas 'cd immich-app && docker compose up -d'` | `ssh nas 'cd immich-app && docker compose stop'` |
+
+SSH needs key login (no password prompt), for example with `ssh-copy-id nas`. If Docker Desktop isn't running yet, put `open -a Docker && sleep 20 && ` in front of the start command.
+
+- The Server menu has Start Server and Stop Server. After starting, the app waits until the server answers (up to 3 minutes), then syncs.
+- Two switches: start the server when the app opens (only if it isn't answering), and stop it when the app quits (only if the app started it, so a server that was already running for phone backups stays up).
+- If a command fails, its output shows in Settings > Server.
 
 ## Where data is kept
 
 - Thumbnails: `~/Library/Caches/ImmichViewer/thumbnails` (faces in `.../faces`)
 - Last asset list (for instant start): `~/Library/Application Support/ImmichViewer/assets.json`
-- Server address and view settings: the app's preferences (`local.ImmichViewer`)
+- Server address, start and stop commands, and view settings: the app’s preferences (`local.ImmichViewer`)
 
 Delete these folders to start fresh, for example after switching servers.
 
@@ -77,7 +103,7 @@ swiftc ImmichViewer/TimelineModel.swift ImmichViewer/ThumbnailStore.swift Immich
 | `ImmichViewerApp.swift` | App window and sidebar, View menu, timeline page, bottom bar, title bar blur |
 | `Settings.swift` | Settings window: appearance, grid, video, storage, connection |
 | `Scrubber.swift` | Date capsule, time scrubber, Go to Date sheet |
-| `Library.swift` | Connection, asset list, sync |
+| `Library.swift` | Connection, starting and stopping the server, asset list, sync |
 | `ImmichAPI.swift` | Immich API calls, keychain |
 | `ThumbnailStore.swift` | Disk and memory thumbnail cache |
 | `PhotoGrid.swift` | NSCollectionView grid, zoom, clicks, pinch, keyboard selection, cells, headers |
@@ -92,7 +118,12 @@ Searching, map, memories, Simplified Chinese interface, and noticing deletions m
 
 ## Version history
 
-### v0.2 (current)
+### v0.3 (current)
+
+- Start and stop commands for the server (Settings > Server, Server menu), optionally run when the app opens and quits.
+- Servers on other computers: addresses without `http://`, plain `http` to any host, the Local Network permission, and Connect checks the address and key before saving.
+
+### v0.2
 
 - English and Traditional Chinese interface, following the macOS language. English is now the source language; the translations live in `ImmichViewer/Localizable.xcstrings`.
 - A DMG installer (`scripts/make-dmg.sh`): drag the app to Applications.

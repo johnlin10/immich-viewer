@@ -13,6 +13,40 @@ struct ImmichAPI: Sendable {
         var errorDescription: String? { "HTTP \(status) \(message)" }
     }
 
+    /// What people type into the address field, as the server's base URL: `nas.local:2283`, `http://192.168.1.20:2283/`
+    /// and `https://photos.example.com/api` all work. Nil if there's no host.
+    static func address(_ text: String) -> URL? {
+        var s = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !["http://", "https://"].contains(where: { s.lowercased().hasPrefix($0) }) { s = "http://" + s }
+        while s.hasSuffix("/") { s.removeLast() }
+        if s.lowercased().hasSuffix("/api") { s.removeLast(4) }
+        guard let url = URL(string: s), url.host() != nil else { return nil }
+        return url
+    }
+
+    /// True once the server answers. Needs no key, so it also works before connecting.
+    static func ping(_ server: URL) async -> Bool {
+        let request = URLRequest(url: server.appending(path: "api/server/ping"), timeoutInterval: 5)
+        guard let (_, response) = try? await URLSession.shared.data(for: request) else { return false }
+        return (response as? HTTPURLResponse)?.statusCode == 200
+    }
+
+    /// Tries the address and key with the first call a sync makes. Nil if they work, else why not, for the Connection settings.
+    func check() async -> String? {
+        do {
+            _ = try await get("timeline/buckets", ["visibility": "timeline"])
+            return nil
+        } catch let error as HTTPError {
+            return switch error.status {
+            case 401: String(localized: "The server didn’t accept this API key.")
+            case 404: String(localized: "Something answered at \(server.absoluteString), but it isn’t an Immich server. Check the port.")
+            default: error.localizedDescription // 403 names the missing permission
+            }
+        } catch {
+            return String(localized: "Couldn’t reach \(server.absoluteString): \(error.localizedDescription) Check the address and port, and that the server is running. For a server on another computer, also check that Immich Viewer is on in System Settings > Privacy & Security > Local Network.")
+        }
+    }
+
     func get(_ path: String, _ query: [String: String] = [:]) async throws -> Data {
         var url = server.appending(path: "api/" + path)
         if !query.isEmpty { url.append(queryItems: query.map { URLQueryItem(name: $0.key, value: $0.value) }) }
