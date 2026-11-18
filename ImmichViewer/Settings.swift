@@ -1,3 +1,4 @@
+#if os(macOS)
 import AppKit
 import Sparkle
 import SwiftUI
@@ -354,3 +355,4 @@ private struct ServerSettings: View {
         .fixedSize(horizontal: false, vertical: true)
     }
 }
+#endif

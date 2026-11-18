@@ -1,3 +1,4 @@
+#if os(macOS)
 import SwiftUI
 
 /// Wall-clock dates (`Asset.date`) are kept as UTC; these format them without shifting the day.
@@ -144,3 +145,4 @@ struct JumpToDate: View {
         .onAppear { if assets.indices.contains(current) { day = Self.local(assets[current].date) } }
     }
 }
+#endif

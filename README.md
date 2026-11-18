@@ -6,12 +6,12 @@ It keeps every small thumbnail (about 15 KB each) on this Mac, so scrolling read
 
 > **Language:** English and Traditional Chinese, following the macOS language (or the per-app language in System Settings > General > Language & Region). Simplified Chinese is planned; see [docs/localization.md](docs/localization.md).
 
-## What it does (v0.7)
+## What it does (v0.8)
 
 - A sidebar with Library, People, Albums, Tags, Archive and Trash.
 - People: everyone Immich recognised (hidden people left out) as round faces, with their birthday and age when one is set; click one for their photos. A person's page shows the birthday and age next to the item count.
 - Albums: own and shared albums as covers with name and count, newest first; click one for its photos.
-- Filter and sort at the top right of every page. Filters can be combined, and with none on everything shows; choices in the same group (Photos and Videos, Named and Unnamed, Mine and Shared) add up, the others narrow. Photo pages (Library, Archive, Trash, a person, an album, a tag): Photos, Videos, Favorites, and Newest or Oldest First; the filter starts empty on every page, the order is kept. People: Named, Unnamed, Has Birthday; Default (Immich's order: favorites, then named, then most photographed), Name, Age either way. Albums: Mine, Shared (on servers that can tell); Recent, Name, Item Count. Tags: Name, A to Z or Z to A. The page's subtitle says how many a filter leaves.
+- Filter and sort at the top right of every page. Filters can be combined, and with none on everything shows; choices in the same group (Photos and Videos, Named and Unnamed, Mine and Shared) add up, the others narrow. Photo pages (Library, Archive, Trash, a person, an album, a tag): Photos, Videos, Live Photos, Favorites, and Newest or Oldest First; the filter starts empty on every page, the order is kept. People: Named, Unnamed, Has Birthday; Default (Immich's order: favorites, then named, then most photographed), Name, Age either way. Albums: Mine, Shared (on servers that can tell); Recent, Name, Item Count. Tags: Name, A to Z or Z to A. The page's subtitle says how many a filter leaves.
 - Person and album photos use the same grid, zoom, grouping and single photo view as the library, with a back button. A person opened from a photo opens on top of the page you were on, so back returns to the same place in the Library, an album or another person. While a photo is open only ✕ shows, which closes the photo.
 - One square grid of the whole timeline (archived, hidden and locked items are left out, like Immich's own timeline). The grid fills the window; under the title bar the photos blur progressively, strongest at the top.
 - Eight zoom steps (16 to 220 pt cells): the − / + buttons, ⌘− / ⌘=, or pinch on the trackpad.
@@ -56,10 +56,23 @@ Changes go straight to the server and show in the app right away. Edit > Undo (�
 - Click the photo or video to hide the title bar, the buttons, the faces and the info panel, and click again to bring them back. While they are hidden, pointing at the title bar shows it until the pointer leaves. A click while dragging a zoomed photo doesn't count.
 - ← → or a two-finger swipe sideways for the previous and next photo. To close: ✕ (top left), Esc, or a two-finger swipe down; the photo follows the fingers and shrinks, and past a short distance letting go sends it back into the grid. Space closes a photo or pauses a video.
 - Videos play in place with the system player controls (streamed from the server, like the web UI). The player appears once the video has grown out of its cell.
+- Live Photos show LIVE in the top left corner: point at it to play the moving part, or click it. When the clip ends it fades back to the still.
 - The ⋯ button has the editing menu and Open in Browser for anything else.
 - Info panel (ⓘ or ⌘I, remembered): date and time, description, rating, file name, size and megapixels, camera and lens, aperture, shutter, focal length, ISO, place with a small map (click to open in Maps), and the people in it (named or not; click one for their photos).
 - Zoom: pinch, double-click (3× at the pointer; again to go back) or ⌘= / ⌘−, up to 8×. Drag or scroll to move around. Zooming downloads the original for full sharpness (with `asset.download`; otherwise the large preview). Esc zooms out first, then closes.
 - ⌘C copies the photo (original or preview) for pasting into other apps. Drag the photo out to Finder, Mail, Messages and so on to save it as a file under its original name.
+
+### iPhone and iPad
+
+The same project also builds an iPhone and iPad app (iOS 26 or later) for browsing; editing stays on the Mac. It isn't in the Releases: build it from Xcode onto your own device.
+
+- Tabs for Library, People, Albums, Tags and Servers (a sidebar on iPad). The Servers tab adds, switches and removes servers, each with its own key, list and thumbnails, like the Mac.
+- The same grid, filters, sorting and grouping. Pinch the grid to change the column count (2 to 8): like the Mac, it follows the fingers and fades into the next count, keeping the photo under them in place. Pull down to refresh. The tab bar tucks away while scrolling down.
+- By day, each day's date sticks just under the title over the system's blur while its photos scroll past; by month, the date capsule shows instead.
+- Tap a photo to open it: it grows out of its square and shrinks back when closed. Swipe sideways for the next one, swipe up for its details, pinch or double-tap to zoom. The low-resolution thumbnail shows at once, then the large preview.
+- A tap hides the bars and faces and turns the background black; another brings them back. The ⋯ menu has Info and Open in Browser.
+- Videos have their own controls under them (play or pause, a scrubber with the time left, sound on or off), which come and go with the bars and hide after a few seconds of playing.
+- Live Photos: long-press the photo, or tap LIVE, to play the moving part.
 
 ### Settings (⌘,)
 
@@ -119,7 +132,7 @@ Removing a server in Settings > Connection deletes its key and both folders. Upd
 
 ## Development
 
-- macOS 26 or later (Liquid Glass), Xcode 26 or later. Files dropped into the `ImmichViewer/` folder are added to the target automatically.
+- macOS 26 or later (Liquid Glass), Xcode 26 or later. One target builds both the Mac app and the iPhone and iPad app (`#if os(iOS)` / `#if os(macOS)`); to run it on a phone, choose the device in Xcode. Files dropped into the `ImmichViewer/` folder are added to the target automatically.
 - Signing uses your Apple Development certificate (team set in the project), so the keychain keeps trusting rebuilt versions.
 - Debug builds take these environment variables (Edit Scheme > Run > Arguments): `IMMICH_API_KEY` (skips the keychain), `IMMICH_SERVER` (another server address) and `IMMICH_VIEWER_PROFILE` (keeps the list and thumbnails in separate `ImmichViewer-<name>` folders, so a test server doesn't mix with your library).
 - Grid and grouping checks, no Xcode needed:
@@ -142,6 +155,11 @@ swiftc ImmichViewer/TimelineModel.swift ImmichViewer/ThumbnailStore.swift Immich
 | `ThumbnailStore.swift` | Disk and memory thumbnail cache |
 | `PhotoGrid.swift` | NSCollectionView grid, zoom, clicks, pinch, keyboard selection, cells, headers |
 | `PhotoViewer.swift` | Single photo view, zoom and pan, info panel, copy and drag-out, video player, swipes |
+| `LivePhoto.swift` | A Live Photo's moving part and the LIVE badge, on both platforms |
+| `PhoneApp.swift` | iPhone and iPad app: tabs |
+| `PhoneTimeline.swift` | iPhone and iPad photo page and photo view: menus, pager, zoom, video controls |
+| `PhoneGrid.swift` | iPhone and iPad UICollectionView grid, pinch, sticky dates, open and close transitions |
+| `PhoneServers.swift` | iPhone and iPad server list and connect form |
 | `Collections.swift` | People and album pages, one person's or album's grid |
 | `Editing.swift` | Photo menu, date, location, album and person sheets |
 | `TimelineModel.swift` | Asset, grouping, grid geometry, row moves, date lookup, year marks |
@@ -155,7 +173,13 @@ Planned editing: cropping, dropping files on the window to upload, then stacks, 
 
 ## Version history
 
-### v0.7.2 (current)
+### v0.8.0 (current)
+
+- An iPhone and iPad app in the same project, for browsing (built from Xcode, not in the Releases): Library, People, Albums, Tags and Servers; the same grid, filters and grouping; a photo view with swipes, zoom, details, faces and video controls.
+- Live Photos: LIVE in the photo view plays the moving part (point at it or click it on the Mac; long-press or tap it on iOS).
+- A Live Photos filter on photo pages. Older lists learn which photos are Live Photos on the next refresh.
+
+### v0.7.2
 
 - Filter and sort at the top right of every page, with icons. Photo pages: Photos, Videos, Favorites; Newest or Oldest First (moved here from Settings > General). People: Named, Unnamed, Has Birthday; Default, Name, Age. Albums: Mine, Shared; Recent, Name, Item Count. Tags: Name, A to Z or Z to A.
 - Filters combine, and with none on everything shows; the subtitle says how many are shown.

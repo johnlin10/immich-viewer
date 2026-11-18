@@ -9,6 +9,8 @@ struct Asset: Codable, Sendable {
     let isVideo: Bool
     /// Optional so lists saved before v0.6 still load.
     var isFavorite: Bool?
+    /// A Live Photo (or motion photo). nil in lists saved before v0.8, until the next sync.
+    var isLive: Bool?
 }
 
 /// Immich sends times like `2026-11-10T21:45:03` or `...03.886` with no zone; like the web UI, read them as UTC.
@@ -215,13 +217,16 @@ struct PhotoFilter: Equatable {
     var photos = false
     var videos = false
     var favorites = false
+    var live = false
 
-    var isActive: Bool { photos || videos || favorites }
+    var isActive: Bool { photos || videos || favorites || live }
 
+    /// Photos, videos and Live Photos are kinds: any picked one matches, none picked means all. Favorites narrows that.
     func apply(_ assets: [Asset]) -> [Asset] {
         guard isActive else { return assets }
+        let anyKind = !(photos || videos || live)
         return assets.filter { asset in
-            (photos == videos || (asset.isVideo ? videos : photos)) && (!favorites || asset.isFavorite == true)
+            (anyKind || (asset.isVideo ? videos : photos) || (live && asset.isLive == true)) && (!favorites || asset.isFavorite == true)
         }
     }
 }

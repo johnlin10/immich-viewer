@@ -320,11 +320,13 @@ private struct TagSheet: View {
     var body: some View {
         Form {
             TextField("Tag", text: $name, prompt: Text("Trips/Japan"))
+                #if os(macOS)
                 .textInputSuggestions {
                     ForEach(tags.filter { name.isEmpty || $0.value.localizedCaseInsensitiveContains(name) }.prefix(12)) {
                         Text($0.value).textInputCompletion($0.value)
                     }
                 }
+                #endif
             Text("A slash makes a tag inside another one.").font(.callout).foregroundStyle(.secondary)
         }
         .frame(width: 360)

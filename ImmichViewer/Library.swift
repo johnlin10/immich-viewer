@@ -1,4 +1,8 @@
+#if os(macOS)
 import AppKit
+#else
+import UIKit
+#endif
 import AVFoundation
 import CoreLocation
 import Observation
@@ -51,9 +55,11 @@ final class Library {
         moveSharedCommands()
         if let key = debugKey ?? Keychain.load(serverURL), let url = URL(string: serverURL) { api = ImmichAPI(server: url, key: key) }
         loadList()
+        #if os(macOS)
         NotificationCenter.default.addObserver(forName: NSApplication.willTerminateNotification, object: nil, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated { self?.stopServerAtQuit() }
         }
+        #endif
     }
 
     private static func stores(_ base: String, _ server: String) -> (ThumbnailStore, ThumbnailStore, URL) {
@@ -218,6 +224,7 @@ final class Library {
         status = String(localized: "Server stopped")
     }
 
+    #if os(macOS)
     /// At quit, without waiting: each server this app started, with its own stop command. The commands keep running after the app is gone.
     func stopServerAtQuit() {
         for server in startedServers where UserDefaults.standard.bool(forKey: Self.setting("serverStopAtQuit", server)) {
@@ -263,6 +270,10 @@ final class Library {
         process.standardError = FileHandle.nullDevice
         return process
     }
+    #else
+    /// iOS can't run commands.
+    private func run(_ key: String, _ message: String) async -> Bool { false }
+    #endif
 
     /// Reloads the asset list, then downloads any thumbnails not cached yet.
     func refresh() async {
@@ -291,6 +302,7 @@ final class Library {
         saveList()
         await loadCollections()
 
+        #if os(macOS)
         await thumbs.downloadMissing(list.map(\.id), api: api) { done, total, failed in
             self.status = switch (done < total, failed > 0) {
             case (true, false): String(localized: "Downloading thumbnails \(done) of \(total)")
@@ -299,6 +311,9 @@ final class Library {
             case (false, true): String(localized: "\(list.count) items, \(failed) failed")
             }
         }
+        #else
+        status = String(localized: "\(list.count) items") // a phone loads thumbnails as they are shown, not the whole library
+        #endif
     }
 
     private func saveList() {
@@ -329,10 +344,12 @@ final class Library {
     }
 
     /// The large (~1440 px) version for the single-photo view. Not cached on disk.
+    #if os(macOS)
     func preview(_ asset: Asset) async -> NSImage? {
         guard let api, let data = try? await api.thumbnail(asset.id, size: "preview") else { return nil }
         return NSImage(data: data)
     }
+    #endif
 
     func detail(_ asset: Asset) async -> AssetDetail? { try? await api?.detail(asset.id) }
 
@@ -355,9 +372,12 @@ final class Library {
     }
 
     /// Streams a video from the server (the transcoded version, as the web UI plays it).
-    func player(for asset: Asset) -> AVPlayer? {
+    func player(for asset: Asset) -> AVPlayer? { player(video: asset.id) }
+
+    /// A video asset by id, such as a Live Photo's moving part.
+    func player(video id: String) -> AVPlayer? {
         guard let api else { return nil }
-        let url = api.server.appending(path: "api/assets/\(asset.id)/video/playback")
+        let url = api.server.appending(path: "api/assets/\(id)/video/playback")
         // ponytail: header option key is undocumented but long-standing; a signed URL would replace it if it ever breaks
         let video = AVURLAsset(url: url, options: ["AVURLAssetHTTPHeaderFieldsKey": ["x-api-key": api.key]])
         return AVPlayer(playerItem: AVPlayerItem(asset: video))
@@ -365,7 +385,11 @@ final class Library {
 
     func openInBrowser(_ asset: Asset) {
         guard let api else { return }
+        #if os(macOS)
         NSWorkspace.shared.open(api.server.appending(path: "photos/\(asset.id)"))
+        #else
+        UIApplication.shared.open(api.server.appending(path: "photos/\(asset.id)"))
+        #endif
     }
 
     // MARK: Editing. Each change goes to the server first; the local list follows only if it worked.
@@ -637,7 +661,9 @@ final class Library {
             }
         }
         status = String(localized: "\(assets.count) items")
+        #if os(macOS)
         if !saved.isEmpty { NSWorkspace.shared.activateFileViewerSelecting(saved) }
+        #endif
     }
 
     /// `url`, or "name 2.jpg", "name 3.jpg"… if that is taken.

@@ -1,6 +1,7 @@
-import AVKit
-import SwiftUI
 import MapKit
+import SwiftUI
+#if os(macOS)
+import AVKit
 import UniformTypeIdentifiers
 
 /// What the grid hands the viewer when a photo is clicked.
@@ -47,6 +48,9 @@ struct PhotoViewer: View {
     /// The pointer is over the title bar, which shows it while the rest stays hidden.
     @State private var pointerInBar = false
     @State private var player: AVPlayer?
+    /// The photo's moving part, when it's a Live Photo: pointing at LIVE plays it, like Photos.
+    @State private var livePlayer: AVPlayer?
+    @State private var livePlaying = false
     @State private var swipe = SwipeMonitor()
     @State private var detail: AssetDetail?
     /// The photo shown, to find it again after an edit.
@@ -131,6 +135,11 @@ struct PhotoViewer: View {
                             guard !asset.isVideo, let image, rect.contains(point) else { return nil }
                             return (promise(for: asset), image, rect)
                         })
+                    if let livePlayer, shown, settled {
+                        LiveVideo(player: livePlayer, playing: $livePlaying, gravity: .resizeAspectFill)
+                            .frame(width: rect.width, height: rect.height).clipped()
+                            .position(x: rect.midX, y: rect.midY)
+                    }
                     if let player, shown, settled {
                         // over the thumbnail, which shows until the first frame arrives
                         PlayerView(player: player, onTap: toggleChrome)
@@ -142,6 +151,16 @@ struct PhotoViewer: View {
                             .padding(8)
                             .glassEffect(.regular, in: .circle)
                             .position(x: space.maxX - 28, y: space.maxY - 28)
+                    }
+                }
+                .overlay(alignment: .topLeading) {
+                    if shown, chromeShown, livePlayer != nil {
+                        LiveBadge()
+                            .onHover { livePlaying = $0 }
+                            .onTapGesture { livePlaying = true }
+                            .padding(16)
+                            .offset(y: topInset)
+                            .transition(.opacity)
                     }
                 }
                 .overlay(alignment: .topTrailing) {
@@ -164,6 +183,8 @@ struct PhotoViewer: View {
                                   onChangePerson: { person in
                                       if let face = person.faces?.first { act(.changePerson(face: face.id, from: person.id)) }
                                   })
+                            .background(.ultraThinMaterial)
+                            .environment(\.colorScheme, .dark) // always over the black viewer
                             .frame(width: Self.panelWidth, height: max(geo.size.height - topInset, 1))
                             .offset(y: topInset)
                             .transition(.move(edge: .trailing))
@@ -263,6 +284,14 @@ struct PhotoViewer: View {
                 if again, full?.id != asset.id, let preview = await library.preview(asset), !Task.isCancelled { image = preview }
             }
             .onChange(of: revision) { found() }
+            .task(id: asset.isVideo ? nil : detail?.livePhotoVideoId) {
+                livePlaying = false
+                livePlayer = nil
+                if !asset.isVideo, let id = detail?.livePhotoVideoId, let live = library.player(video: id) {
+                    live.isMuted = muted
+                    livePlayer = live // loads now, so pointing at LIVE plays at once
+                }
+            }
             .task(id: asset.id) {
                 player?.pause()
                 player = nil
@@ -726,21 +755,23 @@ struct PlayerView: NSViewRepresentable {
     }
 }
 
+#endif
+
 /// ⌘I: when, what file, which camera, where and who, from the asset's EXIF in Immich.
-/// The description, stars, date and place can be changed here.
+/// On the Mac the description, stars, date and place can be changed here; without the edit actions (iOS) it only shows them.
 struct InfoPanel: View {
     let asset: Asset
     let detail: AssetDetail?
     @Binding var typing: Bool
     /// A person was clicked: show their photos.
     let onPerson: (Person) -> Void
-    let onDescribe: (String) -> Void
-    let onRate: (Int?) -> Void
-    let onDate: () -> Void
-    let onPlace: () -> Void
-    let onAddTag: () -> Void
-    let onUntag: (Tag) -> Void
-    let onChangePerson: (Person) -> Void
+    var onDescribe: ((String) -> Void)?
+    var onRate: ((Int?) -> Void)?
+    var onDate: (() -> Void)?
+    var onPlace: (() -> Void)?
+    var onAddTag: (() -> Void)?
+    var onUntag: ((Tag) -> Void)?
+    var onChangePerson: ((Person) -> Void)?
     @State private var draft = ""
     @FocusState private var editing: Bool
     private static let dayStyle: Date.FormatStyle = {
@@ -757,22 +788,30 @@ struct InfoPanel: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
-                Button(action: onDate) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(asset.date.formatted(Self.dayStyle)).font(.title3.weight(.semibold))
-                        Text(asset.date.formatted(Self.timeStyle)).foregroundStyle(.secondary)
-                    }
-                    .contentShape(Rectangle())
+                let when = VStack(alignment: .leading, spacing: 2) {
+                    Text(asset.date.formatted(Self.dayStyle)).font(.title3.weight(.semibold))
+                    Text(asset.date.formatted(Self.timeStyle)).foregroundStyle(.secondary)
                 }
-                .buttonStyle(.plain)
-                .help("Adjust Date and Time…")
+                if let onDate {
+                    Button(action: onDate) { when.contentShape(Rectangle()) }
+                        .buttonStyle(.plain)
+                        .help("Adjust Date and Time…")
+                } else {
+                    when
+                }
                 if let detail {
-                    TextField("Add a Description", text: $draft, axis: .vertical)
-                        .textFieldStyle(.plain)
-                        .lineLimit(1...8)
-                        .focused($editing)
-                        .onSubmit { editing = false }
-                    Stars(rating: detail.exifInfo?.rating, onRate: onRate)
+                    if onDescribe != nil {
+                        TextField("Add a Description", text: $draft, axis: .vertical)
+                            .textFieldStyle(.plain)
+                            .lineLimit(1...8)
+                            .focused($editing)
+                            .onSubmit { editing = false }
+                    } else if let text = detail.exifInfo?.description, !text.isEmpty {
+                        Text(text).textSelection(.enabled)
+                    }
+                    if onRate != nil || (detail.exifInfo?.rating ?? 0) > 0 {
+                        Stars(rating: detail.exifInfo?.rating, onRate: onRate)
+                    }
                     let exif = detail.exifInfo
                     Row(symbol: asset.isVideo ? "video" : "photo", title: detail.originalFileName, lines: [fileLine(exif)])
                     if let camera = camera(exif) {
@@ -791,9 +830,13 @@ struct InfoPanel: View {
                         PlaceMap(coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lon), name: place(exif!))
                             .id("\(asset.id)\(lat)\(lon)")
                     }
-                    Button(exif?.latitude == nil ? "Add Location…" : "Change Location…", action: onPlace)
-                        .buttonStyle(.link)
-                    Tags(tags: detail.tags ?? [], onAdd: onAddTag, onRemove: onUntag)
+                    if let onPlace {
+                        Button(exif?.latitude == nil ? "Add Location…" : "Change Location…", action: onPlace)
+                            .linkStyle()
+                    }
+                    if onAddTag != nil || !(detail.tags ?? []).isEmpty {
+                        Tags(tags: detail.tags ?? [], onAdd: onAddTag, onRemove: onUntag)
+                    }
                     if let people = detail.people, !people.isEmpty {
                         People(people: people, onPerson: onPerson, onChange: onChangePerson)
                     }
@@ -804,12 +847,10 @@ struct InfoPanel: View {
             .padding(18)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .background(.ultraThinMaterial)
-        .environment(\.colorScheme, .dark) // always over the black viewer
         .onChange(of: detail?.exifInfo?.description, initial: true) { if !editing { draft = $1 ?? "" } }
         .onChange(of: editing) {
             typing = editing
-            if !editing, let detail, draft != detail.exifInfo?.description ?? "" { onDescribe(draft) } // saved when the field is left
+            if !editing, let detail, draft != detail.exifInfo?.description ?? "" { onDescribe?(draft) } // saved when the field is left
         }
         .onDisappear { typing = false }
     }
@@ -817,16 +858,17 @@ struct InfoPanel: View {
     /// 1–5 stars; clicking the current number of stars clears them.
     private struct Stars: View {
         let rating: Int?
-        let onRate: (Int?) -> Void
+        let onRate: ((Int?) -> Void)?
 
         var body: some View {
             HStack(spacing: 2) {
                 ForEach(1...5, id: \.self) { n in
-                    Button { onRate(rating == n ? nil : n) } label: {
+                    Button { onRate?(rating == n ? nil : n) } label: {
                         Image(systemName: n <= (rating ?? 0) ? "star.fill" : "star")
                             .foregroundStyle(n <= (rating ?? 0) ? Color.yellow : .secondary)
                     }
                     .buttonStyle(.plain)
+                    .disabled(onRate == nil)
                     .accessibilityLabel(rating == n ? "Clear Rating" : "\(n) Stars")
                     .help(rating == n ? "Clear Rating" : "\(n) Stars")
                 }
@@ -921,8 +963,8 @@ struct InfoPanel: View {
     /// The photo's tags; ✕ takes one off.
     private struct Tags: View {
         let tags: [Tag]
-        let onAdd: () -> Void
-        let onRemove: (Tag) -> Void
+        let onAdd: (() -> Void)?
+        let onRemove: ((Tag) -> Void)?
 
         var body: some View {
             VStack(alignment: .leading, spacing: 8) {
@@ -931,12 +973,14 @@ struct InfoPanel: View {
                     HStack {
                         Text(tag.value)
                         Spacer()
-                        Button { onRemove(tag) } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(.tertiary) }
-                            .buttonStyle(.plain)
-                            .help("Remove Tag")
+                        if let onRemove {
+                            Button { onRemove(tag) } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(.tertiary) }
+                                .buttonStyle(.plain)
+                                .help("Remove Tag")
+                        }
                     }
                 }
-                Button("Add Tag…", action: onAdd).buttonStyle(.link)
+                if let onAdd { Button("Add Tag…", action: onAdd).linkStyle() }
             }
         }
     }
@@ -946,7 +990,7 @@ struct InfoPanel: View {
         @Environment(Library.self) private var library
         let people: [Person]
         let onPerson: (Person) -> Void
-        let onChange: (Person) -> Void
+        let onChange: ((Person) -> Void)?
 
         var body: some View {
             VStack(alignment: .leading, spacing: 8) {
@@ -966,7 +1010,7 @@ struct InfoPanel: View {
                     }
                     .buttonStyle(.plain)
                     .help("Show Their Photos")
-                    .contextMenu { Button("Change Person…") { onChange(person) } }
+                    .contextMenu { if let onChange { Button("Change Person…") { onChange(person) } } }
                 }
             }
         }
@@ -1002,5 +1046,16 @@ struct FaceRow: View {
             }
         }
         .fixedSize(horizontal: false, vertical: true)
+    }
+}
+
+extension View {
+    /// A button that looks like a link: the Mac's link style, plain tinted text elsewhere.
+    func linkStyle() -> some View {
+        #if os(macOS)
+        buttonStyle(.link)
+        #else
+        buttonStyle(.borderless)
+        #endif
     }
 }

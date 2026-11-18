@@ -82,11 +82,13 @@ struct PeopleGrid: View {
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
+                    #if os(macOS) // iOS only browses for now
                     .contextMenu {
                         Button("Edit Person…") { sheet = .editPerson(person) }
                         Button("Merge With…") { sheet = .merge(person) }
                         Button("Hide Person") { Task { await library.update(person, hidden: true, was: person, undo: undo) } }
                     }
+                    #endif
                 }
             }
             .padding(20)
@@ -153,10 +155,12 @@ struct AlbumGrid: View {
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
+                    #if os(macOS)
                     .contextMenu {
                         Button("Edit Album…") { sheet = .editAlbum(album) }
                         Button("Delete Album…") { deleting = album }
                     }
+                    #endif
                 }
             }
             .padding(20)
@@ -173,8 +177,10 @@ struct AlbumGrid: View {
                 Label("Name", systemImage: "textformat").tag(AlbumSort.name)
                 Label("Item Count", systemImage: "photo.stack").tag(AlbumSort.count)
             }
+            #if os(macOS)
             Button { sheet = .newAlbum([]) } label: { Image(systemName: "plus") }
                 .help("New Album")
+            #endif
         }
         .overlay {
             if filtered, shown.isEmpty, !library.albums.isEmpty {
@@ -205,7 +211,9 @@ struct TagList: View {
     var body: some View {
         List(ascending ? library.tags : library.tags.reversed()) { tag in
             NavigationLink(value: tag) { Label(tag.value, systemImage: "tag") }
+                #if os(macOS)
                 .contextMenu { Button("Delete Tag…") { deleting = tag } }
+                #endif
         }
         .alert("Delete This Tag?", isPresented: Binding { deleting != nil } set: { if !$0 { deleting = nil } }) {
             Button("Delete", role: .destructive) {

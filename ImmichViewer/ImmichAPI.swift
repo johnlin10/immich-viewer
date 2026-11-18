@@ -168,6 +168,7 @@ struct ImmichAPI: Sendable {
             let localOffsetHours: [Double]
             let isImage: [Bool]
             let isFavorite: [Bool]?
+            let livePhotoVideoId: [String?]?
         }
         let buckets = try JSONDecoder().decode([Bucket].self, from: await get("timeline/buckets", filter))
         let assets = try await withThrowingTaskGroup(of: [Asset].self) { group in
@@ -180,7 +181,7 @@ struct ImmichAPI: Sendable {
                         guard let utc = parser.date(c.fileCreatedAt[i]) else { return nil }
                         // local wall-clock time, kept in UTC like the web timeline does
                         return Asset(id: c.id[i], date: utc.addingTimeInterval(c.localOffsetHours[i] * 3600), isVideo: !c.isImage[i],
-                                     isFavorite: c.isFavorite?[i] == true)
+                                     isFavorite: c.isFavorite?[i] == true, isLive: (c.livePhotoVideoId?[i] ?? nil) != nil)
                     }
                 }
             }
@@ -307,6 +308,8 @@ struct AssetDetail: Decodable, Sendable {
     var exifInfo: Exif?
     let people: [Person]?
     var tags: [Tag]?
+    /// A Live Photo's (or motion photo's) moving part, a hidden video asset.
+    var livePhotoVideoId: String?
 
     /// Numbers are Doubles so ints and floats both decode.
     struct Exif: Decodable, Sendable {

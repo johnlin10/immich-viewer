@@ -114,6 +114,10 @@ func ids(_ f: PhotoFilter) -> String { f.apply(mixed).map(\.id).joined(separator
 precondition(ids(PhotoFilter()) == "p,pf,v,vf" && ids(PhotoFilter(photos: true, videos: true)) == "p,pf,v,vf")
 precondition(ids(PhotoFilter(videos: true)) == "v,vf" && ids(PhotoFilter(favorites: true)) == "pf,vf")
 precondition(ids(PhotoFilter(photos: true, favorites: true)) == "pf")
+let withLive = mixed + [Asset(id: "l", date: jan3, isVideo: false, isLive: true)]
+func liveIDs(_ f: PhotoFilter) -> String { f.apply(withLive).map(\.id).joined(separator: ",") }
+precondition(liveIDs(PhotoFilter(live: true)) == "l" && liveIDs(PhotoFilter(videos: true, live: true)) == "v,vf,l")
+precondition(liveIDs(PhotoFilter(photos: true)) == "p,pf,l" && liveIDs(PhotoFilter(favorites: true, live: true)) == "")
 
 // people: named/unnamed either-or, birthday narrows; sorts keep the rest in the server's order
 let crowd = [Person(id: "1", name: "Zoe", birthDate: "2001-01-01"), Person(id: "2", name: ""), Person(id: "3", name: "amy"),

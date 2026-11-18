@@ -1,3 +1,4 @@
+#if os(macOS)
 import MapKit
 import Sparkle
 import SwiftUI
@@ -308,6 +309,7 @@ struct TimelineBrowser: View {
                                 FilterMenu(active: filter.isActive) { filter = PhotoFilter() } items: {
                                     Toggle(isOn: $filter.photos) { Label("Photos", systemImage: "photo") }
                                     Toggle(isOn: $filter.videos) { Label("Videos", systemImage: "video") }
+                                    Toggle(isOn: $filter.live) { Label("Live Photos", systemImage: "livephoto") }
                                     Divider()
                                     Toggle(isOn: $filter.favorites) { Label("Favorites", systemImage: "heart") }
                                 }
@@ -585,4 +587,4 @@ struct TitleBarBlur: View {
         .allowsHitTesting(false)
     }
 }
-
+#endif
