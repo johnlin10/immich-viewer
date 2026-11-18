@@ -231,6 +231,15 @@ struct Person: Codable, Identifiable, Hashable, Sendable {
     var faces: [Face]?
 
     struct Face: Codable, Hashable, Sendable { let id: String }
+
+    /// The birthday as a local date and the age in whole years on `now`; nil without one.
+    func birthday(on now: Date = .now) -> (date: Date, age: Int)? {
+        let parts = (birthDate ?? "").prefix(10).split(separator: "-").compactMap { Int($0) }
+        let calendar = Calendar(identifier: .gregorian) // also where the system shows another calendar
+        guard parts.count == 3, let date = calendar.date(from: DateComponents(year: parts[0], month: parts[1], day: parts[2])),
+              let age = calendar.dateComponents([.year], from: date, to: now).year else { return nil }
+        return (date, max(age, 0))
+    }
 }
 
 struct Tag: Codable, Identifiable, Hashable, Sendable {

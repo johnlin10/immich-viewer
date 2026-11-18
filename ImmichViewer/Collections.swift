@@ -15,8 +15,20 @@ struct PeopleGrid: View {
                             Thumb(id: person.id, store: library.faces)
                                 .frame(width: 96, height: 96)
                                 .clipShape(Circle())
-                            Text(person.name.isEmpty ? " " : person.name) // a blank line keeps rows even
+                            VStack(spacing: 2) {
+                                Text(person.name.isEmpty ? " " : person.name) // blank lines keep rows even
+                                    .lineLimit(1)
+                                Group {
+                                    if let birthday = person.birthday() {
+                                        Text("\(birthday.date.formatted(date: .numeric, time: .omitted)) · Age \(birthday.age)")
+                                    } else {
+                                        Text(verbatim: " ")
+                                    }
+                                }
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
                                 .lineLimit(1)
+                            }
                         }
                         .contentShape(Rectangle())
                     }
@@ -133,6 +145,13 @@ struct CollectionTimeline: View {
         return name.isEmpty ? String(localized: "Unnamed") : name
     }
 
+    /// The item count; on a person's page with a birthday, the birthday and age first.
+    private func subtitle(_ count: Int) -> String {
+        let items = String(localized: "\(count) items")
+        guard case .person(let id) = context, let birthday = library.people.first(where: { $0.id == id })?.birthday() else { return items }
+        return String(localized: "Born \(birthday.date.formatted(date: .long, time: .omitted)) · Age \(birthday.age)") + " · " + items
+    }
+
     private var filter: [String: String] {
         switch context {
         case .person(let id): ["personId": id, "visibility": "timeline"]
@@ -147,7 +166,7 @@ struct CollectionTimeline: View {
     var body: some View {
         Group {
             if let assets {
-                TimelineBrowser(title: title, subtitle: String(localized: "\(assets.count) items"), assets: assets, revision: loads,
+                TimelineBrowser(title: title, subtitle: subtitle(assets.count), assets: assets, revision: loads,
                                 context: context)
             } else if let error {
                 ContentUnavailableView("Can’t Load", systemImage: "exclamationmark.triangle", description: Text(error))

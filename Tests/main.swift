@@ -98,4 +98,13 @@ precondition(ImmichAPI.folder("http://nas.local:2283") == "nas-local-2283")
 precondition(ImmichAPI.folder("https://photos.example.com") == "photos-example-com")
 precondition(ImmichAPI.folder("http://192.168.1.20:2283/immich") == "192-168-1-20-2283-immich")
 precondition(ImmichAPI.folder("") == "")
+// age in whole years: not yet on the day before the birthday, a year more on the day
+let gregorian = Calendar(identifier: .gregorian)
+func on(_ y: Int, _ m: Int, _ d: Int) -> Date { gregorian.date(from: DateComponents(year: y, month: m, day: d, hour: 12))! }
+let born = Person(id: "p", name: "", birthDate: "1990-05-03")
+precondition(born.birthday(on: on(2025, 5, 2))?.age == 34 && born.birthday(on: on(2025, 5, 3))?.age == 35)
+precondition(Person(id: "p", name: "", birthDate: "2000-02-29").birthday(on: on(2025, 3, 1))?.age == 25)
+precondition(Person(id: "p", name: "", birthDate: "1990-05-03T00:00:00.000Z").birthday(on: on(2025, 6, 1))?.age == 35)
+precondition(Person(id: "p", name: "").birthday() == nil && Person(id: "p", name: "", birthDate: "").birthday() == nil)
+
 print("all checks passed")

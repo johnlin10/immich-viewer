@@ -9,7 +9,7 @@ It keeps every small thumbnail (about 15 KB each) on this Mac, so scrolling read
 ## What it does (v0.7)
 
 - A sidebar with Library, People, Albums, Tags, Archive and Trash.
-- People: everyone Immich recognised (hidden people left out) as round faces; click one for their photos.
+- People: everyone Immich recognised (hidden people left out) as round faces, with their birthday and age when one is set; click one for their photos. A person's page shows the birthday and age next to the item count.
 - Albums: own and shared albums as covers with name and count, newest first; click one for its photos.
 - Person and album photos use the same grid, zoom, grouping and single photo view as the library, with a back button. A person opened from a photo opens on top of the page you were on, so back returns to the same place in the Library, an album or another person. While a photo is open only ✕ shows, which closes the photo.
 - One square grid of the whole timeline (archived, hidden and locked items are left out, like Immich's own timeline). The grid fills the window; under the title bar the photos blur progressively, strongest at the top.
@@ -154,7 +154,11 @@ Planned editing: cropping, dropping files on the window to upload, then stacks, 
 
 ## Version history
 
-### v0.7.0 (current)
+### v0.7.1 (current)
+
+- People with a birthday show it and their age (whole years) under their name on the People page, and next to the item count on their own page.
+
+### v0.7.0
 
 - Several servers: Settings > Connection lists them with + and −, Change Key… and Use (or double-click). The Server menu also switches.
 - Each server keeps its own API key, asset list, thumbnails, and start and stop commands. Switching stops a running sync first.

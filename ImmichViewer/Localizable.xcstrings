@@ -14,6 +14,16 @@
         }
       }
     },
+    "%@ · Age %lld": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %2$lld 歲"
+          }
+        }
+      }
+    },
     "%lld Stars": {
       "localizations": {
         "en": {
@@ -328,6 +338,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "生日"
+          }
+        }
+      }
+    },
+    "Born %@ · Age %lld": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "生日 %1$@ · %2$lld 歲"
           }
         }
       }
