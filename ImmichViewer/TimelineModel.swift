@@ -209,3 +209,19 @@ func yearStarts(_ assets: [Asset]) -> [(year: Int, index: Int)] {
     }
     return result
 }
+
+/// The filter menu on photo pages. Photos and videos are either-or (neither or both: every kind); Favorites narrows further.
+struct PhotoFilter: Equatable {
+    var photos = false
+    var videos = false
+    var favorites = false
+
+    var isActive: Bool { photos || videos || favorites }
+
+    func apply(_ assets: [Asset]) -> [Asset] {
+        guard isActive else { return assets }
+        return assets.filter { asset in
+            (photos == videos || (asset.isVideo ? videos : photos)) && (!favorites || asset.isFavorite == true)
+        }
+    }
+}

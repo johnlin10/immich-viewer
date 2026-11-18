@@ -215,6 +215,17 @@ struct ImmichAPI: Sendable {
         try JSONDecoder().decode([Tag].self, from: await get("tags")).sorted { $0.value.localizedStandardCompare($1.value) == .orderedAscending }
     }
 
+    /// Ids of the albums you own, so the rest are shared with you. Nil if the server can't tell
+    /// (one without the `isOwned` filter answers both questions with every album).
+    func ownedAlbumIDs() async throws -> Set<String>? {
+        struct Item: Decodable { let id: String }
+        async let owned = get("albums", ["isOwned": "true"])
+        async let others = get("albums", ["isOwned": "false"])
+        let mine = Set(try JSONDecoder().decode([Item].self, from: await owned).map(\.id))
+        let theirs = Set(try JSONDecoder().decode([Item].self, from: await others).map(\.id))
+        return mine.isDisjoint(with: theirs) ? mine : nil
+    }
+
     /// Own albums and albums shared with you, most recent first.
     func albums() async throws -> [Album] {
         let albums = try JSONDecoder().decode([Album].self, from: await get("albums"))
@@ -239,6 +250,48 @@ struct Person: Codable, Identifiable, Hashable, Sendable {
         guard parts.count == 3, let date = calendar.date(from: DateComponents(year: parts[0], month: parts[1], day: parts[2])),
               let age = calendar.dateComponents([.year], from: date, to: now).year else { return nil }
         return (date, max(age, 0))
+    }
+}
+
+/// The People page's filter menu: Named and Unnamed are either-or (neither or both: everyone); Has Birthday narrows further.
+struct PeopleFilter: Equatable {
+    var named = false
+    var unnamed = false
+    var birthday = false
+
+    var isActive: Bool { named || unnamed || birthday }
+
+    func apply(_ people: [Person]) -> [Person] {
+        people.filter { person in
+            (named == unnamed || (person.name.isEmpty ? unnamed : named)) && (!birthday || person.birthday() != nil)
+        }
+    }
+}
+
+/// The People page's sort menu. `standard` keeps the server's order (favorites, then named, then most photographed).
+enum PeopleSort: String, CaseIterable {
+    case standard, name, youngest, oldest
+
+    /// Unnamed people, and people without a birthday when sorting by age, go last in the server's order.
+    func apply(_ people: [Person]) -> [Person] {
+        func ordered(_ key: (Person) -> String?, _ before: (String, String) -> Bool) -> [Person] {
+            people.enumerated().sorted { a, b in
+                switch (key(a.element), key(b.element)) {
+                case let (x?, y?) where x != y: before(x, y)
+                case (_?, nil): true
+                case (nil, _?): false
+                default: a.offset < b.offset
+                }
+            }.map(\.element)
+        }
+        let name = { (p: Person) in p.name.isEmpty ? nil : p.name }
+        let born = { (p: Person) in p.birthDate.map { String($0.prefix(10)) }.flatMap { $0.isEmpty ? nil : $0 } }
+        return switch self {
+        case .standard: people
+        case .name: ordered(name) { $0.localizedStandardCompare($1) == .orderedAscending }
+        case .youngest: ordered(born, >)
+        case .oldest: ordered(born, <)
+        }
     }
 }
 
@@ -272,6 +325,20 @@ struct Album: Codable, Identifiable, Hashable, Sendable {
     var assetCount: Int
     var endDate: String?
 }
+
+/// The Albums page's sort menu. `recent` keeps the newest photos first, as loaded.
+enum AlbumSort: String, CaseIterable {
+    case recent, name, count
+
+    func apply(_ albums: [Album]) -> [Album] {
+        switch self {
+        case .recent: albums
+        case .name: albums.sorted { $0.albumName.localizedStandardCompare($1.albumName) == .orderedAscending }
+        case .count: albums.sorted { $0.assetCount > $1.assetCount }
+        }
+    }
+}
+
 
 /// API keys live in the login keychain, never in a plain file: one per server, under its address.
 enum Keychain {

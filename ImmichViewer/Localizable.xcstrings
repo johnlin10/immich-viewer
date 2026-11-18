@@ -162,6 +162,16 @@
         }
       }
     },
+    "%lld shown": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "顯示 %lld 個"
+          }
+        }
+      }
+    },
     "%lld tags": {
       "localizations": {
         "zh-Hant": {
@@ -288,6 +298,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "調整日期與時間…"
+          }
+        }
+      }
+    },
+    "Age, Oldest First": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "年齡（大到小）"
+          }
+        }
+      }
+    },
+    "Age, Youngest First": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "年齡（小到大）"
           }
         }
       }
@@ -472,6 +502,16 @@
         }
       }
     },
+    "Clear Filters": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清除篩選"
+          }
+        }
+      }
+    },
     "Clear Rating": {
       "localizations": {
         "zh-Hant": {
@@ -644,6 +684,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "依日"
+          }
+        }
+      }
+    },
+    "Default": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "預設"
           }
         }
       }
@@ -956,6 +1006,26 @@
         }
       }
     },
+    "Favorites": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "喜好"
+          }
+        }
+      }
+    },
+    "Filter": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "篩選"
+          }
+        }
+      }
+    },
     "General": {
       "localizations": {
         "zh-Hant": {
@@ -1016,6 +1086,16 @@
         }
       }
     },
+    "Has Birthday": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已設定生日"
+          }
+        }
+      }
+    },
     "Hide Person": {
       "localizations": {
         "zh-Hant": {
@@ -1052,6 +1132,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "資訊（⌘I）"
+          }
+        }
+      }
+    },
+    "Item Count": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "照片數量"
           }
         }
       }
@@ -1146,6 +1236,16 @@
         }
       }
     },
+    "Mine": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "我的"
+          }
+        }
+      }
+    },
     "Months": {
       "localizations": {
         "zh-Hant": {
@@ -1172,6 +1272,36 @@
           "stringUnit": {
             "state": "translated",
             "value": "名稱"
+          }
+        }
+      }
+    },
+    "Name, A to Z": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "名稱（A→Z）"
+          }
+        }
+      }
+    },
+    "Name, Z to A": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "名稱（Z→A）"
+          }
+        }
+      }
+    },
+    "Named": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已命名"
           }
         }
       }
@@ -1212,6 +1342,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "沒有相簿"
+          }
+        }
+      }
+    },
+    "No Matches": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "沒有符合的項目"
           }
         }
       }
@@ -1337,6 +1477,16 @@
         }
       }
     },
+    "Photos": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "照片"
+          }
+        }
+      }
+    },
     "Photos on the server are not affected.": {
       "localizations": {
         "zh-Hant": {
@@ -1363,6 +1513,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "評分"
+          }
+        }
+      }
+    },
+    "Recent": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最近"
           }
         }
       }
@@ -1577,6 +1737,16 @@
         }
       }
     },
+    "Shared": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "共享"
+          }
+        }
+      }
+    },
     "Show Their Photos": {
       "localizations": {
         "zh-Hant": {
@@ -1617,7 +1787,7 @@
         }
       }
     },
-    "Sort Order": {
+    "Sort": {
       "localizations": {
         "zh-Hant": {
           "stringUnit": {
@@ -2064,6 +2234,16 @@
       }
     },
     "Video": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "影片"
+          }
+        }
+      }
+    },
+    "Videos": {
       "localizations": {
         "zh-Hant": {
           "stringUnit": {

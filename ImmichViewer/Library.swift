@@ -15,6 +15,8 @@ final class Library {
     private(set) var people: [Person] = []
     private(set) var albums: [Album] = []
     private(set) var tags: [Tag] = []
+    /// Ids of your own albums (the rest are shared with you); nil if the server can't tell.
+    private(set) var ownedAlbums: Set<String>?
     /// Why people or albums couldn't be loaded (for example a key without `person.read`).
     private(set) var collectionsError: String?
     private(set) var thumbs: ThumbnailStore
@@ -149,6 +151,7 @@ final class Library {
             UserDefaults.standard.set(server, forKey: "server")
             (thumbs, faces, listFile) = Self.stores(base, server)
             (people, albums, tags, collectionsError, canDownload, trashEnabled) = ([], [], [], nil, nil, true)
+            ownedAlbums = nil
             loadList()
         }
         api = candidate
@@ -311,6 +314,7 @@ final class Library {
             async let people = api.people()
             async let albums = api.albums()
             (self.people, self.albums) = try await (people, albums)
+            ownedAlbums = (try? await api.ownedAlbumIDs()) ?? nil
             collectionsError = nil
             tags = (try? await api.tags()) ?? [] // a key without tag.read just shows no tags
         } catch {

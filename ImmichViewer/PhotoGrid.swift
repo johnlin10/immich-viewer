@@ -163,7 +163,7 @@ final class GridController: NSObject, NSCollectionViewDataSource, NSCollectionVi
                 || data.sections[shift.section].range != self.data.sections[shift.section].range { layout.shift = nil }
             self.data = data
             selected = selectedID.flatMap { id in data.assets.firstIndex { $0.id == id } }
-            if !picked.isEmpty { picked.formIntersection(data.assets.lazy.map(\.id)) } // deleted or archived ones go
+            if !picked.isEmpty { setPicked(picked.intersection(data.assets.lazy.map(\.id))) } // deleted, archived or filtered out ones go
             self.level = level
             requestedLevel = level
             layout.target = zoomLevels[level]

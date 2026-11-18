@@ -1,15 +1,64 @@
 import SwiftUI
 
+/// The filter button at the top right: filled while a filter is on. Items are toggles; none on shows everything.
+struct FilterMenu<Items: View>: View {
+    let active: Bool
+    let clear: () -> Void
+    @ViewBuilder let items: Items
+
+    var body: some View {
+        Menu {
+            items
+            Divider()
+            Button("Clear Filters", systemImage: "xmark.circle", action: clear).disabled(!active)
+        } label: {
+            Image(systemName: active ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
+        }
+        .menuIndicator(.hidden)
+        .help("Filter")
+    }
+}
+
+/// The sort button at the top right: one choice, checked.
+struct SortMenu<Value: Hashable, Items: View>: View {
+    @Binding var selection: Value
+    @ViewBuilder let items: Items
+
+    var body: some View {
+        Menu {
+            Picker("Sort", selection: $selection) { items }
+                .pickerStyle(.inline)
+                .labelsHidden()
+        } label: {
+            Image(systemName: "arrow.up.arrow.down")
+        }
+        .menuIndicator(.hidden)
+        .help("Sort")
+    }
+}
+
+/// "12 people · 3 shown" while a filter is on.
+func countSubtitle(_ total: String, shown: Int, filtered: Bool) -> String {
+    filtered ? total + " · " + String(localized: "\(shown) shown") : total
+}
+
 /// Everyone Immich recognised (hidden people left out), as round faces. Click one for their photos.
 struct PeopleGrid: View {
     @Environment(Library.self) private var library
     @Environment(\.undoManager) private var undo
     @State private var sheet: EditSheet?
+    @AppStorage("peopleSort") private var sort = PeopleSort.standard
+    @AppStorage("peopleNamed") private var named = false
+    @AppStorage("peopleUnnamed") private var unnamed = false
+    @AppStorage("peopleBirthday") private var birthday = false
+
+    private var filter: PeopleFilter { PeopleFilter(named: named, unnamed: unnamed, birthday: birthday) }
 
     var body: some View {
+        let shown = sort.apply(filter.apply(library.people))
         ScrollView {
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 110), spacing: 16)], spacing: 20) {
-                ForEach(library.people) { person in
+                ForEach(shown) { person in
                     NavigationLink(value: person) {
                         VStack(spacing: 8) {
                             Thumb(id: person.id, store: library.faces)
@@ -44,8 +93,27 @@ struct PeopleGrid: View {
         }
         .editSheet($sheet, library: library, undo: undo)
         .overlay { Empty(count: library.people.count, error: library.collectionsError, title: "No People") }
+        .overlay {
+            if filter.isActive, shown.isEmpty, !library.people.isEmpty {
+                ContentUnavailableView("No Matches", systemImage: "line.3.horizontal.decrease.circle")
+            }
+        }
+        .toolbar {
+            FilterMenu(active: filter.isActive) { (named, unnamed, birthday) = (false, false, false) } items: {
+                Toggle(isOn: $named) { Label("Named", systemImage: "person.crop.circle.badge.checkmark") }
+                Toggle(isOn: $unnamed) { Label("Unnamed", systemImage: "person.crop.circle.badge.questionmark") }
+                Divider()
+                Toggle(isOn: $birthday) { Label("Has Birthday", systemImage: "birthday.cake") }
+            }
+            SortMenu(selection: $sort) {
+                Label("Default", systemImage: "list.bullet").tag(PeopleSort.standard)
+                Label("Name", systemImage: "textformat").tag(PeopleSort.name)
+                Label("Age, Youngest First", systemImage: "figure.child").tag(PeopleSort.youngest)
+                Label("Age, Oldest First", systemImage: "figure.walk").tag(PeopleSort.oldest)
+            }
+        }
         .navigationTitle("People")
-        .navigationSubtitle("\(library.people.count) people")
+        .navigationSubtitle(countSubtitle(String(localized: "\(library.people.count) people"), shown: shown.count, filtered: filter.isActive))
     }
 }
 
@@ -55,11 +123,22 @@ struct AlbumGrid: View {
     @Environment(\.undoManager) private var undo
     @State private var sheet: EditSheet?
     @State private var deleting: Album?
+    @AppStorage("albumSort") private var sort = AlbumSort.recent
+    @AppStorage("albumsMine") private var mine = false
+    @AppStorage("albumsShared") private var shared = false
+
+    /// Mine and Shared are either-or; without knowing who owns what, there's no filter.
+    private var filtered: Bool { library.ownedAlbums != nil && (mine || shared) }
 
     var body: some View {
+        let owned = library.ownedAlbums
+        let shown = sort.apply(library.albums.filter { album in
+            guard let owned, mine != shared else { return true }
+            return owned.contains(album.id) ? mine : shared
+        })
         ScrollView {
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 170), spacing: 20)], alignment: .leading, spacing: 24) {
-                ForEach(library.albums) { album in
+                ForEach(shown) { album in
                     NavigationLink(value: album) {
                         VStack(alignment: .leading, spacing: 4) {
                             Thumb(id: album.albumThumbnailAssetId ?? "", store: library.thumbs)
@@ -83,8 +162,24 @@ struct AlbumGrid: View {
             .padding(20)
         }
         .toolbar {
+            if owned != nil {
+                FilterMenu(active: filtered) { (mine, shared) = (false, false) } items: {
+                    Toggle(isOn: $mine) { Label("Mine", systemImage: "person") }
+                    Toggle(isOn: $shared) { Label("Shared", systemImage: "person.2") }
+                }
+            }
+            SortMenu(selection: $sort) {
+                Label("Recent", systemImage: "clock").tag(AlbumSort.recent)
+                Label("Name", systemImage: "textformat").tag(AlbumSort.name)
+                Label("Item Count", systemImage: "photo.stack").tag(AlbumSort.count)
+            }
             Button { sheet = .newAlbum([]) } label: { Image(systemName: "plus") }
                 .help("New Album")
+        }
+        .overlay {
+            if filtered, shown.isEmpty, !library.albums.isEmpty {
+                ContentUnavailableView("No Matches", systemImage: "line.3.horizontal.decrease.circle")
+            }
         }
         .editSheet($sheet, library: library, undo: undo)
         .alert("Delete This Album?", isPresented: Binding { deleting != nil } set: { if !$0 { deleting = nil } }) {
@@ -97,7 +192,7 @@ struct AlbumGrid: View {
         }
         .overlay { Empty(count: library.albums.count, error: library.collectionsError, title: "No Albums") }
         .navigationTitle("Albums")
-        .navigationSubtitle("\(library.albums.count) albums")
+        .navigationSubtitle(countSubtitle(String(localized: "\(library.albums.count) albums"), shown: shown.count, filtered: filtered))
     }
 }
 
@@ -105,9 +200,10 @@ struct AlbumGrid: View {
 struct TagList: View {
     @Environment(Library.self) private var library
     @State private var deleting: Tag?
+    @AppStorage("tagsAscending") private var ascending = true
 
     var body: some View {
-        List(library.tags) { tag in
+        List(ascending ? library.tags : library.tags.reversed()) { tag in
             NavigationLink(value: tag) { Label(tag.value, systemImage: "tag") }
                 .contextMenu { Button("Delete Tag…") { deleting = tag } }
         }
@@ -120,6 +216,12 @@ struct TagList: View {
             Text("The photos with it stay in your library.")
         }
         .overlay { if library.tags.isEmpty { ContentUnavailableView("No Tags", systemImage: "tag") } }
+        .toolbar {
+            SortMenu(selection: $ascending) {
+                Label("Name, A to Z", systemImage: "a.square").tag(true)
+                Label("Name, Z to A", systemImage: "z.square").tag(false)
+            }
+        }
         .navigationTitle("Tags")
         .navigationSubtitle("\(library.tags.count) tags")
     }

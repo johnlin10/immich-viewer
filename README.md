@@ -11,6 +11,7 @@ It keeps every small thumbnail (about 15 KB each) on this Mac, so scrolling read
 - A sidebar with Library, People, Albums, Tags, Archive and Trash.
 - People: everyone Immich recognised (hidden people left out) as round faces, with their birthday and age when one is set; click one for their photos. A person's page shows the birthday and age next to the item count.
 - Albums: own and shared albums as covers with name and count, newest first; click one for its photos.
+- Filter and sort at the top right of every page. Filters can be combined, and with none on everything shows; choices in the same group (Photos and Videos, Named and Unnamed, Mine and Shared) add up, the others narrow. Photo pages (Library, Archive, Trash, a person, an album, a tag): Photos, Videos, Favorites, and Newest or Oldest First; the filter starts empty on every page, the order is kept. People: Named, Unnamed, Has Birthday; Default (Immich's order: favorites, then named, then most photographed), Name, Age either way. Albums: Mine, Shared (on servers that can tell); Recent, Name, Item Count. Tags: Name, A to Z or Z to A. The page's subtitle says how many a filter leaves.
 - Person and album photos use the same grid, zoom, grouping and single photo view as the library, with a back button. A person opened from a photo opens on top of the page you were on, so back returns to the same place in the Library, an album or another person. While a photo is open only ✕ shows, which closes the photo.
 - One square grid of the whole timeline (archived, hidden and locked items are left out, like Immich's own timeline). The grid fills the window; under the title bar the photos blur progressively, strongest at the top.
 - Eight zoom steps (16 to 220 pt cells): the − / + buttons, ⌘− / ⌘=, or pinch on the trackpad.
@@ -62,7 +63,7 @@ Changes go straight to the server and show in the app right away. Edit > Undo (�
 
 ### Settings (⌘,)
 
-- General: appearance (System, Light, Dark); photo grid sort order (Newest First, Oldest First), spacing, corner radius, Show Whole Photos, Mark Videos (▶); updates (check automatically, download and install automatically) and the version.
+- General: appearance (System, Light, Dark); photo grid spacing, corner radius, Show Whole Photos, Mark Videos (▶); updates (check automatically, download and install automatically) and the version.
 - Video: Play Automatically, Start Muted, Loop.
 - Storage: thumbnail and face cache size, Show in Finder, Clear Cache… (thumbnails download again when shown, or all at once with ⌘R).
 - Connection: server address and API key. Connect tries them first and says what's wrong (server not reachable, wrong port, key not accepted, missing permission); the key is only saved once it works. Settings > Connection lists every server: + adds one, − removes it (its key, list and thumbnails are deleted from this Mac), Change Key… replaces its key, and double-click or Use switches to it. The Server menu also switches. Each server keeps its own key (in the keychain), list and thumbnails.
@@ -154,7 +155,13 @@ Planned editing: cropping, dropping files on the window to upload, then stacks, 
 
 ## Version history
 
-### v0.7.1 (current)
+### v0.7.2 (current)
+
+- Filter and sort at the top right of every page, with icons. Photo pages: Photos, Videos, Favorites; Newest or Oldest First (moved here from Settings > General). People: Named, Unnamed, Has Birthday; Default, Name, Age. Albums: Mine, Shared; Recent, Name, Item Count. Tags: Name, A to Z or Z to A.
+- Filters combine, and with none on everything shows; the subtitle says how many are shown.
+- The selected count updates when a filter hides chosen photos.
+
+### v0.7.1
 
 - People with a birthday show it and their age (whole years) under their name on the People page, and next to the item count on their own page.
 

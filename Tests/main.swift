@@ -107,4 +107,27 @@ precondition(Person(id: "p", name: "", birthDate: "2000-02-29").birthday(on: on(
 precondition(Person(id: "p", name: "", birthDate: "1990-05-03T00:00:00.000Z").birthday(on: on(2025, 6, 1))?.age == 35)
 precondition(Person(id: "p", name: "").birthday() == nil && Person(id: "p", name: "", birthDate: "").birthday() == nil)
 
+// photo filter: kinds are either-or, favorites narrows
+let mixed = [Asset(id: "p", date: jan3, isVideo: false), Asset(id: "pf", date: jan3, isVideo: false, isFavorite: true),
+             Asset(id: "v", date: jan3, isVideo: true), Asset(id: "vf", date: jan3, isVideo: true, isFavorite: true)]
+func ids(_ f: PhotoFilter) -> String { f.apply(mixed).map(\.id).joined(separator: ",") }
+precondition(ids(PhotoFilter()) == "p,pf,v,vf" && ids(PhotoFilter(photos: true, videos: true)) == "p,pf,v,vf")
+precondition(ids(PhotoFilter(videos: true)) == "v,vf" && ids(PhotoFilter(favorites: true)) == "pf,vf")
+precondition(ids(PhotoFilter(photos: true, favorites: true)) == "pf")
+
+// people: named/unnamed either-or, birthday narrows; sorts keep the rest in the server's order
+let crowd = [Person(id: "1", name: "Zoe", birthDate: "2001-01-01"), Person(id: "2", name: ""), Person(id: "3", name: "amy"),
+             Person(id: "4", name: "Bob", birthDate: "1980-06-01"), Person(id: "5", name: "", birthDate: "1995-03-03")]
+func ids(_ list: [Person]) -> String { list.map(\.id).joined() }
+precondition(ids(PeopleFilter().apply(crowd)) == "12345" && ids(PeopleFilter(named: true, unnamed: true).apply(crowd)) == "12345")
+precondition(ids(PeopleFilter(named: true).apply(crowd)) == "134" && ids(PeopleFilter(unnamed: true).apply(crowd)) == "25")
+precondition(ids(PeopleFilter(named: true, birthday: true).apply(crowd)) == "14")
+precondition(ids(PeopleSort.standard.apply(crowd)) == "12345" && ids(PeopleSort.name.apply(crowd)) == "34125")
+precondition(ids(PeopleSort.youngest.apply(crowd)) == "15423" && ids(PeopleSort.oldest.apply(crowd)) == "45123")
+
+// albums
+let shelf = [Album(id: "a", albumName: "trip 10", assetCount: 5), Album(id: "b", albumName: "Trip 9", assetCount: 50)]
+precondition(AlbumSort.recent.apply(shelf).map(\.id) == ["a", "b"] && AlbumSort.name.apply(shelf).map(\.id) == ["b", "a"])
+precondition(AlbumSort.count.apply(shelf).map(\.id) == ["b", "a"])
+
 print("all checks passed")

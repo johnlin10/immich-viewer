@@ -249,6 +249,8 @@ struct TimelineBrowser: View {
     @AppStorage("videoBadge") private var badge = true
     @AppStorage("newestFirst") private var newestFirst = true
     @State private var grid = GridData()
+    /// Not kept: every page opens showing everything.
+    @State private var filter = PhotoFilter()
     @State private var viewer: ViewerState?
     @State private var bridge = GridBridge()
     @State private var askingDate = false
@@ -303,6 +305,20 @@ struct TimelineBrowser: View {
                     if viewer == nil {
                         Color.clear.toolbar {
                             ToolbarItem(placement: .primaryAction) {
+                                FilterMenu(active: filter.isActive) { filter = PhotoFilter() } items: {
+                                    Toggle(isOn: $filter.photos) { Label("Photos", systemImage: "photo") }
+                                    Toggle(isOn: $filter.videos) { Label("Videos", systemImage: "video") }
+                                    Divider()
+                                    Toggle(isOn: $filter.favorites) { Label("Favorites", systemImage: "heart") }
+                                }
+                            }
+                            ToolbarItem(placement: .primaryAction) {
+                                SortMenu(selection: $newestFirst) {
+                                    Label("Newest First", systemImage: "arrow.down").tag(true)
+                                    Label("Oldest First", systemImage: "arrow.up").tag(false)
+                                }
+                            }
+                            ToolbarItem(placement: .primaryAction) {
                                 Menu {
                                     Toggle("Show Whole Photos", isOn: $fit)
                                     collectionMenu
@@ -316,6 +332,11 @@ struct TimelineBrowser: View {
                     }
                 }
                 .overlay {
+                    if filter.isActive, grid.assets.isEmpty, !assets.isEmpty {
+                        ContentUnavailableView("No Matches", systemImage: "line.3.horizontal.decrease.circle")
+                    }
+                }
+                .overlay {
                     if let viewer {
                         PhotoViewer(library: library, assets: grid.assets, revision: grid.id, context: context, topInset: titleBar,
                                     bridge: bridge, start: viewer, perform: perform) { self.viewer = nil }
@@ -325,11 +346,12 @@ struct TimelineBrowser: View {
         // the single photo view puts its own date in the middle of the title bar
         .navigationTitle(viewer == nil ? title : "")
         .navigationBarBackButtonHidden(viewer != nil) // ✕ closes the photo; back would leave the page too
-        .navigationSubtitle(viewer != nil ? "" : bridge.chosen > 1 ? String(localized: "\(bridge.chosen) selected") : subtitle)
+        .navigationSubtitle(shownSubtitle)
         .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
         .onChange(of: revision, initial: true) { regroup() }
         .onChange(of: grouping) { regroup() }
         .onChange(of: newestFirst) { regroup() }
+        .onChange(of: filter) { regroup() }
         .focusedSceneValue(\.browser, BrowserActions(
             viewerOpen: viewer != nil,
             toTop: { bridge.jump(to: 0) },
@@ -374,6 +396,13 @@ struct TimelineBrowser: View {
         } message: {
             Text("The photos in it stay in your library.")
         }
+    }
+
+    /// Nothing over an open photo; how many are chosen; else the page's subtitle, with how many a filter leaves.
+    private var shownSubtitle: String {
+        if viewer != nil { return "" }
+        if bridge.chosen > 1 { return String(localized: "\(bridge.chosen) selected") }
+        return countSubtitle(subtitle, shown: grid.assets.count, filtered: filter.isActive)
     }
 
     private var album: Album? {
@@ -450,7 +479,7 @@ struct TimelineBrowser: View {
     }
 
     private func regroup() {
-        let list = newestFirst ? assets : assets.reversed()
+        let list = filter.apply(newestFirst ? assets : assets.reversed())
         grid = GridData(assets: list, sections: makeSections(list, by: grouping), years: yearStarts(list), id: grid.id + 1)
     }
 }

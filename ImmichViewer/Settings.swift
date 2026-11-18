@@ -38,7 +38,6 @@ private struct GeneralSettings: View {
     @AppStorage("gridSpacing") private var spacing = 1.0
     @AppStorage("cornerRadius") private var radius = 0.0
     @AppStorage("videoBadge") private var badge = true
-    @AppStorage("newestFirst") private var newestFirst = true
     @AppStorage("fitWholePhoto") private var fit = false
 
     var body: some View {
@@ -52,10 +51,6 @@ private struct GeneralSettings: View {
             .onChange(of: appearance) { applyAppearance(appearance) }
 
             SwiftUI.Section("Photo Grid") {
-                Picker("Sort Order", selection: $newestFirst) {
-                    Text("Newest First").tag(true)
-                    Text("Oldest First").tag(false)
-                }
                 LabeledContent("Spacing") {
                     Slider(value: $spacing, in: 0...8, step: 1) { EmptyView() } minimumValueLabel: { Text(verbatim: "0") } maximumValueLabel: { Text(verbatim: "8") }
                 }
