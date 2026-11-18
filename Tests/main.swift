@@ -92,4 +92,10 @@ precondition(address("https://photos.example.com/api/") == "https://photos.examp
 precondition(address("HTTP://Box:2283") == "HTTP://Box:2283")
 precondition(address("") == nil && address("http://") == nil)
 
+
+// one cache folder per server
+precondition(ImmichAPI.folder("http://nas.local:2283") == "nas-local-2283")
+precondition(ImmichAPI.folder("https://photos.example.com") == "photos-example-com")
+precondition(ImmichAPI.folder("http://192.168.1.20:2283/immich") == "192-168-1-20-2283-immich")
+precondition(ImmichAPI.folder("") == "")
 print("all checks passed")

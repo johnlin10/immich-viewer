@@ -6,7 +6,7 @@ It keeps every small thumbnail (about 15 KB each) on this Mac, so scrolling read
 
 > **Language:** English and Traditional Chinese, following the macOS language (or the per-app language in System Settings > General > Language & Region). Simplified Chinese is planned; see [docs/localization.md](docs/localization.md).
 
-## What it does (v0.6)
+## What it does (v0.7)
 
 - A sidebar with Library, People, Albums, Tags, Archive and Trash.
 - People: everyone Immich recognised (hidden people left out) as round faces; click one for their photos.
@@ -65,7 +65,7 @@ Changes go straight to the server and show in the app right away. Edit > Undo (�
 - General: appearance (System, Light, Dark); photo grid sort order (Newest First, Oldest First), spacing, corner radius, Show Whole Photos, Mark Videos (▶); updates (check automatically, download and install automatically) and the version.
 - Video: Play Automatically, Start Muted, Loop.
 - Storage: thumbnail and face cache size, Show in Finder, Clear Cache… (thumbnails download again when shown, or all at once with ⌘R).
-- Connection: server address and API key. Connect tries them first and says what's wrong (server not reachable, wrong port, key not accepted, missing permission); the key is only saved once it works.
+- Connection: server address and API key. Connect tries them first and says what's wrong (server not reachable, wrong port, key not accepted, missing permission); the key is only saved once it works. Settings > Connection lists every server: + adds one, − removes it (its key, list and thumbnails are deleted from this Mac), Change Key… replaces its key, and double-click or Use switches to it. The Server menu also switches. Each server keeps its own key (in the keychain), list and thumbnails.
 - Server: commands that start and stop the server, see below.
 
 ## Setup
@@ -88,7 +88,7 @@ Use the same address you open the Immich web UI with:
 
 ### Starting and stopping the server
 
-If Immich only runs while you need it, Settings > Server takes a start and a stop command. They run in zsh as in Terminal, so `docker` and `ssh` are found as usual.
+If Immich only runs while you need it, Settings > Server takes a start and a stop command. Each server has its own: the tab shows the current server's, and a server without commands (a NAS that's always on) leaves them empty. They run in zsh as in Terminal, so `docker` and `ssh` are found as usual.
 
 | Where Immich runs | Start | Stop |
 |---|---|---|
@@ -98,7 +98,7 @@ If Immich only runs while you need it, Settings > Server takes a start and a sto
 SSH needs key login (no password prompt), for example with `ssh-copy-id nas`. If Docker Desktop isn't running yet, put `open -a Docker && sleep 20 && ` in front of the start command.
 
 - The Server menu has Start Server and Stop Server. After starting, the app waits until the server answers (up to 3 minutes), then syncs.
-- Two switches: start the server when the app opens (only if it isn't answering), and stop it when the app quits (only if the app started it, so a server that was already running for phone backups stays up).
+- Two switches per server: start it when the app opens or switches to it (only if it isn't answering), and stop it when the app quits (only if the app started it, so a server that was already running for phone backups stays up). Each server the app started is stopped with its own command.
 - If a command fails, its output shows in Settings > Server.
 
 ### Updates
@@ -107,11 +107,14 @@ From v0.4 the app updates itself with [Sparkle](https://sparkle-project.org): it
 
 ## Where data is kept
 
-- Thumbnails: `~/Library/Caches/ImmichViewer/thumbnails` (faces in `.../faces`)
-- Last asset list (for instant start): `~/Library/Application Support/ImmichViewer/assets.json`
-- Server address, start and stop commands, and view settings: the app’s preferences (`local.ImmichViewer`)
+Each server has its own folder, named after its address (`http://nas.local:2283` → `nas-local-2283`):
 
-Delete these folders to start fresh, for example after switching servers.
+- Thumbnails: `~/Library/Caches/ImmichViewer/<server>/thumbnails` (faces in `.../faces`)
+- Last asset list (for instant start): `~/Library/Application Support/ImmichViewer/<server>/assets.json`
+- API keys: the login keychain, one per server address
+- Server addresses, start and stop commands (per server), and view settings: the app’s preferences (`local.ImmichViewer`)
+
+Removing a server in Settings > Connection deletes its key and both folders. Updating from v0.6 moves the single server's key, thumbnails and list into its new folder, so nothing downloads again.
 
 ## Development
 
@@ -151,7 +154,14 @@ Planned editing: cropping, dropping files on the window to upload, then stacks, 
 
 ## Version history
 
-### v0.6.2 (current)
+### v0.7.0 (current)
+
+- Several servers: Settings > Connection lists them with + and −, Change Key… and Use (or double-click). The Server menu also switches.
+- Each server keeps its own API key, asset list, thumbnails, and start and stop commands. Switching stops a running sync first.
+- Start Automatically also starts a server when you switch to it; Stop When Quitting stops each server the app started, with its own command.
+- Updating from v0.6 moves the existing key, thumbnails, list and commands to the current server.
+
+### v0.6.2
 
 - Archive, Trash and Tags pages. Restore, delete permanently, empty the trash.
 - Add and remove tags, rotate photos, download originals, upload with File > Import….

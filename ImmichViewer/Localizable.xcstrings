@@ -192,6 +192,16 @@
         }
       }
     },
+    "Add Server": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新增伺服器"
+          }
+        }
+      }
+    },
     "Add Tag": {
       "localizations": {
         "zh-Hant": {
@@ -362,6 +372,16 @@
         }
       }
     },
+    "Change Key…": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更改金鑰…"
+          }
+        }
+      }
+    },
     "Change Location…": {
       "localizations": {
         "zh-Hant": {
@@ -472,6 +492,16 @@
         }
       }
     },
+    "Commands for %@": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 的指令"
+          }
+        }
+      }
+    },
     "Commands run in zsh, as in Terminal. For a server on another computer, run them over SSH with key login, for example: ssh nas 'cd immich-app && docker compose up -d'": {
       "localizations": {
         "zh-Hant": {
@@ -544,6 +574,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "無法連線到 %1$@：%2$@ 請檢查位址和連接埠，以及伺服器是否正在執行。如果伺服器在其他電腦上，也請到「系統設定」>「隱私權與安全性」>「區域網路」確認 Immich Viewer 已開啟。"
+          }
+        }
+      }
+    },
+    "Current": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "使用中"
           }
         }
       }
@@ -786,6 +826,16 @@
         }
       }
     },
+    "Each server keeps its own API key, list and thumbnails. Double-click one to switch to it.": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每台伺服器各自保存 API 金鑰、照片清單和縮圖。點兩下即可切換。"
+          }
+        }
+      }
+    },
     "Edit Album": {
       "localizations": {
         "zh-Hant": {
@@ -982,6 +1032,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "資訊（⌘I）"
+          }
+        }
+      }
+    },
+    "Its API key, list and thumbnails are deleted from this Mac. Photos on the server are not affected.": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "會從這台 Mac 刪除它的 API 金鑰、照片清單和縮圖。伺服器上的照片不受影響。"
           }
         }
       }
@@ -1297,6 +1357,36 @@
         }
       }
     },
+    "Remove": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移除"
+          }
+        }
+      }
+    },
+    "Remove %@?": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "要移除 %@ 嗎？"
+          }
+        }
+      }
+    },
+    "Remove Server": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移除伺服器"
+          }
+        }
+      }
+    },
     "Remove Tag": {
       "localizations": {
         "zh-Hant": {
@@ -1537,6 +1627,16 @@
         }
       }
     },
+    "Start Automatically": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自動啟動"
+          }
+        }
+      }
+    },
     "Start Muted": {
       "localizations": {
         "zh-Hant": {
@@ -1577,22 +1677,22 @@
         }
       }
     },
-    "Start the server when Immich Viewer opens, if it isn’t running": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "打開 Immich Viewer 時，如果伺服器沒有在執行就啟動它"
-          }
-        }
-      }
-    },
     "Starting the server…": {
       "localizations": {
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
             "value": "正在啟動伺服器…"
+          }
+        }
+      }
+    },
+    "Starts the server when Immich Viewer opens or switches to it, if it isn’t running. Stops it at quit only if Immich Viewer started it.": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打開 Immich Viewer 或切換到這台伺服器時，如果它沒有在執行就啟動它。結束時只停止由 Immich Viewer 啟動的伺服器。"
           }
         }
       }
@@ -1627,12 +1727,12 @@
         }
       }
     },
-    "Stop the server when Immich Viewer quits, if Immich Viewer started it": {
+    "Stop When Quitting": {
       "localizations": {
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "結束 Immich Viewer 時，如果伺服器是由 Immich Viewer 啟動的就停止它"
+            "value": "結束時停止"
           }
         }
       }
@@ -1919,6 +2019,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "正在上傳第 %lld 個，共 %lld 個"
+          }
+        }
+      }
+    },
+    "Use": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "使用"
           }
         }
       }

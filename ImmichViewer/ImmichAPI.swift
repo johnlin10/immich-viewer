@@ -26,6 +26,12 @@ struct ImmichAPI: Sendable {
         return url
     }
 
+    /// The folder name for a server's cached list and thumbnails: `http://nas.local:2283` → `nas-local-2283`.
+    static func folder(_ server: String) -> String {
+        let rest = server.range(of: "://").map { String(server[$0.upperBound...]) } ?? server
+        return rest.components(separatedBy: CharacterSet.alphanumerics.inverted).filter { !$0.isEmpty }.joined(separator: "-")
+    }
+
     /// True once the server answers. Needs no key, so it also works before connecting.
     static func ping(_ server: URL) async -> Bool {
         let request = URLRequest(url: server.appending(path: "api/server/ping"), timeoutInterval: 5)
@@ -258,23 +264,30 @@ struct Album: Codable, Identifiable, Hashable, Sendable {
     var endDate: String?
 }
 
-/// The API key lives in the login keychain, never in a plain file.
+/// API keys live in the login keychain, never in a plain file: one per server, under its address.
 enum Keychain {
-    private static let query: [String: Any] = [kSecClass as String: kSecClassGenericPassword,
-                                               kSecAttrService as String: "ImmichViewer"]
+    /// `server` nil: any key, for moving the single key from before several servers.
+    private static func query(_ server: String?) -> [String: Any] {
+        var q: [String: Any] = [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: "ImmichViewer"]
+        if let server { q[kSecAttrAccount as String] = server }
+        return q
+    }
 
-    static func load() -> String? {
-        var q = query
+    static func load(_ server: String?) -> String? {
+        var q = query(server)
         q[kSecReturnData as String] = true
         var out: AnyObject?
         guard SecItemCopyMatching(q as CFDictionary, &out) == errSecSuccess, let data = out as? Data else { return nil }
         return String(data: data, encoding: .utf8)
     }
 
-    static func save(_ key: String) {
-        SecItemDelete(query as CFDictionary)
-        var q = query
+    static func save(_ key: String, _ server: String) {
+        delete(server)
+        var q = query(server)
         q[kSecValueData as String] = Data(key.utf8)
         SecItemAdd(q as CFDictionary, nil)
     }
+
+    /// `server` nil deletes every key.
+    static func delete(_ server: String?) { SecItemDelete(query(server) as CFDictionary) }
 }

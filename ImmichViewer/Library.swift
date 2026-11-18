@@ -17,61 +17,153 @@ final class Library {
     private(set) var tags: [Tag] = []
     /// Why people or albums couldn't be loaded (for example a key without `person.read`).
     private(set) var collectionsError: String?
-    let thumbs: ThumbnailStore
+    private(set) var thumbs: ThumbnailStore
     /// Face crops for the people page.
-    let faces: ThumbnailStore
+    private(set) var faces: ThumbnailStore
+    /// Every server connected to, by address. Each keeps its own key, list and thumbnails.
+    private(set) var servers = UserDefaults.standard.stringArray(forKey: "servers") ?? []
 
-    // ponytail: list and thumbnails are not keyed by server; clear ~/Library/Caches/ImmichViewer if you switch servers
-    private let listFile: URL
+    private var listFile: URL
+    /// "ImmichViewer", or "ImmichViewer-<profile>" in debug builds.
+    private let base: String
+    /// The running sync, so switching servers can stop it.
+    private var syncTask: Task<Void, Never>?
 
     init() {
         let env = ProcessInfo.processInfo.environment
-        var key = Keychain.load()
-        var folder = "ImmichViewer"
+        var base = "ImmichViewer"
+        var debugKey: String?
+        var server = UserDefaults.standard.string(forKey: "server") ?? "http://localhost:2283"
         #if DEBUG
         // Testing from Xcode (Edit Scheme > Run > Environment Variables) without touching your real setup:
         // IMMICH_API_KEY skips the keychain, IMMICH_SERVER overrides the address, and
         // IMMICH_VIEWER_PROFILE keeps the list and thumbnails in separate folders.
-        if let value = env["IMMICH_API_KEY"] { key = value }
-        if let value = env["IMMICH_SERVER"] { serverURL = value }
-        if let value = env["IMMICH_VIEWER_PROFILE"] { folder += "-" + value }
+        debugKey = env["IMMICH_API_KEY"]
+        if let value = env["IMMICH_SERVER"] { server = value }
+        if let value = env["IMMICH_VIEWER_PROFILE"] { base += "-" + value }
         #endif
-        thumbs = ThumbnailStore(dir: URL.cachesDirectory.appending(path: "\(folder)/thumbnails", directoryHint: .isDirectory))
-        faces = ThumbnailStore(dir: URL.cachesDirectory.appending(path: "\(folder)/faces", directoryHint: .isDirectory)) {
-            try await $0.get("people/\($1)/thumbnail")
-        }
-        listFile = URL.applicationSupportDirectory.appending(path: "\(folder)/assets.json")
-
-        if let key, let url = URL(string: serverURL) { api = ImmichAPI(server: url, key: key) }
-        // last known list, so the grid shows instantly while the new list loads
-        if let data = try? Data(contentsOf: listFile), let list = try? JSONDecoder().decode([Asset].self, from: data) {
-            assets = list
-            revision += 1
-            status = String(localized: "\(list.count) items")
-        }
+        self.base = base
+        (thumbs, faces, listFile) = Self.stores(base, server)
+        serverURL = server
+        if UserDefaults.standard.object(forKey: "servers") == nil { moveSingleServer() }
+        moveSharedCommands()
+        if let key = debugKey ?? Keychain.load(serverURL), let url = URL(string: serverURL) { api = ImmichAPI(server: url, key: key) }
+        loadList()
         NotificationCenter.default.addObserver(forName: NSApplication.willTerminateNotification, object: nil, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated { self?.stopServerAtQuit() }
         }
     }
 
+    private static func stores(_ base: String, _ server: String) -> (ThumbnailStore, ThumbnailStore, URL) {
+        let folder = "\(base)/\(ImmichAPI.folder(server))"
+        return (ThumbnailStore(dir: URL.cachesDirectory.appending(path: "\(folder)/thumbnails", directoryHint: .isDirectory)),
+                ThumbnailStore(dir: URL.cachesDirectory.appending(path: "\(folder)/faces", directoryHint: .isDirectory)) {
+                    try await $0.get("people/\($1)/thumbnail")
+                },
+                URL.applicationSupportDirectory.appending(path: "\(folder)/assets.json"))
+    }
+
+    /// Up to 0.6 there was one server: its key had no address and its files sat right in the base folder.
+    /// Moves them to the current server's place, so nothing downloads again.
+    private func moveSingleServer() {
+        if let key = Keychain.load(nil) {
+            let server = UserDefaults.standard.string(forKey: "server") ?? serverURL // the saved one, also when debugging another
+            Keychain.delete(nil)
+            Keychain.save(key, server)
+            servers = [server]
+        }
+        UserDefaults.standard.set(servers, forKey: "servers")
+        let old = [URL.cachesDirectory.appending(path: "\(base)/thumbnails"), URL.cachesDirectory.appending(path: "\(base)/faces"),
+                   URL.applicationSupportDirectory.appending(path: "\(base)/assets.json")]
+        for (from, to) in zip(old, [thumbs.dir, faces.dir, listFile]) where FileManager.default.fileExists(atPath: from.path) {
+            try? FileManager.default.removeItem(at: to) // the stores just made it empty
+            try? FileManager.default.createDirectory(at: to.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try? FileManager.default.moveItem(at: from, to: to)
+        }
+    }
+
+    /// Up to 0.6 the start and stop commands were shared; they belong to the first server (the one from before several servers).
+    private func moveSharedCommands() {
+        let defaults = UserDefaults.standard
+        for name in Self.serverSettings {
+            guard let value = defaults.object(forKey: name) else { continue }
+            defaults.set(value, forKey: Self.setting(name, servers.first ?? serverURL))
+            defaults.removeObject(forKey: name)
+        }
+    }
+
+    /// The last known list, so the grid shows instantly while the new list loads.
+    private func loadList() {
+        let list = (try? Data(contentsOf: listFile)).flatMap { try? JSONDecoder().decode([Asset].self, from: $0) } ?? []
+        assets = list
+        revision += 1
+        status = list.isEmpty ? "" : String(localized: "\(list.count) items")
+    }
+
     /// Tries the address and key, and only keeps the key if the server takes it. Returns why it didn't work, or nil.
     /// The address is kept either way, so the start command (Settings > Server) can wait on it.
-    func connect(server: String, key: String) async -> String? {
+    /// A new address is added to the servers and, with `switching`, switched to (else only its key is saved).
+    func connect(server: String, key: String, switching: Bool = true) async -> String? {
         guard let url = ImmichAPI.address(server) else { return String(localized: "That isn’t a server address.") }
-        serverURL = url.absoluteString
-        UserDefaults.standard.set(serverURL, forKey: "server")
+        if api == nil {
+            serverURL = url.absoluteString
+            UserDefaults.standard.set(serverURL, forKey: "server")
+        }
         let candidate = ImmichAPI(server: url, key: key.trimmingCharacters(in: .whitespacesAndNewlines))
         if let problem = await candidate.check() { return problem }
-        Keychain.save(candidate.key)
-        api = candidate
-        Task { await refresh() }
+        Keychain.save(candidate.key, url.absoluteString)
+        if !servers.contains(url.absoluteString) {
+            servers.append(url.absoluteString)
+            UserDefaults.standard.set(servers, forKey: "servers")
+        }
+        if switching || url.absoluteString == serverURL || api == nil { await use(candidate) }
         return nil
     }
 
-    /// At launch: start the server first if Settings > Server says so and it isn't answering, then sync.
+    /// Switches to a server connected to before, with its saved key.
+    func switchTo(_ server: String) async {
+        guard server != serverURL || api == nil, let key = Keychain.load(server), let url = URL(string: server) else { return }
+        await use(ImmichAPI(server: url, key: key))
+    }
+
+    /// Forgets a server: its key, list and thumbnails. If it's the current one, switches to another, or back to the connection form.
+    func remove(_ server: String) async {
+        guard !ImmichAPI.folder(server).isEmpty else { return } // never the whole base folder
+        servers.removeAll { $0 == server }
+        UserDefaults.standard.set(servers, forKey: "servers")
+        Keychain.delete(server)
+        for name in Self.serverSettings { UserDefaults.standard.removeObject(forKey: Self.setting(name, server)) }
+        if server == serverURL {
+            if let next = servers.first { await switchTo(next) } else { await stopSync(); api = nil }
+        }
+        let (thumbs, _, list) = Self.stores(base, server)
+        try? FileManager.default.removeItem(at: thumbs.dir.deletingLastPathComponent())
+        try? FileManager.default.removeItem(at: list.deletingLastPathComponent())
+    }
+
+    private func use(_ candidate: ImmichAPI) async {
+        let server = candidate.server.absoluteString
+        if server != serverURL || api == nil {
+            await stopSync()
+            serverURL = server
+            UserDefaults.standard.set(server, forKey: "server")
+            (thumbs, faces, listFile) = Self.stores(base, server)
+            (people, albums, tags, collectionsError, canDownload, trashEnabled) = ([], [], [], nil, nil, true)
+            loadList()
+        }
+        api = candidate
+        Task { await launch() }
+    }
+
+    private func stopSync() async {
+        syncTask?.cancel()
+        await syncTask?.value
+    }
+
+    /// At launch and after switching servers: start the server first if Settings > Server says so and it isn't answering, then sync.
     func launch() async {
-        if UserDefaults.standard.bool(forKey: "serverStartAtLaunch"), api != nil, !command("serverStart").isEmpty,
-           let url = URL(string: serverURL), !(await ImmichAPI.ping(url)) {
+        if !serverBusy, UserDefaults.standard.bool(forKey: Self.setting("serverStartAtLaunch", serverURL)), api != nil,
+           !command("serverStart").isEmpty, let url = URL(string: serverURL), !(await ImmichAPI.ping(url)) {
             await startServer()
         } else {
             await refresh()
@@ -83,23 +175,30 @@ final class Library {
     private(set) var serverBusy = false
     /// The output of the last start or stop command, when it failed.
     private(set) var serverError: String?
-    /// Only a server this app started is stopped at quit.
-    private var startedServer = false
+    /// Only servers this app started are stopped at quit.
+    private var startedServers: Set<String> = []
 
-    func command(_ key: String) -> String {
-        (UserDefaults.standard.string(forKey: key) ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+    /// Settings > Server keeps these for each server, as "serverStart http://localhost:2283".
+    static let serverSettings = ["serverStart", "serverStop", "serverStartAtLaunch", "serverStopAtQuit"]
+    static func setting(_ name: String, _ server: String) -> String { "\(name) \(server)" }
+
+    /// The current server's start or stop command, or another server's.
+    func command(_ name: String, for server: String? = nil) -> String {
+        (UserDefaults.standard.string(forKey: Self.setting(name, server ?? serverURL)) ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     /// Runs the start command, waits until the server answers, then syncs.
     func startServer() async {
+        let server = serverURL
         guard !serverBusy, await run("serverStart", String(localized: "Starting the server…")) else { return }
-        startedServer = true
+        startedServers.insert(server)
         serverBusy = true
         defer { serverBusy = false }
         status = String(localized: "Waiting for the server…")
         // ponytail: fixed 3 minute wait; make it a setting if a slow NAS needs longer
         for _ in 0..<90 {
-            if let url = URL(string: serverURL), await ImmichAPI.ping(url) {
+            guard serverURL == server else { return } // switched to another server meanwhile
+            if let url = URL(string: server), await ImmichAPI.ping(url) {
                 serverBusy = false
                 await refresh()
                 return
@@ -112,14 +211,16 @@ final class Library {
 
     func stopServer() async {
         guard !serverBusy, await run("serverStop", String(localized: "Stopping the server…")) else { return }
-        startedServer = false
+        startedServers.remove(serverURL)
         status = String(localized: "Server stopped")
     }
 
-    /// At quit, without waiting: the command keeps running after the app is gone.
+    /// At quit, without waiting: each server this app started, with its own stop command. The commands keep running after the app is gone.
     func stopServerAtQuit() {
-        guard startedServer, UserDefaults.standard.bool(forKey: "serverStopAtQuit"), !command("serverStop").isEmpty else { return }
-        try? Self.shell(command("serverStop")).run()
+        for server in startedServers where UserDefaults.standard.bool(forKey: Self.setting("serverStopAtQuit", server)) {
+            let stop = command("serverStop", for: server)
+            if !stop.isEmpty { try? Self.shell(stop).run() }
+        }
     }
 
     private func run(_ key: String, _ message: String) async -> Bool {
@@ -164,7 +265,15 @@ final class Library {
     func refresh() async {
         guard let api, !syncing else { return }
         syncing = true
-        defer { syncing = false }
+        let task = Task {
+            await self.sync(api)
+            self.syncing = false
+        }
+        syncTask = task
+        await task.value
+    }
+
+    private func sync(_ api: ImmichAPI) async {
         status = String(localized: "Syncing the list…")
         let list: [Asset]
         do {
@@ -173,6 +282,7 @@ final class Library {
             status = String(localized: "Sync failed: \(error.localizedDescription)")
             return
         }
+        guard !Task.isCancelled else { return }
         assets = list
         revision += 1
         saveList()

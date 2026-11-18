@@ -109,26 +109,53 @@ struct ImportCommands: Commands {
     }
 }
 
-/// The Server menu: the start and stop commands from Settings > Server.
+/// The Server menu: the current server's start and stop commands from Settings > Server, and switching servers.
 struct ServerCommands: Commands {
     let library: Library
-    @AppStorage("serverStart") private var start = ""
-    @AppStorage("serverStop") private var stop = ""
     @AppStorage("settingsTab") private var tab = "general"
     @Environment(\.openSettings) private var openSettings
 
     var body: some Commands {
         CommandMenu("Server") {
-            Button("Start Server") { Task { await library.startServer() } }
-                .disabled(start.isEmpty || library.serverBusy)
-            Button("Stop Server") { Task { await library.stopServer() } }
-                .disabled(stop.isEmpty || library.serverBusy)
+            StartStopItems(library: library, server: library.serverURL).id(library.serverURL)
+            if library.servers.count > 1 {
+                Divider()
+                ForEach(library.servers, id: \.self) { server in
+                    Toggle(isOn: Binding { server == library.serverURL } set: { _ in Task { await library.switchTo(server) } }) {
+                        Text(verbatim: server)
+                    }
+                }
+            }
             Divider()
             Button("Start and Stop Commands…") {
                 tab = "server"
                 openSettings()
             }
         }
+    }
+}
+
+/// Start and Stop in the Server menu, for the current server's commands.
+private struct StartStopItems: View {
+    let library: Library
+    @AppStorage private var start: String
+    @AppStorage private var stop: String
+
+    init(library: Library, server: String) {
+        self.library = library
+        _start = AppStorage(wrappedValue: "", Library.setting("serverStart", server))
+        _stop = AppStorage(wrappedValue: "", Library.setting("serverStop", server))
+    }
+
+    /// Spaces alone aren't a command.
+    private var noStart: Bool { start.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+    private var noStop: Bool { stop.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+
+    var body: some View {
+        Button("Start Server") { Task { await library.startServer() } }
+            .disabled(noStart || library.serverBusy)
+        Button("Stop Server") { Task { await library.stopServer() } }
+            .disabled(noStop || library.serverBusy)
     }
 }
 
@@ -176,8 +203,10 @@ struct ContentView: View {
                     .id(current) // each page its own stack
                     .environment(\.showPerson) { paths[current, default: NavigationPath()].append($0) }
                 }
+                .id(library.serverURL) // another server: every page starts over
             }
         }
+        .onChange(of: library.serverURL) { paths = [:] }
         .frame(minWidth: 700, minHeight: 400)
         .alert("Couldn’t Make the Change", isPresented: Binding { library.editError != nil } set: { if !$0 { library.editError = nil } }) {
             Button("OK") {}

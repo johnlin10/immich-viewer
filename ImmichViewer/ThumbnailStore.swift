@@ -85,6 +85,7 @@ final class ThumbnailStore: @unchecked Sendable {
                 if done % 200 == 0 { await progress(done, missing.count, failed) }
             }
             for id in missing {
+                if Task.isCancelled { break } // switched to another server
                 if started - done >= 8 { await collect(await group.next()) }
                 group.addTask {
                     guard let data = try? await self.fetch(api, id) else { return false }
