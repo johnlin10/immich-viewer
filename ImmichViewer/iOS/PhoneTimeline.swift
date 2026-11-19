@@ -1,11 +1,14 @@
 #if os(iOS)
 import AVKit
+import CoreLocation
 import SwiftUI
 
-/// The iOS photo page: the grid (`PhoneGrid`), the date capsule, and the filter, sort and grouping menus.
+/// The iOS photo page: the grid (`PhoneGrid`), the date capsule, Select, and the ⋯ menu with the filter, sort and
+/// grouping, and what can be done to the chosen photos.
 /// Same initializer as the Mac's, so the shared person, album and tag pages use it unchanged.
 struct TimelineBrowser: View {
     @Environment(Library.self) private var library
+    @Environment(\.undoManager) private var undo
     let title: String
     let subtitle: String
     let assets: [Asset]
@@ -24,13 +27,27 @@ struct TimelineBrowser: View {
     @State private var top = 0
     /// A face in the photo view was tapped.
     @State private var person: Person?
+    /// Select mode: a tap checks or unchecks a photo instead of opening it.
+    @State private var selecting = false
+    @State private var chosen: Set<String> = []
+    @State private var editor = PhotoEditor()
 
     var body: some View {
         ZStack(alignment: .topLeading) {
             PhoneGrid(library: library, assets: list, sections: sections, headers: grouping != .none,
-                      pinHeaders: grouping == .day, dataID: dataID,
-                      columns: columns, refresh: context == .library ? { await library.refresh() } : nil,
-                      onColumns: { columns = $0 }, onTop: { top = $0 }, onPerson: { person = $0 })
+                      pinHeaders: grouping == .day, dataID: dataID, columns: columns, context: context,
+                      selecting: selecting, chosen: chosen,
+                      handlers: PhoneGrid.Handlers(
+                        refresh: context == .library ? { await library.refresh() } : nil,
+                        onColumns: { columns = $0 }, onTop: { top = $0 }, onPerson: { person = $0 },
+                        onToggle: { id in
+                            if chosen.remove(id) == nil { chosen.insert(id) }
+                        },
+                        onSelect: { id in
+                            chosen = [id]
+                            setSelecting(true)
+                        },
+                        onAction: { act($0, on: $1) }))
                 .ignoresSafeArea()
             if grouping != .day, list.indices.contains(top) { // by day, the pinned header shows the date
                 Text(list[top].date.formatted(Self.capsuleStyle))
@@ -49,35 +66,70 @@ struct TimelineBrowser: View {
             }
         }
         .toolbar {
-            ToolbarItemGroup(placement: .primaryAction) {
-                FilterMenu(active: filter.isActive) { filter = PhotoFilter() } items: {
-                    Toggle(isOn: $filter.photos) { Label("Photos", systemImage: "photo") }
-                    Toggle(isOn: $filter.videos) { Label("Videos", systemImage: "video") }
-                    Toggle(isOn: $filter.live) { Label("Live Photos", systemImage: "livephoto") }
-                    Divider()
-                    Toggle(isOn: $filter.favorites) { Label("Favorites", systemImage: "heart") }
+            // two items swapped inside an animation: the toolbar morphs the glass from "Select" into ✕ and back
+            if selecting {
+                ToolbarItem(placement: .primaryAction) {
+                    Button("Cancel", systemImage: "xmark") { setSelecting(false) }
                 }
-                SortMenu(selection: $newestFirst) {
-                    Label("Newest First", systemImage: "arrow.down").tag(true)
-                    Label("Oldest First", systemImage: "arrow.up").tag(false)
+            } else {
+                ToolbarItem(placement: .primaryAction) {
+                    Button("Select") { setSelecting(true) }.disabled(list.isEmpty)
                 }
+            }
+            ToolbarSpacer(.fixed, placement: .primaryAction)
+            ToolbarItem(placement: .primaryAction) {
                 Menu {
-                    Picker("Group By", selection: $grouping) {
-                        ForEach(Grouping.allCases, id: \.self) { Text($0.label).tag($0) }
+                    if selecting, !chosen.isEmpty {
+                        let picked = list.filter { chosen.contains($0.id) }
+                        SwiftUI.Section {
+                            PhotoMenu(library: library, count: picked.count, allFavorite: picked.allSatisfy { $0.isFavorite == true },
+                                      context: context) { act($0, on: picked) }
+                        }
                     }
-                    .pickerStyle(.inline)
+                    SwiftUI.Section {
+                        Menu {
+                            Toggle(isOn: $filter.photos) { Label("Photos", systemImage: "photo") }
+                            Toggle(isOn: $filter.videos) { Label("Videos", systemImage: "video") }
+                            Toggle(isOn: $filter.live) { Label("Live Photos", systemImage: "livephoto") }
+                            Divider()
+                            Toggle(isOn: $filter.favorites) { Label("Favorites", systemImage: "heart") }
+                            Divider()
+                            Button("Clear Filters", systemImage: "xmark.circle") { filter = PhotoFilter() }.disabled(!filter.isActive)
+                        } label: {
+                            Label("Filter", systemImage: filter.isActive ? "line.3.horizontal.decrease.circle.fill"
+                                                                         : "line.3.horizontal.decrease.circle")
+                        }
+                        Picker(selection: $newestFirst) {
+                            Label("Newest First", systemImage: "arrow.down").tag(true)
+                            Label("Oldest First", systemImage: "arrow.up").tag(false)
+                        } label: {
+                            Label("Sort", systemImage: "arrow.up.arrow.down")
+                        }
+                        .pickerStyle(.menu)
+                        Picker(selection: $grouping) {
+                            ForEach(Grouping.allCases, id: \.self) { Text($0.label).tag($0) }
+                        } label: {
+                            Label("Group By", systemImage: "square.grid.3x3")
+                        }
+                        .pickerStyle(.menu)
+                    }
+                    CollectionMenu(library: library, context: context, editor: editor, undo: undo)
                 } label: {
-                    Image(systemName: "square.grid.3x3")
+                    Label("More", systemImage: "ellipsis")
                 }
             }
         }
+        .pageBar() // the grid sets its own soft edge
         .navigationTitle(title)
-        .navigationSubtitle(countSubtitle(subtitle, shown: list.count, filtered: filter.isActive))
+        .navigationSubtitle(selecting ? (chosen.isEmpty ? String(localized: "Select Items") : String(localized: "\(chosen.count) selected"))
+                            : countSubtitle(subtitle, shown: list.count, filtered: filter.isActive))
         .navigationDestination(item: $person) { CollectionTimeline(context: .person($0.id), fallbackTitle: $0.name) }
+        .photoEditor(editor, library: library, undo: undo)
         .onChange(of: revision, initial: true) { regroup() }
         .onChange(of: grouping) { regroup() }
         .onChange(of: newestFirst) { regroup() }
         .onChange(of: filter) { regroup() }
+        .onChange(of: selecting) { if !selecting { chosen = [] } }
     }
 
     private static let capsuleStyle: Date.FormatStyle = {
@@ -86,10 +138,26 @@ struct TimelineBrowser: View {
         return style
     }()
 
+    /// Select mode ends once something is done to the photos; for Delete, once they are gone (it can be cancelled).
+    private func act(_ action: PhotoAction, on picked: [Asset]) {
+        editor.perform(action, on: picked, context: context, library: library, undo: undo)
+        if case .trash = action {} else { setSelecting(false) }
+    }
+
+    /// In or out of select mode, animated: the button morphs and the subtitle changes with it.
+    private func setSelecting(_ on: Bool) {
+        withAnimation(.smooth) { selecting = on }
+    }
+
     private func regroup() {
         list = filter.apply(newestFirst ? assets : assets.reversed())
         sections = makeSections(list, by: grouping)
         dataID += 1
+        if !chosen.isEmpty {
+            let shown = Set(list.map(\.id))
+            chosen.formIntersection(shown)
+            if chosen.isEmpty { setSelecting(false) } // all deleted, or filtered out
+        }
     }
 }
 
@@ -97,8 +165,12 @@ struct TimelineBrowser: View {
 /// A tap hides the bars and faces and turns the background black; another brings them back. ⓘ shows the details.
 struct PhotoPager: View {
     @Environment(Library.self) private var library
+    @Environment(\.undoManager) private var undo
     let assets: [Asset]
+    /// Counts up when `assets` is replaced after an edit.
+    let version: Int
     @Binding var position: Int?
+    let context: BrowserContext
     let close: () -> Void
     /// A face or a person in the details was tapped: close and show their photos.
     let onPerson: (Person) -> Void
@@ -116,6 +188,9 @@ struct PhotoPager: View {
     @State private var video: (id: String, player: AVPlayer)?
     @State private var videoRunning = false
     @AppStorage("videoMuted") private var muted = false
+    @State private var editor = PhotoEditor()
+    /// The details sheet's own, for the changes made from it: a sheet can't come from under another sheet.
+    @State private var infoEditor = PhotoEditor()
 
     /// Asset dates are wall-clock time stored as UTC.
     private static let dayStyle = gmt(Date.FormatStyle(date: .abbreviated, time: .omitted))
@@ -126,9 +201,12 @@ struct PhotoPager: View {
         return style
     }
 
-    init(assets: [Asset], position: Binding<Int?>, close: @escaping () -> Void, onPerson: @escaping (Person) -> Void) {
+    init(assets: [Asset], version: Int, position: Binding<Int?>, context: BrowserContext, close: @escaping () -> Void,
+         onPerson: @escaping (Person) -> Void) {
         self.assets = assets
+        self.version = version
         _position = position
+        self.context = context
         self.close = close
         self.onPerson = onPerson
         let start = position.wrappedValue ?? 0
@@ -136,12 +214,16 @@ struct PhotoPager: View {
     }
 
     private var asset: Asset? { position.flatMap { assets.indices.contains($0) ? assets[$0] : nil } }
+    /// Where the photo was taken, for Set Location.
+    private var place: CLLocationCoordinate2D? {
+        detail?.exifInfo.flatMap { e in e.latitude.flatMap { lat in e.longitude.map { CLLocationCoordinate2D(latitude: lat, longitude: $0) } } }
+    }
     private var shownVideo: AVPlayer? { video != nil && video?.id == asset?.id ? video?.player : nil }
 
     var body: some View {
         ScrollView(.horizontal) {
             LazyHStack(spacing: 0) {
-                ForEach(window, id: \.self) { i in
+                ForEach(window.clamped(to: 0..<assets.count), id: \.self) { i in // the list may have just got shorter
                     PhonePhoto(asset: assets[i], cached: library.thumbs.anyCached(assets[i].id), playing: i == position) {
                         chromeHidden.toggle()
                     } onPlayer: { player in
@@ -152,6 +234,7 @@ struct PhotoPager: View {
                     } onPress: { pressed in
                         livePlaying = pressed && livePlayer != nil
                     }
+                        .id(assets[i].id) // another photo at this place after an edit: start over
                         .containerRelativeFrame([.horizontal, .vertical])
                 }
             }
@@ -202,6 +285,10 @@ struct PhotoPager: View {
                     Spacer()
                     if let asset {
                         Menu {
+                            PhotoMenu(library: library, count: 1, allFavorite: asset.isFavorite == true, context: context) {
+                                editor.perform($0, on: [asset], context: context, library: library, undo: undo, place: place)
+                            }
+                            Divider()
                             Button("Info", systemImage: "info.circle") { showInfo = true }
                             Button("Open in Browser", systemImage: "safari") { library.openInBrowser(asset) }
                         } label: {
@@ -231,12 +318,35 @@ struct PhotoPager: View {
         .statusBarHidden(chromeHidden)
         .sheet(isPresented: $showInfo) {
             if let asset {
-                InfoPanel(asset: asset, detail: detail, typing: .constant(false), onPerson: open)
+                let edit = { (action: PhotoAction) in
+                    infoEditor.perform(action, on: [asset], context: context, library: library, undo: undo, place: place)
+                }
+                InfoPanel(asset: asset, detail: detail, typing: .constant(false), onPerson: open,
+                          onDescribe: { text in
+                              Task { await library.describe(asset.id, text, was: detail?.exifInfo?.description ?? "", undo: undo) }
+                          },
+                          onRate: { stars in Task { await library.rate(asset.id, stars, was: detail?.exifInfo?.rating, undo: undo) } },
+                          onDate: { edit(.adjustDate) },
+                          onPlace: { edit(.setLocation) },
+                          onAddTag: { edit(.addTag) },
+                          onUntag: { tag in Task { await library.untag([asset.id], tag, undo: undo) } },
+                          onChangePerson: { person in
+                              if let face = person.faces?.first { edit(.changePerson(face: face.id, from: person.id)) }
+                          })
+                    .photoEditor(infoEditor, library: library, undo: undo)
                     .presentationDetents([.medium, .large])
                     .presentationBackgroundInteraction(.enabled(upThrough: .medium)) // keep swiping photos, like the Mac's panel
             }
         }
-        .task(id: position) {
+        .photoEditor(editor, library: library, undo: undo)
+        .onChange(of: library.edits) { // what the server made of a change: stars, description, tags, people
+            Task { if let asset, let new = await library.detail(asset), asset.id == self.asset?.id { detail = new } }
+        }
+        .onChange(of: version) { // recentred, in case the photo moved far (a new date)
+            let start = position ?? 0
+            window = max(0, start - 1000)..<min(assets.count, start + 1000)
+        }
+        .task(id: asset?.id) {
             detail = nil
             livePlaying = false
             livePlayer = nil

@@ -15,18 +15,34 @@ struct PhoneGrid: UIViewControllerRepresentable {
     /// Changes whenever `assets` or `sections` are replaced, so the grid reloads.
     let dataID: Int
     let columns: Int
-    var refresh: (() async -> Void)?
-    var onColumns: (Int) -> Void
-    /// The photo at the top of the screen changed to another day.
-    var onTop: (Int) -> Void
-    var onPerson: (Person) -> Void
+    /// What the page shows, for the menus.
+    let context: BrowserContext
+    /// Select mode: a tap checks or unchecks a photo instead of opening it. `chosen`: the checked ones.
+    let selecting: Bool
+    let chosen: Set<String>
+    let handlers: Handlers
+
+    struct Handlers {
+        var refresh: (() async -> Void)?
+        var onColumns: (Int) -> Void = { _ in }
+        /// The photo at the top of the screen changed to another day.
+        var onTop: (Int) -> Void = { _ in }
+        var onPerson: (Person) -> Void = { _ in }
+        /// A tap in select mode.
+        var onToggle: (String) -> Void = { _ in }
+        /// Select in a photo's long-press menu: select mode, with that photo checked.
+        var onSelect: (String) -> Void = { _ in }
+        /// From a photo's long-press menu.
+        var onAction: (PhotoAction, [Asset]) -> Void = { _, _ in }
+    }
 
     func makeUIViewController(context: Context) -> PhoneGridController { PhoneGridController(library: library) }
 
     func updateUIViewController(_ controller: PhoneGridController, context: Context) {
-        controller.handlers = (refresh, onColumns, onTop, onPerson)
+        controller.handlers = handlers
+        controller.context = self.context
         controller.update(assets: assets, sections: sections, headers: headers, pinHeaders: pinHeaders, dataID: dataID,
-                          columns: columns)
+                          columns: columns, selecting: selecting, chosen: chosen)
     }
 }
 
@@ -49,8 +65,13 @@ final class PhoneGridController: UIViewController, UICollectionViewDataSource, U
     /// The dates themselves, drawn over the blur: the top day's, and the next day's while its header is inside the zone.
     private let floatingLabel = UILabel()
     private let incomingLabel = UILabel()
-    var handlers: (refresh: (() async -> Void)?, onColumns: (Int) -> Void, onTop: (Int) -> Void, onPerson: (Person) -> Void) =
-        (nil, { _ in }, { _ in }, { _ in })
+    var handlers = PhoneGrid.Handlers()
+    var context = BrowserContext.library
+    private var selecting = false
+    private var chosen: Set<String> = []
+    /// The open photo view, which follows the list as it changes.
+    private var pager: PagerState?
+    private weak var pagerHost: UIViewController?
 
     init(library: Library) {
         self.library = library
@@ -93,7 +114,17 @@ final class PhoneGridController: UIViewController, UICollectionViewDataSource, U
         updateFloating()
     }
 
-    func update(assets: [Asset], sections: [Section], headers: Bool, pinHeaders: Bool, dataID: Int, columns: Int) {
+    func update(assets: [Asset], sections: [Section], headers: Bool, pinHeaders: Bool, dataID: Int, columns: Int,
+                selecting: Bool, chosen: Set<String>) {
+        if selecting != self.selecting || chosen != self.chosen {
+            self.selecting = selecting
+            self.chosen = chosen
+            for case let cell as PhoneCell in collection.visibleCells {
+                if let path = collection.indexPath(for: cell) {
+                    cell.setChecked(chosen.contains(self.assets[index(of: path)].id), animated: true)
+                }
+            }
+        }
         if (handlers.refresh != nil) != (collection.refreshControl != nil) {
             collection.refreshControl = handlers.refresh == nil ? nil : {
                 let control = UIRefreshControl()
@@ -102,6 +133,7 @@ final class PhoneGridController: UIViewController, UICollectionViewDataSource, U
             }()
         }
         if dataID != self.dataID {
+            let first = self.assets.isEmpty // the page's photos just arrived: start at the top
             self.assets = assets
             self.sections = sections
             self.dataID = dataID
@@ -113,11 +145,17 @@ final class PhoneGridController: UIViewController, UICollectionViewDataSource, U
             layout.columns = columns
             collection.reloadData()
             lastTopDay = .min
+            if let pager, let host = pagerHost, host.presentingViewController != nil { // a photo was edited, deleted or moved
+                if assets.isEmpty { host.dismiss(animated: true) } else { pager.follow(assets) }
+            }
             // after this SwiftUI update, once the new layout is in
             DispatchQueue.main.async { [weak self] in
-                self?.collection.layoutIfNeeded()
-                self?.reportTop()
-                self?.updateFloating()
+                guard let self else { return }
+                collection.layoutIfNeeded()
+                // the inset above may have changed under an offset left from the empty list, which would open mid-page
+                if first { collection.contentOffset.y = -collection.adjustedContentInset.top }
+                self.reportTop()
+                self.updateFloating()
             }
         } else if columns != layout.columns, pinch == nil { // mid-pinch the fingers decide
             // keep the photo at the top where it is
@@ -238,8 +276,9 @@ final class PhoneGridController: UIViewController, UICollectionViewDataSource, U
     func collectionView(_ collectionView: UICollectionView, cellForItemAt path: IndexPath) -> UICollectionViewCell {
         let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "cell", for: path) as! PhoneCell
         let side = layout.math.side
-        cell.show(assets[index(of: path)], library: library,
-                  pixels: ThumbnailStore.pixels(forSide: side, scale: traitCollection.displayScale))
+        let asset = assets[index(of: path)]
+        cell.show(asset, library: library, pixels: ThumbnailStore.pixels(forSide: side, scale: traitCollection.displayScale))
+        cell.setChecked(chosen.contains(asset.id), animated: false)
         return cell
     }
 
@@ -251,7 +290,55 @@ final class PhoneGridController: UIViewController, UICollectionViewDataSource, U
     }
 
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt path: IndexPath) {
-        open(index(of: path))
+        collectionView.deselectItem(at: path, animated: false)
+        if selecting { handlers.onToggle(assets[index(of: path)].id) } else { open(index(of: path)) }
+    }
+
+    /// Long press: the photo over a short menu, as in Photos. The full set is in the photo view's ⋯ and, for several, in Select.
+    func collectionView(_ collectionView: UICollectionView, contextMenuConfigurationForItemsAt paths: [IndexPath],
+                        point: CGPoint) -> UIContextMenuConfiguration? {
+        guard !selecting, let path = paths.first else { return nil }
+        let i = index(of: path)
+        return UIContextMenuConfiguration(identifier: i as NSNumber, previewProvider: nil) { [weak self] _ in self?.menu(for: self?.assets[i]) }
+    }
+
+    /// Tapping the preview opens the photo.
+    func collectionView(_ collectionView: UICollectionView, willPerformPreviewActionForMenuWith configuration: UIContextMenuConfiguration,
+                        animator: UIContextMenuInteractionCommitAnimating) {
+        guard let i = (configuration.identifier as? NSNumber)?.intValue, assets.indices.contains(i) else { return }
+        animator.addCompletion { [weak self] in self?.open(i) }
+    }
+
+    private func menu(for asset: Asset?) -> UIMenu? {
+        guard let asset else { return nil }
+        func item(_ title: String, _ symbol: String, destructive: Bool = false, _ action: PhotoAction) -> UIAction {
+            UIAction(title: title, image: UIImage(systemName: symbol), attributes: destructive ? .destructive : []) { [weak self] _ in
+                self?.handlers.onAction(action, [asset])
+            }
+        }
+        if context == .trash {
+            return UIMenu(children: [item(String(localized: "Restore"), "arrow.uturn.backward", .restore),
+                                     item(String(localized: "Delete Permanently…"), "trash", destructive: true, .trash)])
+        }
+        let favorite = asset.isFavorite == true
+        var first: [UIMenuElement] = [
+            item(String(localized: "Share…"), "square.and.arrow.up", .download),
+            item(favorite ? String(localized: "Remove from Favorites") : String(localized: "Add to Favorites"),
+                 favorite ? "heart.slash" : "heart", .favorite),
+            UIMenu(title: String(localized: "Add to Album"), image: UIImage(systemName: "rectangle.stack.badge.plus"),
+                   children: [UIMenu(options: .displayInline, children: [item(String(localized: "New Album…"), "plus", .newAlbum)])]
+                       + library.albums.map { album in item(album.albumName, "rectangle.stack", .add(album: album.id)) }),
+        ]
+        if case .album = context {
+            first.append(item(String(localized: "Remove from Album"), "rectangle.stack.badge.minus", .removeFromAlbum))
+        }
+        first.append(UIAction(title: String(localized: "Select"), image: UIImage(systemName: "checkmark.circle")) { [weak self] _ in
+            self?.handlers.onSelect(asset.id)
+        })
+        let archive = context == .archive ? item(String(localized: "Unarchive"), "archivebox", .unarchive)
+                                          : item(String(localized: "Archive"), "archivebox", .archive)
+        return UIMenu(children: [UIMenu(options: .displayInline, children: first),
+                                 UIMenu(options: .displayInline, children: [archive, item(String(localized: "Delete…"), "trash", destructive: true, .trash)])])
     }
 
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
@@ -499,15 +586,20 @@ final class PhoneGridController: UIViewController, UICollectionViewDataSource, U
     // MARK: Photo view
 
     private func open(_ index: Int) {
-        let state = PagerState(position: index)
+        let state = PagerState(position: index, assets: assets)
         let host = UIHostingController(rootView: AnyView(EmptyView()))
+        pager = state
+        pagerHost = host
         host.rootView = AnyView(
-            PagerHost(state: state, assets: assets,
+            PagerHost(state: state, context: context,
                       close: { [weak host] in host?.dismiss(animated: true) },
                       onPerson: { [weak self, weak host] person in
                           host?.dismiss(animated: true) { self?.handlers.onPerson(person) }
                       })
                 .environment(library))
+        // over, not instead of, the grid: off screen SwiftUI stops updating it, and an edit here must reach it
+        host.modalPresentationStyle = .overFullScreen
+        host.modalPresentationCapturesStatusBarAppearance = true
         host.preferredTransition = .zoom { [weak self, weak state] _ in
             guard let self, let position = state?.position else { return nil }
             return self.reveal(position)
@@ -519,17 +611,34 @@ final class PhoneGridController: UIViewController, UICollectionViewDataSource, U
 /// Which photo the photo view shows, shared with the grid so closing shrinks into the right square.
 @Observable final class PagerState {
     var position: Int?
-    init(position: Int) { self.position = position }
+    /// The grid's photos. Replaced after an edit, with `version` counting up.
+    private(set) var assets: [Asset]
+    private(set) var version = 0
+
+    init(position: Int, assets: [Asset]) {
+        self.position = position
+        self.assets = assets
+    }
+
+    /// The list changed: stay on the same photo wherever it went, or show the next one if it's gone.
+    func follow(_ new: [Asset]) {
+        let id = position.flatMap { assets.indices.contains($0) ? assets[$0].id : nil }
+        position = new.firstIndex { $0.id == id } ?? min(position ?? 0, new.count - 1)
+        assets = new
+        version += 1
+    }
 }
 
 private struct PagerHost: View {
     @Bindable var state: PagerState
-    let assets: [Asset]
+    let context: BrowserContext
     let close: () -> Void
     let onPerson: (Person) -> Void
 
     var body: some View {
-        PhotoPager(assets: assets, position: $state.position, close: close, onPerson: onPerson)
+        PhotoPager(assets: state.assets, version: state.version, position: $state.position, context: context, close: close,
+                   onPerson: onPerson)
+            .overlay { TransferPanel() } // the root's is under this full screen view
     }
 }
 
@@ -602,6 +711,43 @@ final class PhoneGridLayout: UICollectionViewLayout {
 final class PhoneCell: UICollectionViewCell {
     fileprivate let image = UIImageView()
     private let badge = UIImageView(image: UIImage(systemName: "play.fill"))
+    private let check = UIImageView(image: UIImage(systemName: "checkmark.circle.fill",
+                                                   withConfiguration: UIImage.SymbolConfiguration(paletteColors: [.white, .tintColor])))
+    /// Chosen in select mode: a check in the top left corner, the photo slightly faded.
+    private(set) var checked = false
+
+    /// `animated`: the check springs in or shrinks away, for a tap; a cell just shown gets it as it is.
+    func setChecked(_ on: Bool, animated: Bool) {
+        guard on != checked || !animated else { return }
+        checked = on
+        check.layer.removeAllAnimations()
+        image.layer.removeAllAnimations()
+        guard animated, !UIAccessibility.isReduceMotionEnabled else {
+            check.isHidden = !on
+            check.alpha = 1
+            check.transform = .identity
+            image.alpha = on ? 0.8 : 1
+            return
+        }
+        check.isHidden = false
+        if on {
+            check.alpha = 1
+            check.transform = CGAffineTransform(scaleX: 0.4, y: 0.4)
+            UIView.animate(springDuration: 0.35, bounce: 0.4) { self.check.transform = .identity }
+        }
+        UIView.animate(withDuration: 0.2) {
+            self.image.alpha = on ? 0.8 : 1
+            if !on {
+                self.check.alpha = 0
+                self.check.transform = CGAffineTransform(scaleX: 0.4, y: 0.4)
+            }
+        } completion: { _ in
+            guard !self.checked else { return }
+            self.check.isHidden = true
+            self.check.alpha = 1
+            self.check.transform = .identity
+        }
+    }
     private var task: Task<Void, Never>?
     private var id = ""
 
@@ -619,6 +765,10 @@ final class PhoneCell: UICollectionViewCell {
         badge.layer.shadowRadius = 2
         badge.layer.shadowOffset = .zero
         contentView.addSubview(badge)
+        check.preferredSymbolConfiguration = .init(pointSize: 20)
+        check.backgroundColor = .white // a white ring around the blue
+        check.isHidden = true
+        contentView.addSubview(check)
     }
 
     required init?(coder: NSCoder) { fatalError("not used") }
@@ -627,6 +777,9 @@ final class PhoneCell: UICollectionViewCell {
         super.layoutSubviews()
         badge.sizeToFit()
         badge.frame.origin = CGPoint(x: bounds.maxX - badge.frame.width - 4, y: bounds.maxY - badge.frame.height - 4)
+        check.sizeToFit()
+        check.frame.origin = CGPoint(x: 5, y: 5)
+        check.layer.cornerRadius = check.frame.width / 2
     }
 
     override func prepareForReuse() {

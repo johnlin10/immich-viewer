@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// The filter button at the top right: filled while a filter is on. Items are toggles; none on shows everything.
+/// The filter button at the top right (on iOS, a submenu of ⋯): filled while a filter is on. Items are toggles; none
+/// on shows everything.
 struct FilterMenu<Items: View>: View {
     let active: Bool
     let clear: () -> Void
@@ -12,28 +13,61 @@ struct FilterMenu<Items: View>: View {
             Divider()
             Button("Clear Filters", systemImage: "xmark.circle", action: clear).disabled(!active)
         } label: {
-            Image(systemName: active ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
+            Label("Filter", systemImage: active ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
         }
         .menuIndicator(.hidden)
         .help("Filter")
     }
 }
 
-/// The sort button at the top right: one choice, checked.
+/// The sort button at the top right (on iOS, a submenu of ⋯): one choice, checked.
 struct SortMenu<Value: Hashable, Items: View>: View {
     @Binding var selection: Value
     @ViewBuilder let items: Items
 
     var body: some View {
+        #if os(iOS) // a submenu that shows the current choice, like the photo pages' Sort
+        Picker(selection: $selection) { items } label: { Label("Sort", systemImage: "arrow.up.arrow.down") }
+            .pickerStyle(.menu)
+        #else
         Menu {
             Picker("Sort", selection: $selection) { items }
                 .pickerStyle(.inline)
                 .labelsHidden()
         } label: {
-            Image(systemName: "arrow.up.arrow.down")
+            Label("Sort", systemImage: "arrow.up.arrow.down")
         }
         .menuIndicator(.hidden)
         .help("Sort")
+        #endif
+    }
+}
+
+/// A list page's filter and sort: separate buttons on the Mac, one ⋯ menu on iOS as on the photo pages.
+struct ListOptions<Items: View>: ToolbarContent {
+    @ViewBuilder let items: Items
+
+    var body: some ToolbarContent {
+        #if os(iOS)
+        ToolbarItem(placement: .primaryAction) {
+            Menu { items } label: { Label("More", systemImage: "ellipsis") }
+        }
+        #else
+        ToolbarItemGroup(placement: .primaryAction) { items }
+        #endif
+    }
+}
+
+extension View {
+    /// Every iOS page's bar alike: once the large title shrinks it sits on the left (iOS would centre it), and the content
+    /// fades under it with a progressive blur (iOS picks a solid backdrop for lists and forms).
+    func pageBar() -> some View {
+        #if os(iOS)
+        toolbarRole(.browser)
+            .scrollEdgeEffectStyle(.soft, for: .top)
+        #else
+        self
+        #endif
     }
 }
 
@@ -82,13 +116,13 @@ struct PeopleGrid: View {
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-                    #if os(macOS) // iOS only browses for now
                     .contextMenu {
-                        Button("Edit Person…") { sheet = .editPerson(person) }
-                        Button("Merge With…") { sheet = .merge(person) }
-                        Button("Hide Person") { Task { await library.update(person, hidden: true, was: person, undo: undo) } }
+                        Button("Edit Person…", systemImage: "pencil") { sheet = .editPerson(person) }
+                        Button("Merge With…", systemImage: "person.2") { sheet = .merge(person) }
+                        Button("Hide Person", systemImage: "eye.slash") {
+                            Task { await library.update(person, hidden: true, was: person, undo: undo) }
+                        }
                     }
-                    #endif
                 }
             }
             .padding(20)
@@ -100,18 +134,21 @@ struct PeopleGrid: View {
                 ContentUnavailableView("No Matches", systemImage: "line.3.horizontal.decrease.circle")
             }
         }
+        .pageBar()
         .toolbar {
-            FilterMenu(active: filter.isActive) { (named, unnamed, birthday) = (false, false, false) } items: {
-                Toggle(isOn: $named) { Label("Named", systemImage: "person.crop.circle.badge.checkmark") }
-                Toggle(isOn: $unnamed) { Label("Unnamed", systemImage: "person.crop.circle.badge.questionmark") }
-                Divider()
-                Toggle(isOn: $birthday) { Label("Has Birthday", systemImage: "birthday.cake") }
-            }
-            SortMenu(selection: $sort) {
-                Label("Default", systemImage: "list.bullet").tag(PeopleSort.standard)
-                Label("Name", systemImage: "textformat").tag(PeopleSort.name)
-                Label("Age, Youngest First", systemImage: "figure.child").tag(PeopleSort.youngest)
-                Label("Age, Oldest First", systemImage: "figure.walk").tag(PeopleSort.oldest)
+            ListOptions {
+                FilterMenu(active: filter.isActive) { (named, unnamed, birthday) = (false, false, false) } items: {
+                    Toggle(isOn: $named) { Label("Named", systemImage: "person.crop.circle.badge.checkmark") }
+                    Toggle(isOn: $unnamed) { Label("Unnamed", systemImage: "person.crop.circle.badge.questionmark") }
+                    Divider()
+                    Toggle(isOn: $birthday) { Label("Has Birthday", systemImage: "birthday.cake") }
+                }
+                SortMenu(selection: $sort) {
+                    Label("Default", systemImage: "list.bullet").tag(PeopleSort.standard)
+                    Label("Name", systemImage: "textformat").tag(PeopleSort.name)
+                    Label("Age, Youngest First", systemImage: "figure.child").tag(PeopleSort.youngest)
+                    Label("Age, Oldest First", systemImage: "figure.walk").tag(PeopleSort.oldest)
+                }
             }
         }
         .navigationTitle("People")
@@ -139,6 +176,15 @@ struct AlbumGrid: View {
             return owned.contains(album.id) ? mine : shared
         })
         ScrollView {
+            #if os(iOS) // above the albums, so they're never a long scroll away; the Mac has them in the sidebar
+            VStack(spacing: 0) {
+                NavigationLink(value: BrowserContext.archive) { UtilityRow(title: "Archive", symbol: "archivebox") }
+                Divider().padding(.leading, 62)
+                NavigationLink(value: BrowserContext.trash) { UtilityRow(title: "Trash", symbol: "trash") }
+                Divider()
+            }
+            .buttonStyle(.plain)
+            #endif
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 170), spacing: 20)], alignment: .leading, spacing: 24) {
                 ForEach(shown) { album in
                     NavigationLink(value: album) {
@@ -155,32 +201,36 @@ struct AlbumGrid: View {
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-                    #if os(macOS)
                     .contextMenu {
-                        Button("Edit Album…") { sheet = .editAlbum(album) }
-                        Button("Delete Album…") { deleting = album }
+                        Button("Edit Album…", systemImage: "pencil") { sheet = .editAlbum(album) }
+                        Button("Delete Album…", systemImage: "trash", role: .destructive) { deleting = album }
                     }
-                    #endif
                 }
             }
             .padding(20)
         }
+        .pageBar()
         .toolbar {
-            if owned != nil {
-                FilterMenu(active: filtered) { (mine, shared) = (false, false) } items: {
-                    Toggle(isOn: $mine) { Label("Mine", systemImage: "person") }
-                    Toggle(isOn: $shared) { Label("Shared", systemImage: "person.2") }
+            ToolbarItem(placement: .primaryAction) {
+                Button("New Album", systemImage: "plus") { sheet = .newAlbum([]) }
+                    .help("New Album")
+            }
+            #if os(iOS)
+            ToolbarSpacer(.fixed, placement: .primaryAction)
+            #endif
+            ListOptions {
+                if owned != nil {
+                    FilterMenu(active: filtered) { (mine, shared) = (false, false) } items: {
+                        Toggle(isOn: $mine) { Label("Mine", systemImage: "person") }
+                        Toggle(isOn: $shared) { Label("Shared", systemImage: "person.2") }
+                    }
+                }
+                SortMenu(selection: $sort) {
+                    Label("Recent", systemImage: "clock").tag(AlbumSort.recent)
+                    Label("Name", systemImage: "textformat").tag(AlbumSort.name)
+                    Label("Item Count", systemImage: "photo.stack").tag(AlbumSort.count)
                 }
             }
-            SortMenu(selection: $sort) {
-                Label("Recent", systemImage: "clock").tag(AlbumSort.recent)
-                Label("Name", systemImage: "textformat").tag(AlbumSort.name)
-                Label("Item Count", systemImage: "photo.stack").tag(AlbumSort.count)
-            }
-            #if os(macOS)
-            Button { sheet = .newAlbum([]) } label: { Image(systemName: "plus") }
-                .help("New Album")
-            #endif
         }
         .overlay {
             if filtered, shown.isEmpty, !library.albums.isEmpty {
@@ -211,8 +261,9 @@ struct TagList: View {
     var body: some View {
         List(ascending ? library.tags : library.tags.reversed()) { tag in
             NavigationLink(value: tag) { Label(tag.value, systemImage: "tag") }
-                #if os(macOS)
-                .contextMenu { Button("Delete Tag…") { deleting = tag } }
+                .contextMenu { Button("Delete Tag…", systemImage: "trash", role: .destructive) { deleting = tag } }
+                #if os(iOS)
+                .swipeActions { Button("Delete", systemImage: "trash", role: .destructive) { deleting = tag } }
                 #endif
         }
         .alert("Delete This Tag?", isPresented: Binding { deleting != nil } set: { if !$0 { deleting = nil } }) {
@@ -224,10 +275,13 @@ struct TagList: View {
             Text("The photos with it stay in your library.")
         }
         .overlay { if library.tags.isEmpty { ContentUnavailableView("No Tags", systemImage: "tag") } }
+        .pageBar()
         .toolbar {
-            SortMenu(selection: $ascending) {
-                Label("Name, A to Z", systemImage: "a.square").tag(true)
-                Label("Name, Z to A", systemImage: "z.square").tag(false)
+            ListOptions {
+                SortMenu(selection: $ascending) {
+                    Label("Name, A to Z", systemImage: "a.square").tag(true)
+                    Label("Name, Z to A", systemImage: "z.square").tag(false)
+                }
             }
         }
         .navigationTitle("Tags")
@@ -273,24 +327,37 @@ struct CollectionTimeline: View {
         }
     }
 
+    /// Until the photos are in: an album's count is known already; otherwise a placeholder of the same height, so the
+    /// page doesn't jump when the count arrives.
+    private var loadingSubtitle: String {
+        if case .album(let id) = context, let album = library.albums.first(where: { $0.id == id }) { return subtitle(album.assetCount) }
+        return String(localized: "Loading…")
+    }
+
     var body: some View {
-        Group {
-            if let assets {
-                TimelineBrowser(title: title, subtitle: subtitle(assets.count), assets: assets, revision: loads,
-                                context: context)
-            } else if let error {
-                ContentUnavailableView("Can’t Load", systemImage: "exclamationmark.triangle", description: Text(error))
-                    .navigationTitle(title)
-            } else {
-                ProgressView().navigationTitle(title)
+        // the grid and its toolbar from the start, so they come in with the push instead of popping in after the load
+        TimelineBrowser(title: title, subtitle: assets.map { subtitle($0.count) } ?? loadingSubtitle, assets: assets ?? [],
+                        revision: loads, context: context)
+            .overlay {
+                if let error {
+                    ContentUnavailableView("Can’t Load", systemImage: "exclamationmark.triangle", description: Text(error))
+                } else if assets == nil {
+                    ProgressView()
+                }
             }
-        }
+        .pageBar()
         .task(id: library.edits) {
+            if assets == nil, let saved = library.savedAssets(filter) { // last time's at once; the server's replace them
+                assets = saved
+                loads += 1
+            }
             do {
-                assets = try await library.assets(filter)
+                let fresh = try await library.assets(filter)
+                guard fresh != assets else { return } // unchanged: no regrouping, the grid stays put
+                assets = fresh
                 loads += 1
             } catch {
-                self.error = error.localizedDescription
+                if assets == nil { self.error = error.localizedDescription } // offline: last time's list is still worth showing
             }
         }
     }
@@ -316,6 +383,26 @@ struct Thumb: View {
             }
     }
 }
+
+#if os(iOS)
+/// Archive or Trash under the albums, like Photos' Utilities.
+private struct UtilityRow: View {
+    let title: LocalizedStringKey
+    let symbol: String
+
+    var body: some View {
+        HStack(spacing: 14) {
+            Image(systemName: symbol).font(.title3).foregroundStyle(.tint).frame(width: 28)
+            Text(title)
+            Spacer()
+            Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
+        }
+        .padding(.horizontal, 20)
+        .frame(height: 50)
+        .contentShape(.rect)
+    }
+}
+#endif
 
 /// Shown over an empty people or album page: why it is empty.
 private struct Empty: View {

@@ -20,5 +20,8 @@
 	<!-- shown in the Local Network permission prompt (translated in InfoPlist.xcstrings) -->
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Immich Viewer connects to your Immich server on the local network.</string>
+	<!-- iOS: Save Image and Save Video in the share sheet, for photos shared from the server -->
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Immich Viewer saves the photos and videos you share from your Immich server to your photo library.</string>
 </dict>
 </plist>

@@ -222,6 +222,16 @@
         }
       }
     },
+    "Add Server…": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "加入伺服器…"
+          }
+        }
+      }
+    },
     "Add Tag": {
       "localizations": {
         "zh-Hant": {
@@ -1156,12 +1166,12 @@
         }
       }
     },
-    "In the Immich web UI, open Account Settings > API Keys and create a key with asset.read, asset.view, person.read and album.read. The key is kept in the keychain.": {
+    "In the Immich web UI, open Account Settings > API Keys and create a key with asset.read, asset.view, person.read and album.read. To make changes and share originals too, give it all permissions. The key is kept in the keychain.": {
       "localizations": {
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "在 Immich 網頁的「帳號設定 > API 金鑰」建立新金鑰，權限勾選 asset.read、asset.view、person.read 和 album.read。金鑰存在鑰匙圈裡。"
+            "value": "在 Immich 網頁的「帳號設定 > API 金鑰」建立新金鑰，權限勾選 asset.read、asset.view、person.read 和 album.read。若也要修改內容或分享原始檔，請勾選全部權限。金鑰存在鑰匙圈裡。"
           }
         }
       }
@@ -1807,6 +1817,26 @@
         }
       }
     },
+    "Select": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選擇"
+          }
+        }
+      }
+    },
+    "Select Items": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選擇項目"
+          }
+        }
+      }
+    },
     "Server": {
       "localizations": {
         "zh-Hant": {
@@ -1867,12 +1897,32 @@
         }
       }
     },
+    "Settings": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "設定"
+          }
+        }
+      }
+    },
     "Shared": {
       "localizations": {
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
             "value": "共享"
+          }
+        }
+      }
+    },
+    "Share…": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "分享…"
           }
         }
       }
@@ -2127,6 +2177,16 @@
         }
       }
     },
+    "Tap a server to switch to it. Swipe left on one to change its API key or remove it.": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "點一下伺服器即可切換。在伺服器上向左滑動，可以更改 API 金鑰或移除。"
+          }
+        }
+      }
+    },
     "That isn’t a server address.": {
       "localizations": {
         "zh-Hant": {
@@ -2207,6 +2267,16 @@
         }
       }
     },
+    "They go to the server’s trash, which keeps them for 30 days unless the server is set otherwise.": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "照片會移到伺服器的垃圾桶，除非伺服器另有設定，否則會保留 30 天。"
+          }
+        }
+      }
+    },
     "They go to the server’s trash, which keeps them for 30 days unless the server is set otherwise. ⌘Z puts them back.": {
       "localizations": {
         "zh-Hant": {
@@ -2253,6 +2323,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "縮圖存在這台 Mac 上，捲動時不必向伺服器要。清除後，照片會在下次顯示時重新下載；重新整理（⌘R）會一次全部補回。"
+          }
+        }
+      }
+    },
+    "Thumbnails are kept on this device, so scrolling doesn’t wait on the server. After clearing, photos download again when they are shown.": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "縮圖會保存在這部裝置上，捲動時不必等待伺服器。清除後，照片會在顯示時重新下載。"
           }
         }
       }
@@ -2467,6 +2547,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "，"
+          }
+        }
+      }
+    },
+    "Loading…": {
+      "localizations": {
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "載入中…"
           }
         }
       }

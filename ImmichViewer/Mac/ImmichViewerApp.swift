@@ -209,6 +209,7 @@ struct ContentView: View {
         }
         .onChange(of: library.serverURL) { paths = [:] }
         .frame(minWidth: 700, minHeight: 400)
+        .overlay { TransferPanel() }
         .alert("Couldn’t Make the Change", isPresented: Binding { library.editError != nil } set: { if !$0 { library.editError = nil } }) {
             Button("OK") {}
         } message: {
@@ -255,14 +256,8 @@ struct TimelineBrowser: View {
     @State private var viewer: ViewerState?
     @State private var bridge = GridBridge()
     @State private var askingDate = false
-    @State private var sheet: EditSheet?
-    /// Photos waiting for Delete to be confirmed.
-    @State private var trashing: [String]?
-    /// Photos waiting for Delete Permanently to be confirmed; empty for the whole trash.
-    @State private var purging: [String]?
-    @State private var deletingAlbum = false
+    @State private var editor = PhotoEditor()
     @Environment(\.undoManager) private var undo
-    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         GeometryReader { geo in
@@ -323,7 +318,7 @@ struct TimelineBrowser: View {
                             ToolbarItem(placement: .primaryAction) {
                                 Menu {
                                     Toggle("Show Whole Photos", isOn: $fit)
-                                    collectionMenu
+                                    CollectionMenu(library: library, context: context, editor: editor, undo: undo)
                                 } label: {
                                     Image(systemName: "ellipsis")
                                 }
@@ -363,41 +358,7 @@ struct TimelineBrowser: View {
         .sheet(isPresented: $askingDate) {
             JumpToDate(assets: grid.assets, current: bridge.top) { if let i = index(of: $0, in: grid.assets) { bridge.jump(to: i) } }
         }
-        .editSheet($sheet, library: library, undo: undo)
-        .alert(trashing?.count == 1 ? "Delete This Photo?" : "Delete \(trashing?.count ?? 0) Photos?",
-               isPresented: Binding { trashing != nil } set: { if !$0 { trashing = nil } }) {
-            Button("Delete", role: .destructive) {
-                if let ids = trashing { Task { await library.trash(ids, undo: undo) } }
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text(library.trashEnabled
-                 ? "They go to the server’s trash, which keeps them for 30 days unless the server is set otherwise. ⌘Z puts them back."
-                 : "The server’s trash is turned off, so they are deleted for good.")
-        }
-        .alert(purging?.isEmpty == true ? "Empty the Trash?" : purging?.count == 1 ? "Delete This Photo Permanently?"
-               : "Delete \(purging?.count ?? 0) Photos Permanently?",
-               isPresented: Binding { purging != nil } set: { if !$0 { purging = nil } }) {
-            Button(purging?.isEmpty == true ? "Empty Trash" : "Delete Permanently", role: .destructive) {
-                guard let ids = purging else { return }
-                Task { ids.isEmpty ? await library.emptyTrash() : await library.deleteForever(ids) }
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("This can’t be undone.")
-        }
-        .alert("Delete This Album?", isPresented: $deletingAlbum) {
-            Button("Delete", role: .destructive) {
-                guard let album else { return }
-                Task {
-                    await library.delete(album)
-                    dismiss()
-                }
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("The photos in it stay in your library.")
-        }
+        .photoEditor(editor, library: library, undo: undo)
     }
 
     /// Nothing over an open photo; how many are chosen; else the page's subtitle, with how many a filter leaves.
@@ -412,72 +373,10 @@ struct TimelineBrowser: View {
         return library.albums.first { $0.id == id }
     }
 
-    private var person: Person? {
-        guard case .person(let id) = context else { return nil }
-        return library.people.first { $0.id == id }
-    }
-
-    /// The ⋯ menu's part for an album or person page.
-    @ViewBuilder private var collectionMenu: some View {
-        if let album {
-            Divider()
-            Button("Edit Album…") { sheet = .editAlbum(album) }
-            Button("Delete Album…") { deletingAlbum = true }
-        }
-        if let person {
-            Divider()
-            Button("Edit Person…") { sheet = .editPerson(person) }
-            Button("Merge With…") { sheet = .merge(person) }
-            Button("Hide Person") {
-                Task {
-                    await library.update(person, hidden: true, was: person, undo: undo)
-                    dismiss()
-                }
-            }
-        }
-        if context == .trash {
-            Divider()
-            Button("Restore All") { Task { await library.restoreAll() } }
-            Button("Empty Trash…") { purging = [] }
-        }
-    }
-
     /// Does `action` to photos `indices` (into `grid.assets`). `place`: where the photo is now, from the photo view.
     private func perform(_ action: PhotoAction, _ indices: [Int], place: CLLocationCoordinate2D? = nil) {
-        let ids = indices.filter(grid.assets.indices.contains).map { grid.assets[$0].id }
-        guard let first = indices.first, !ids.isEmpty else { return }
-        switch action {
-        case .favorite:
-            let all = indices.allSatisfy { grid.assets[$0].isFavorite == true }
-            Task { await library.favorite(ids, !all, undo: undo) }
-        case .archive: Task { await library.archive(ids, true, undo: undo) }
-        case .trash:
-            if context == .trash { purging = ids } else { trashing = ids }
-        case .unarchive: Task { await library.archive(ids, false, undo: undo) }
-        case .restore: Task { await library.restore(ids, undo: undo) }
-        case .download: Task { await library.download(ids) }
-        case .addTag: sheet = .tag(ids)
-        case .removeTag:
-            if case .tag(let id) = context, let tag = library.tags.first(where: { $0.id == id }) {
-                Task { await library.untag(ids, tag, undo: undo) }
-            }
-        case .rotate(let angle): Task { await library.rotate(ids, by: angle, undo: undo) }
-        case let .changePerson(face, old): sheet = .changePerson(face: face, from: old)
-        case .add(let album): Task { await library.add(ids, to: album, undo: undo) }
-        case .newAlbum: sheet = .newAlbum(ids)
-        case .adjustDate: sheet = .date(ids, grid.assets[first].date)
-        case .setLocation: sheet = .location(ids, place)
-        case .removeFromAlbum:
-            if case .album(let album) = context { Task { await library.remove(ids, from: album, undo: undo) } }
-        case .makeCover:
-            if var new = album {
-                new.albumThumbnailAssetId = ids[0]
-                let old = album!
-                Task { await library.update(new, was: old, undo: undo) }
-            }
-        case .makeProfilePhoto:
-            if case .person(let person) = context { Task { await library.setProfilePhoto(person, from: ids[0]) } }
-        }
+        editor.perform(action, on: indices.filter(grid.assets.indices.contains).map { grid.assets[$0] }, context: context,
+                       library: library, undo: undo, place: place)
     }
 
     private func regroup() {

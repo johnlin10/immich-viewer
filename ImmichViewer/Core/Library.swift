@@ -15,6 +15,9 @@ final class Library {
     private(set) var assets: [Asset] = []
     private(set) var revision = 0
     private(set) var status = ""
+    /// The download under way, for the progress panel; cancel it to stop. `transferStep` is the file it is on, from 1.
+    private(set) var transfer: Progress?
+    private(set) var transferStep = 0
     private(set) var syncing = false
     private(set) var people: [Person] = []
     private(set) var albums: [Album] = []
@@ -100,12 +103,40 @@ final class Library {
         }
     }
 
-    /// The last known list, so the grid shows instantly while the new list loads.
+    /// The last known lists, so the pages show instantly while the new ones load.
     private func loadList() {
-        let list = (try? Data(contentsOf: listFile)).flatMap { try? JSONDecoder().decode([Asset].self, from: $0) } ?? []
+        let list = Self.read([Asset].self, listFile) ?? []
         assets = list
         revision += 1
         status = list.isEmpty ? "" : String(localized: "\(list.count) items")
+        if let saved = Self.read(SavedCollections.self, collectionsFile) {
+            (people, albums, tags, ownedAlbums) = (saved.people, saved.albums, saved.tags, saved.ownedAlbums)
+        }
+    }
+
+    /// People, albums and tags as last loaded, next to the asset list.
+    private struct SavedCollections: Codable {
+        let people: [Person]
+        let albums: [Album]
+        let tags: [Tag]
+        let ownedAlbums: Set<String>?
+    }
+
+    private var collectionsFile: URL { listFile.deletingLastPathComponent().appending(path: "collections.json") }
+
+    /// A person's, album's or tag's photos as last loaded: "pages/albumId=….json".
+    private func pageFile(_ filter: [String: String]) -> URL {
+        let name = filter.sorted { $0.key < $1.key }.map { "\($0.key)=\($0.value)" }.joined(separator: "&")
+        return listFile.deletingLastPathComponent().appending(path: "pages/\(name.replacingOccurrences(of: "/", with: "_")).json")
+    }
+
+    private static func read<T: Decodable>(_ type: T.Type, _ file: URL) -> T? {
+        (try? Data(contentsOf: file)).flatMap { try? JSONDecoder().decode(type, from: $0) }
+    }
+
+    private static func write(_ value: some Encodable, _ file: URL) {
+        try? FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try? JSONEncoder().encode(value).write(to: file, options: .atomic)
     }
 
     /// Tries the address and key, and only keeps the key if the server takes it. Returns why it didn't work, or nil.
@@ -289,18 +320,20 @@ final class Library {
 
     private func sync(_ api: ImmichAPI) async {
         status = String(localized: "Syncing the list…")
+        async let collections: Void = loadCollections() // alongside, not after: people and albums are much quicker
         let list: [Asset]
         do {
             list = try await api.timeline()
         } catch {
             status = String(localized: "Sync failed: \(error.localizedDescription)")
+            await collections
             return
         }
+        await collections
         guard !Task.isCancelled else { return }
         assets = list
         revision += 1
         saveList()
-        await loadCollections()
 
         #if os(macOS)
         await thumbs.downloadMissing(list.map(\.id), api: api) { done, total, failed in
@@ -316,10 +349,7 @@ final class Library {
         #endif
     }
 
-    private func saveList() {
-        try? FileManager.default.createDirectory(at: listFile.deletingLastPathComponent(), withIntermediateDirectories: true)
-        try? JSONEncoder().encode(assets).write(to: listFile, options: .atomic)
-    }
+    private func saveList() { Self.write(assets, listFile) }
 
     /// People and albums; a failure only shows on those pages, the timeline keeps working.
     func loadCollections() async {
@@ -328,19 +358,31 @@ final class Library {
         do {
             async let people = api.people()
             async let albums = api.albums()
-            (self.people, self.albums) = try await (people, albums)
-            ownedAlbums = (try? await api.ownedAlbumIDs()) ?? nil
+            let (newPeople, newAlbums) = try await (people, albums)
+            let owned = (try? await api.ownedAlbumIDs()) ?? nil
+            let newTags = (try? await api.tags()) ?? [] // a key without tag.read just shows no tags
+            guard !Task.isCancelled, self.api?.server == api.server else { return } // switched servers meanwhile
+            // only what changed, so the pages don't redraw for nothing
+            if newPeople != self.people { self.people = newPeople }
+            if newAlbums != self.albums { self.albums = newAlbums }
+            if owned != ownedAlbums { ownedAlbums = owned }
+            if newTags != tags { tags = newTags }
             collectionsError = nil
-            tags = (try? await api.tags()) ?? [] // a key without tag.read just shows no tags
+            Self.write(SavedCollections(people: newPeople, albums: newAlbums, tags: newTags, ownedAlbums: owned), collectionsFile)
         } catch {
             collectionsError = error.localizedDescription
         }
     }
 
-    /// One person's or album's photos, fetched each time the page opens (not cached).
+    /// One person's, album's or tag's photos as last loaded, to show while `assets` gets the current ones.
+    func savedAssets(_ filter: [String: String]) -> [Asset]? { Self.read([Asset].self, pageFile(filter)) }
+
+    /// One person's, album's or tag's photos from the server, kept for `savedAssets` next time.
     func assets(_ filter: [String: String]) async throws -> [Asset] {
         guard let api else { return [] }
-        return try await api.timeline(filter)
+        let list = try await api.timeline(filter)
+        Self.write(list, pageFile(filter))
+        return list
     }
 
     /// The large (~1440 px) version for the single-photo view. Not cached on disk.
@@ -644,26 +686,43 @@ final class Library {
         edits += 1
     }
 
-    /// Saves the original files to Downloads and shows them in Finder.
-    func download(_ ids: [String]) async {
-        guard let api else { return }
+    /// The original files. On the Mac, saved to Downloads and shown in Finder; on iOS, in a new temporary folder for the
+    /// share sheet.
+    @discardableResult
+    func download(_ ids: [String]) async -> [URL] {
+        guard let api else { return [] }
+        #if os(macOS)
+        let folder = URL.downloadsDirectory
+        #else
+        let folder = URL.temporaryDirectory.appending(path: UUID().uuidString)
+        try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        #endif
         var saved: [URL] = []
-        for (n, id) in ids.enumerated() {
-            status = String(localized: "Downloading \(n + 1) of \(ids.count)")
+        let progress = Progress(totalUnitCount: Int64(ids.count))
+        transfer = progress
+        defer { transfer = nil }
+        for (n, id) in ids.enumerated() where !progress.isCancelled {
+            transferStep = n + 1
             do {
-                let (file, name) = try await api.download(id)
-                let target = Self.unused(URL.downloadsDirectory.appending(path: name))
+                let (file, name) = try await api.download(id, progress: progress)
+                let target = Self.unused(folder.appending(path: name))
                 try FileManager.default.moveItem(at: file, to: target)
                 saved.append(target)
             } catch {
-                editError = error.localizedDescription
+                if !progress.isCancelled { editError = error.localizedDescription }
                 break
             }
         }
-        status = String(localized: "\(assets.count) items")
+        #if os(iOS)
+        if progress.isCancelled || saved.isEmpty { // nothing to share
+            try? FileManager.default.removeItem(at: folder)
+            return []
+        }
+        #endif
         #if os(macOS)
         if !saved.isEmpty { NSWorkspace.shared.activateFileViewerSelecting(saved) }
         #endif
+        return saved
     }
 
     /// `url`, or "name 2.jpg", "name 3.jpg"… if that is taken.

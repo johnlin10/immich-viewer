@@ -91,8 +91,10 @@ struct ImmichAPI: Sendable {
     }
 
     /// The original file, into a temporary file the caller moves, and its name on the server.
-    func download(_ id: String) async throws -> (file: URL, name: String) {
-        let (file, response) = try await URLSession.shared.download(for: request("GET", "assets/\(id)/original"))
+    /// Its bytes count as one unit of `progress`, if given; cancelling that cancels the download.
+    func download(_ id: String, progress: Progress? = nil) async throws -> (file: URL, name: String) {
+        let (file, response) = try await URLSession.shared.download(for: request("GET", "assets/\(id)/original"),
+                                                                    delegate: progress.map(ProgressLink.init))
         do {
             try Self.verify(response, (try? Data(contentsOf: file)) ?? Data())
         } catch {
@@ -100,6 +102,15 @@ struct ImmichAPI: Sendable {
             throw error
         }
         return (file, response.suggestedFilename ?? id)
+    }
+
+    /// Makes a download's own progress part of `parent`.
+    private final class ProgressLink: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
+        let parent: Progress
+        init(_ parent: Progress) { self.parent = parent }
+        func urlSession(_ session: URLSession, didCreateTask task: URLSessionTask) {
+            parent.addChild(task.progress, withPendingUnitCount: 1)
+        }
     }
 
     /// Uploads a file as a new asset. Returns its id (the existing one if the server already has the file).

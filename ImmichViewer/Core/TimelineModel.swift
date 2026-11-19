@@ -3,7 +3,7 @@ import Foundation
 
 /// One photo or video on the timeline. `date` is the local wall-clock time stored as if it were UTC,
 /// the same way Immich's web timeline does it, so grouping by day never depends on this Mac's time zone.
-struct Asset: Codable, Sendable {
+struct Asset: Codable, Equatable, Sendable {
     let id: String
     var date: Date
     let isVideo: Bool

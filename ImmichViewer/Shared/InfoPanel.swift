@@ -2,7 +2,7 @@ import MapKit
 import SwiftUI
 
 /// ⌘I: when, what file, which camera, where and who, from the asset's EXIF in Immich.
-/// On the Mac the description, stars, date and place can be changed here; without the edit actions (iOS) it only shows them.
+/// The description, stars, date, place, tags and people can be changed here; without the edit actions it only shows them.
 struct InfoPanel: View {
     let asset: Asset
     let detail: AssetDetail?

@@ -6,7 +6,7 @@ It keeps every small thumbnail (about 15 KB each) on this Mac, so scrolling read
 
 > **Language:** English and Traditional Chinese, following the macOS language (or the per-app language in System Settings > General > Language & Region). Simplified Chinese is planned; see [docs/localization.md](docs/localization.md).
 
-## What it does (v0.8)
+## What it does (v0.9)
 
 - A sidebar with Library, People, Albums, Tags, Archive and Trash.
 - People: everyone Immich recognised (hidden people left out) as round faces, with their birthday and age when one is set; click one for their photos. A person's page shows the birthday and age next to the item count.
@@ -40,7 +40,7 @@ Changes go straight to the server and show in the app right away. Edit > Undo (�
 - Trash page: right-click for Restore and Delete Permanently…; the ⋯ menu has Restore All and Empty Trash…. Permanent deletion asks first and can't be undone.
 - Tags: Add Tag… takes a new or existing tag (a slash nests it, like "Trips/Japan"). The Tags page lists them; click one for its photos, right-click to delete it. The info panel shows a photo's tags, ✕ removes one.
 - Rotate: the server keeps the original file and stores the turn as an edit (newer Immich servers only), then makes new thumbnails, which the app fetches again after a few seconds.
-- Download saves the original files to the Downloads folder (a name already there gets " 2") and shows them in Finder.
+- Download saves the original files to the Downloads folder (a name already there gets " 2") and shows them in Finder. A panel in the middle of the window shows which file is downloading and how far along it is, with Cancel.
 - File > Import… (⇧⌘I) uploads photos and videos. On an album's page they go into that album too. Files the server already has aren't uploaded twice.
 - Adjust Date and Time: the first photo gets the new date and time, and the other chosen photos move by the same amount.
 - Set Location: search for a place, or click the map to put the pin.
@@ -64,15 +64,20 @@ Changes go straight to the server and show in the app right away. Edit > Undo (�
 
 ### iPhone and iPad
 
-The same project also builds an iPhone and iPad app (iOS 26 or later) for browsing; editing stays on the Mac. It isn't in the Releases: build it from Xcode onto your own device.
+The same project also builds an iPhone and iPad app (iOS 26 or later). It isn't in the Releases: build it from Xcode onto your own device.
 
-- Tabs for Library, People, Albums, Tags and Servers (a sidebar on iPad). The Servers tab adds, switches and removes servers, each with its own key, list and thumbnails, like the Mac.
-- The same grid, filters, sorting and grouping. Pinch the grid to change the column count (2 to 8): like the Mac, it follows the fingers and fades into the next count, keeping the photo under them in place. Pull down to refresh. The tab bar tucks away while scrolling down.
+- Tabs for Library, People, Albums, Tags and Settings (a sidebar on iPad). Albums also has Archive and Trash at the top.
+- The same grid and grouping. Pinch the grid to change the column count (2 to 8): like the Mac, it follows the fingers and fades into the next count, keeping the photo under them in place. Pull down to refresh. The tab bar tucks away while scrolling down.
+- Every page has its options in a ⋯ menu at the top right: filter, sort and (on photo pages) grouping, plus the page's own actions (Edit Album…, Merge With…, Empty Trash… and so on). Albums keeps + for a new album next to it. Once a page's large title shrinks it sits on the left, over a progressive blur.
 - By day, each day's date sticks just under the title over the system's blur while its photos scroll past; by month, the date capsule shows instead.
-- Tap a photo to open it: it grows out of its square and shrinks back when closed. Swipe sideways for the next one, swipe up for its details, pinch or double-tap to zoom. The low-resolution thumbnail shows at once, then the large preview.
-- A tap hides the bars and faces and turns the background black; another brings them back. The ⋯ menu has Info and Open in Browser.
+- Select: tap Select (it turns into ✕), then tap photos to check them. With at least one checked, the ⋯ menu starts with what can be done to them.
+- Long-press a photo for Share…, Favorite, Add to Album, Select, Archive and Delete…; in the Trash, Restore and Delete Permanently….
+- Editing works like on the Mac, through the same menus and sheets: favorites, albums, tags, rotating, date and time, location, archiving, deleting, and people's, albums' and tags' own editing. Share… downloads the originals (a panel shows the progress, with Cancel) and opens the share sheet.
+- Tap a photo to open it: it grows out of its square and shrinks back when closed. Swipe sideways for the next one, swipe up for its details (where the description, rating, date, place, tags and people can be changed), pinch or double-tap to zoom. The low-resolution thumbnail shows at once, then the large preview. Its ⋯ menu has the editing menu, Info and Open in Browser.
+- A tap hides the bars and faces and turns the background black; another brings them back.
 - Videos have their own controls under them (play or pause, a scrubber with the time left, sound on or off), which come and go with the bars and hide after a few seconds of playing.
 - Live Photos: long-press the photo, or tap LIVE, to play the moving part.
+- Settings: servers (tap to switch, swipe to change the key or remove one, Add Server…), appearance, video, the cache sizes with Clear Cache…, and the version.
 
 ### Settings (⌘,)
 
@@ -88,7 +93,7 @@ The same project also builds an iPhone and iPad app (iOS 26 or later) for browsi
 2. Download the DMG from the [Releases page](https://github.com/johnlin10/immich-viewer/releases) and drag the app to Applications, or open `ImmichViewer.xcodeproj` in Xcode and run it (⌘R). The app is signed with a development certificate only, so the first time macOS blocks it: open System Settings > Privacy & Security and click Open Anyway.
 3. Enter the server address and the key. The key is saved in the login keychain. Change it later in Settings (⌘,).
 
-The first sync downloads all thumbnails, about 2.5 GB for 165,000 items. Progress shows under the window title.
+The first sync downloads every thumbnail (about 15 KB each), so a large library takes a while and some disk space. Progress shows under the window title.
 
 ### Server address
 
@@ -124,7 +129,7 @@ From v0.4 the app updates itself with [Sparkle](https://sparkle-project.org): it
 Each server has its own folder, named after its address (`http://nas.local:2283` → `nas-local-2283`):
 
 - Thumbnails: `~/Library/Caches/ImmichViewer/<server>/thumbnails` (faces in `.../faces`)
-- Last asset list (for instant start): `~/Library/Application Support/ImmichViewer/<server>/assets.json`
+- Last lists, so pages show at once while the new ones load: `~/Library/Application Support/ImmichViewer/<server>/`, with the timeline in `assets.json`, people, albums and tags in `collections.json`, and each person's, album's and tag's photos in `pages/`
 - API keys: the login keychain, one per server address
 - Server addresses, start and stop commands (per server), and view settings: the app’s preferences (`local.ImmichViewer`)
 
@@ -155,8 +160,8 @@ Sources are grouped by where they run. Every file is compiled for both platforms
 | `ThumbnailStore.swift` | Disk and memory thumbnail cache |
 | `TimelineModel.swift` | Asset, filters, grouping, grid geometry, row moves, date lookup, year marks |
 | **`Shared/`** | Interface used on the Mac and on iPhone and iPad |
-| `Collections.swift` | Filter and sort menus, People, Albums and Tags pages, one person's, album's or tag's grid |
-| `Editing.swift` | Photo menu, date, location, album, person and tag sheets |
+| `Collections.swift` | Filter and sort menus, People, Albums and Tags pages, one person's, album's or tag's grid, the iOS page bar |
+| `Editing.swift` | Photo menu and what its actions do, page menus, date, location, album, person and tag sheets, download progress, share sheet |
 | `InfoPanel.swift` | A photo's details (⌘I on the Mac, swipe up on iOS) and its row of faces |
 | `LivePhoto.swift` | A Live Photo's moving part and the LIVE badge |
 | **`Mac/`** | The Mac app |
@@ -167,9 +172,9 @@ Sources are grouped by where they run. Every file is compiled for both platforms
 | `Settings.swift` | Settings window: appearance, grid, video, storage, connection |
 | **`iOS/`** | The iPhone and iPad app |
 | `PhoneApp.swift` | Tabs |
-| `PhoneGrid.swift` | UICollectionView grid, pinch, sticky dates, open and close transitions |
-| `PhoneTimeline.swift` | Photo page and photo view: menus, pager, zoom, video controls |
-| `PhoneServers.swift` | Server list and connect form |
+| `PhoneGrid.swift` | UICollectionView grid, pinch, sticky dates, checkmarks, long-press menu, open and close transitions |
+| `PhoneTimeline.swift` | Photo page and photo view: Select, menus, pager, zoom, video controls |
+| `PhoneSettings.swift` | Settings tab and connect form |
 | **`Resources/`** | |
 | `Localizable.xcstrings` | Interface text and its translations |
 | `InfoPlist.xcstrings` | The app's name in each language |
@@ -182,7 +187,15 @@ Planned editing: cropping, dropping files on the window to upload, then stacks, 
 
 ## Version history
 
-### v0.8.1 (current)
+### v0.9.0 (current)
+
+- Downloading shows a panel with the file it's on, a progress bar and Cancel (the Mac's Download, and Share… on iOS).
+- People, albums and tags, and each person's, album's and tag's photos, are kept on disk: they show at once when the app opens or a page opens, and update when the server's lists differ. People, albums and tags load alongside the timeline instead of after it.
+- iPhone and iPad: editing. Select mode with checkmarks, a ⋯ menu on every page with filter, sort, grouping and the selection's actions, a long-press menu, Share…, editing in the photo view and its details, and editing people, albums and tags. Archive and Trash at the top of Albums.
+- iPhone and iPad: the Servers tab became Settings, with servers, appearance, video and storage.
+- iPhone and iPad: page titles sit on the left once they shrink, over a progressive blur on every page; a person's, album's or tag's page opens with its buttons and item count already in place, at the top.
+
+### v0.8.1
 
 - Source files grouped in folders by where they run: Core, Shared, Mac, iOS and Resources. The photo details panel moved to its own file, shared by both apps. No change in the app.
 

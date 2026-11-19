@@ -48,6 +48,24 @@
           }
         }
       }
+    },
+    "NSPhotoLibraryAddUsageDescription" : {
+      "comment" : "Photo library add permission prompt (iOS share sheet)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Immich Viewer saves the photos and videos you share from your Immich server to your photo library."
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Immich Viewer 會把你從 Immich 伺服器分享的照片和影片存到你的照片圖庫。"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"
