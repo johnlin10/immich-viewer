@@ -132,38 +132,47 @@ Removing a server in Settings > Connection deletes its key and both folders. Upd
 
 ## Development
 
-- macOS 26 or later (Liquid Glass), Xcode 26 or later. One target builds both the Mac app and the iPhone and iPad app (`#if os(iOS)` / `#if os(macOS)`); to run it on a phone, choose the device in Xcode. Files dropped into the `ImmichViewer/` folder are added to the target automatically.
+- macOS 26 or later (Liquid Glass), Xcode 26 or later. One target builds both the Mac app and the iPhone and iPad app (`#if os(iOS)` / `#if os(macOS)`); to run it on a phone, choose the device in Xcode. Files dropped into the `ImmichViewer/` folder (any subfolder) are added to the target automatically.
 - Signing uses your Apple Development certificate (team set in the project), so the keychain keeps trusting rebuilt versions.
 - Debug builds take these environment variables (Edit Scheme > Run > Arguments): `IMMICH_API_KEY` (skips the keychain), `IMMICH_SERVER` (another server address) and `IMMICH_VIEWER_PROFILE` (keeps the list and thumbnails in separate `ImmichViewer-<name>` folders, so a test server doesn't mix with your library).
 - Grid and grouping checks, no Xcode needed:
 
 ```bash
-swiftc ImmichViewer/TimelineModel.swift ImmichViewer/ThumbnailStore.swift ImmichViewer/ImmichAPI.swift Tests/main.swift -o /tmp/immichviewer-check && /tmp/immichviewer-check
+swiftc ImmichViewer/Core/TimelineModel.swift ImmichViewer/Core/ThumbnailStore.swift ImmichViewer/Core/ImmichAPI.swift Tests/main.swift -o /tmp/immichviewer-check && /tmp/immichviewer-check
 ```
 
 - Installer: `scripts/make-dmg.sh` builds Release and makes `build/ImmichViewer-<version>.dmg`, a window with the app, an Applications shortcut and a background (`scripts/dmg-background.tiff`) that says to drag it across. It needs [uv](https://docs.astral.sh/uv/) (`brew install uv`), which runs dmgbuild; the layout is in `scripts/dmg-settings.py`. The app is signed with a development certificate only, so on another Mac it has to be allowed once in System Settings > Privacy & Security.
 - Releasing: commit with the new `MARKETING_VERSION` (the build number follows it, since Sparkle compares that), push, then run `scripts/release.sh notes.md` in Terminal. It builds the DMG, signs it into the update feed `appcast.xml` (keeping the earlier entries from the latest Release) and publishes GitHub Release `vX.Y.Z` with the DMG, the feed and the notes. The app reads the feed from `releases/latest/download/appcast.xml`, so the newest Release is always the feed. `DRY_RUN=1` stops before publishing.
 - Update signing key: made once with Sparkle's `generate_keys --account immich-viewer`; the private key is in the login keychain, the public key is `SUPublicEDKey` in `Info.plist`. Back it up (`generate_keys --account immich-viewer -x <file>`, kept somewhere safe and never in the repo): without it, installed copies can't be updated any more. The first `release.sh` run asks for keychain access; allow it.
 
+Sources are grouped by where they run. Every file is compiled for both platforms; the Mac and iOS folders are wrapped in `#if os(macOS)` / `#if os(iOS)`.
+
 | File | Contents |
 |---|---|
-| `ImmichViewerApp.swift` | App window and sidebar, View menu, timeline page, bottom bar, title bar blur |
-| `Settings.swift` | Settings window: appearance, grid, video, storage, connection |
-| `Scrubber.swift` | Date capsule, time scrubber, Go to Date sheet |
-| `Library.swift` | Connection, starting and stopping the server, asset list, sync |
+| **`Core/`** | Data and network, no interface (the command-line checks build these) |
 | `ImmichAPI.swift` | Immich API calls, keychain |
+| `Library.swift` | Connection, starting and stopping the server, asset list, sync |
 | `ThumbnailStore.swift` | Disk and memory thumbnail cache |
+| `TimelineModel.swift` | Asset, filters, grouping, grid geometry, row moves, date lookup, year marks |
+| **`Shared/`** | Interface used on the Mac and on iPhone and iPad |
+| `Collections.swift` | Filter and sort menus, People, Albums and Tags pages, one person's, album's or tag's grid |
+| `Editing.swift` | Photo menu, date, location, album, person and tag sheets |
+| `InfoPanel.swift` | A photo's details (⌘I on the Mac, swipe up on iOS) and its row of faces |
+| `LivePhoto.swift` | A Live Photo's moving part and the LIVE badge |
+| **`Mac/`** | The Mac app |
+| `ImmichViewerApp.swift` | App window and sidebar, View menu, timeline page, bottom bar, title bar blur |
 | `PhotoGrid.swift` | NSCollectionView grid, zoom, clicks, pinch, keyboard selection, cells, headers |
-| `PhotoViewer.swift` | Single photo view, zoom and pan, info panel, copy and drag-out, video player, swipes |
-| `LivePhoto.swift` | A Live Photo's moving part and the LIVE badge, on both platforms |
-| `PhoneApp.swift` | iPhone and iPad app: tabs |
-| `PhoneTimeline.swift` | iPhone and iPad photo page and photo view: menus, pager, zoom, video controls |
-| `PhoneGrid.swift` | iPhone and iPad UICollectionView grid, pinch, sticky dates, open and close transitions |
-| `PhoneServers.swift` | iPhone and iPad server list and connect form |
-| `Collections.swift` | People and album pages, one person's or album's grid |
-| `Editing.swift` | Photo menu, date, location, album and person sheets |
-| `TimelineModel.swift` | Asset, grouping, grid geometry, row moves, date lookup, year marks |
+| `PhotoViewer.swift` | Single photo view, zoom and pan, copy and drag-out, video player, swipes |
+| `Scrubber.swift` | Date capsule, time scrubber, Go to Date sheet |
+| `Settings.swift` | Settings window: appearance, grid, video, storage, connection |
+| **`iOS/`** | The iPhone and iPad app |
+| `PhoneApp.swift` | Tabs |
+| `PhoneGrid.swift` | UICollectionView grid, pinch, sticky dates, open and close transitions |
+| `PhoneTimeline.swift` | Photo page and photo view: menus, pager, zoom, video controls |
+| `PhoneServers.swift` | Server list and connect form |
+| **`Resources/`** | |
 | `Localizable.xcstrings` | Interface text and its translations |
+| `InfoPlist.xcstrings` | The app's name in each language |
 
 ## Not in this version
 
@@ -173,7 +182,11 @@ Planned editing: cropping, dropping files on the window to upload, then stacks, 
 
 ## Version history
 
-### v0.8.0 (current)
+### v0.8.1 (current)
+
+- Source files grouped in folders by where they run: Core, Shared, Mac, iOS and Resources. The photo details panel moved to its own file, shared by both apps. No change in the app.
+
+### v0.8.0
 
 - An iPhone and iPad app in the same project, for browsing (built from Xcode, not in the Releases): Library, People, Albums, Tags and Servers; the same grid, filters and grouping; a photo view with swipes, zoom, details, faces and video controls.
 - Live Photos: LIVE in the photo view plays the moving part (point at it or click it on the Mac; long-press or tap it on iOS).
@@ -230,7 +243,7 @@ Planned editing: cropping, dropping files on the window to upload, then stacks, 
 
 ### v0.2
 
-- English and Traditional Chinese interface, following the macOS language. English is now the source language; the translations live in `ImmichViewer/Localizable.xcstrings`.
+- English and Traditional Chinese interface, following the macOS language. English is now the source language; the translations live in `ImmichViewer/Resources/Localizable.xcstrings`.
 - A DMG installer (`scripts/make-dmg.sh`): drag the app to Applications.
 
 ### v0.1

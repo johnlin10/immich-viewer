@@ -1,5 +1,5 @@
 // Checks for the grid math and grouping. Run from the project folder:
-//   swiftc ImmichViewer/TimelineModel.swift ImmichViewer/ThumbnailStore.swift ImmichViewer/ImmichAPI.swift Tests/main.swift -o /tmp/immichviewer-check && /tmp/immichviewer-check
+//   swiftc ImmichViewer/Core/TimelineModel.swift ImmichViewer/Core/ThumbnailStore.swift ImmichViewer/Core/ImmichAPI.swift Tests/main.swift -o /tmp/immichviewer-check && /tmp/immichviewer-check
 import Foundation
 
 // 3 columns: (100 + 2) / (30 + 2) = 3.18, side = (100 - 2*2) / 3 = 32, row = 34

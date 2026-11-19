@@ -14,10 +14,10 @@ The app follows macOS: the user's preferred languages, or the per-app language i
 
 ## How
 
-- One String Catalog, `ImmichViewer/Localizable.xcstrings`. Xcode fills it from the code when built in Xcode; translations live only there. A command-line build doesn't update it; after `xcodebuild`, run `xcrun xcstringstool sync ImmichViewer/Localizable.xcstrings --stringsdata <DerivedData>/…/Objects-normal/arm64/*.stringsdata`.
+- One String Catalog, `ImmichViewer/Resources/Localizable.xcstrings`. Xcode fills it from the code when built in Xcode; translations live only there. A command-line build doesn't update it; after `xcodebuild`, run `xcrun xcstringstool sync ImmichViewer/Resources/Localizable.xcstrings --stringsdata <DerivedData>/…/Objects-normal/arm64/*.stringsdata`.
 - Source strings in the code are English. `zh-Hant` and `zh-Hans` are translations in the catalog.
 - Project: `developmentRegion` becomes `en`; `knownRegions` becomes `en`, `zh-Hant`, `zh-Hans`, `Base`. System menus (File, Edit, View, Window) then follow the same language.
-- The app name stays "Immich Viewer" in every language. The menu bar name comes from `CFBundleName` in `ImmichViewer/InfoPlist.xcstrings` (the generated Info.plist would otherwise use the product name `ImmichViewer`); add each new language there too.
+- The app name stays "Immich Viewer" in every language. The menu bar name comes from `CFBundleName` in `ImmichViewer/Resources/InfoPlist.xcstrings` (the generated Info.plist would otherwise use the product name `ImmichViewer`); add each new language there too.
 
 ## Code changes
 
