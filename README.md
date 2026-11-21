@@ -1,12 +1,12 @@
 # Immich Viewer
 
-A native macOS photo wall for an Immich server. Browse the whole library smoothly, and make everyday changes in place: favorites, descriptions, ratings, dates, places, archiving and deleting, people's names, and albums.
+A native app for an Immich server on Mac, iPhone and iPad. Browse the whole library as a smooth photo wall, search it, upload to it, and make everyday changes in place: favorites, descriptions, ratings, dates, places, tags, archiving and deleting, people's names, and albums.
 
-It keeps every small thumbnail (about 15 KB each) on this Mac, so scrolling reads from disk instead of asking the server for each one.
+It keeps every small thumbnail (about 15 KB each) on the device, so scrolling reads from disk instead of asking the server for each one.
 
 > **Language:** English and Traditional Chinese, following the macOS language (or the per-app language in System Settings > General > Language & Region). Simplified Chinese is planned; see [docs/localization.md](docs/localization.md).
 
-## What it does (v0.9)
+## What it does
 
 - A sidebar like Photos: Library, Collections, every album, and Archive and Trash. People and tags are on Collections; its gear opens Settings.
 - People: everyone Immich recognised (hidden people left out) as round faces, with their birthday and age when one is set; click one for their photos. A person's page shows the birthday and age next to the item count.
