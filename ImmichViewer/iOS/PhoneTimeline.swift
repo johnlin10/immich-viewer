@@ -17,7 +17,11 @@ struct TimelineBrowser: View {
     let context: BrowserContext
     @AppStorage("newestFirst") private var newestFirst = true
     @AppStorage("grouping") private var grouping = Grouping.day
-    @AppStorage("phoneColumns") private var columns = 4
+    @AppStorage("phoneColumns") private var phoneColumns = 4
+    /// Kept apart from the phone's, so a wide window (iPad) doesn't open with a phone's few huge tiles.
+    @AppStorage("padColumns") private var padColumns = 7
+    @Environment(\.horizontalSizeClass) private var sizeClass
+    private var columns: Int { sizeClass == .regular ? padColumns : phoneColumns }
     /// Not kept: every page opens showing everything.
     @State private var filter = PhotoFilter()
     @State private var list: [Asset] = []
@@ -39,7 +43,7 @@ struct TimelineBrowser: View {
                       selecting: selecting, chosen: chosen,
                       handlers: PhoneGrid.Handlers(
                         refresh: context == .library ? { await library.refresh() } : nil,
-                        onColumns: { columns = $0 }, onTop: { top = $0 }, onPerson: { person = $0 },
+                        onColumns: { if sizeClass == .regular { padColumns = $0 } else { phoneColumns = $0 } }, onTop: { top = $0 }, onPerson: { person = $0 },
                         onToggle: { id in
                             if chosen.remove(id) == nil { chosen.insert(id) }
                         },
@@ -174,6 +178,10 @@ struct PhotoPager: View {
     let close: () -> Void
     /// A face or a person in the details was tapped: close and show their photos.
     let onPerson: (Person) -> Void
+    /// The background turned black (true) or back: the closing photo's backdrop matches it.
+    let onDark: (Bool) -> Void
+    /// The opening photo is still flying in over the page: its own copy stays hidden until it lands.
+    let flying: Bool
     /// The photos that can be swiped to, around the one opened. Kept in @State: a window that moved with every swipe
     /// removed pages before the current one and the pager jumped ahead.
     // ponytail: a fixed window of 2,000, so a 100k+ library doesn't build a pager of every photo; recentre it if people swipe that far
@@ -202,13 +210,15 @@ struct PhotoPager: View {
     }
 
     init(assets: [Asset], version: Int, position: Binding<Int?>, context: BrowserContext, close: @escaping () -> Void,
-         onPerson: @escaping (Person) -> Void) {
+         onPerson: @escaping (Person) -> Void, onDark: @escaping (Bool) -> Void, flying: Bool = false) {
         self.assets = assets
         self.version = version
         _position = position
         self.context = context
         self.close = close
         self.onPerson = onPerson
+        self.onDark = onDark
+        self.flying = flying
         let start = position.wrappedValue ?? 0
         _window = State(initialValue: max(0, start - 1000)..<min(assets.count, start + 1000))
     }
@@ -243,11 +253,12 @@ struct PhotoPager: View {
         .scrollTargetBehavior(.paging)
         .scrollPosition(id: $position)
         .scrollIndicators(.hidden)
+        .opacity(flying ? 0 : 1)
         .ignoresSafeArea()
         .overlay {
             if let livePlayer { LiveVideo(player: livePlayer, playing: $livePlaying).ignoresSafeArea() }
         }
-        .background(chromeHidden ? Color.black : Color(.systemBackground))
+        .background(flying ? Color.clear : chromeHidden ? Color.black : Color(.systemBackground))
         .overlay(alignment: .bottom) {
             VStack(alignment: .leading, spacing: 12) {
                 if let shownVideo {
@@ -289,7 +300,7 @@ struct PhotoPager: View {
                                 editor.perform($0, on: [asset], context: context, library: library, undo: undo, place: place)
                             }
                             Divider()
-                            Button("Info", systemImage: "info.circle") { showInfo = true }
+                            Button("Info", systemImage: "info.circle") { showInfo.toggle() } // on iPad the side panel stays until closed here
                             Button("Open in Browser", systemImage: "safari") { library.openInBrowser(asset) }
                         } label: {
                             Label("More", systemImage: "ellipsis").circleGlass()
@@ -316,7 +327,8 @@ struct PhotoPager: View {
         .scrollEdgeEffectHidden(chromeHidden, for: .top)
         .animation(.easeInOut(duration: 0.25), value: chromeHidden)
         .statusBarHidden(chromeHidden)
-        .sheet(isPresented: $showInfo) {
+        .onChange(of: chromeHidden) { onDark(chromeHidden) }
+        .inspector(isPresented: $showInfo) { // a side panel on iPad, a sheet on iPhone
             if let asset {
                 let edit = { (action: PhotoAction) in
                     infoEditor.perform(action, on: [asset], context: context, library: library, undo: undo, place: place)
@@ -336,6 +348,7 @@ struct PhotoPager: View {
                     .photoEditor(infoEditor, library: library, undo: undo)
                     .presentationDetents([.medium, .large])
                     .presentationBackgroundInteraction(.enabled(upThrough: .medium)) // keep swiping photos, like the Mac's panel
+                    .inspectorColumnWidth(min: 300, ideal: 360, max: 440)
             }
         }
         .photoEditor(editor, library: library, undo: undo)
@@ -507,6 +520,46 @@ private struct VideoControls: View {
     }
 }
 
+/// The photo at its own size fitted to the screen, centred by insets, so zoomed in its edges stop at the screen's
+/// edges instead of the letterbox bars zooming along with it.
+final class PhotoScroll: UIScrollView {
+    let photo = UIImageView()
+    private var fitted = CGSize.zero
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        addSubview(photo)
+    }
+
+    required init?(coder: NSCoder) { fatalError("not used") }
+
+    func show(_ image: UIImage) {
+        let reshaped = photo.image.map { abs($0.size.width / $0.size.height - image.size.width / image.size.height) > 0.01 } ?? true
+        photo.image = image
+        if reshaped { fitted = .zero; setNeedsLayout() }
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        if bounds.size != fitted, let image = photo.image, bounds.width > 0, bounds.height > 0 { // first layout, rotation, new shape
+            fitted = bounds.size
+            zoomScale = 1
+            let size = AVMakeRect(aspectRatio: image.size, insideRect: bounds).size
+            photo.frame = CGRect(origin: .zero, size: size)
+            contentSize = size
+            centre()
+            contentOffset = CGPoint(x: -contentInset.left, y: -contentInset.top)
+        }
+        centre()
+    }
+
+    func centre() {
+        let x = max(0, (bounds.width - contentSize.width) / 2), y = max(0, (bounds.height - contentSize.height) / 2)
+        let inset = UIEdgeInsets(top: y, left: x, bottom: y, right: x)
+        if contentInset != inset { contentInset = inset }
+    }
+}
+
 /// Pinch and double-tap zoom, then drag around, like Photos. Swiping up (when not zoomed) shows the details. A UIScrollView, since SwiftUI has no zooming scroll view.
 private struct ZoomableImage: UIViewRepresentable {
     let image: UIImage
@@ -514,19 +567,15 @@ private struct ZoomableImage: UIViewRepresentable {
     let onSwipeUp: () -> Void
     let onPress: (Bool) -> Void
 
-    func makeUIView(context: Context) -> UIScrollView {
-        let scroll = UIScrollView()
+    func makeUIView(context: Context) -> PhotoScroll {
+        let scroll = PhotoScroll()
         scroll.delegate = context.coordinator
         scroll.maximumZoomScale = 4
         scroll.showsHorizontalScrollIndicator = false
         scroll.showsVerticalScrollIndicator = false
         scroll.contentInsetAdjustmentBehavior = .never
-        let view = UIImageView(image: image)
-        view.contentMode = .scaleAspectFit
-        view.frame = scroll.bounds
-        view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-        scroll.addSubview(view)
-        context.coordinator.view = view
+        scroll.photo.image = image
+        context.coordinator.view = scroll.photo
         let tap = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.doubleTap(_:)))
         tap.numberOfTapsRequired = 2
         scroll.addGestureRecognizer(tap)
@@ -544,8 +593,8 @@ private struct ZoomableImage: UIViewRepresentable {
         return scroll
     }
 
-    func updateUIView(_ scroll: UIScrollView, context: Context) {
-        context.coordinator.view?.image = image // the sharper preview replaces the thumbnail
+    func updateUIView(_ scroll: PhotoScroll, context: Context) {
+        scroll.show(image) // the sharper preview replaces the thumbnail
         context.coordinator.onTap = onTap
         context.coordinator.onSwipeUp = onSwipeUp
         context.coordinator.onPress = onPress
@@ -587,6 +636,8 @@ private struct ZoomableImage: UIViewRepresentable {
         }
 
         func viewForZooming(in scrollView: UIScrollView) -> UIView? { view }
+
+        func scrollViewDidZoom(_ scrollView: UIScrollView) { (scrollView as? PhotoScroll)?.centre() }
 
         @objc func doubleTap(_ tap: UITapGestureRecognizer) {
             guard let scroll = tap.view as? UIScrollView else { return }

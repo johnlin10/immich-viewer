@@ -1,2566 +1,2823 @@
 {
-  "sourceLanguage": "en",
-  "strings": {
-    "": {
-      "shouldTranslate": false
+  "sourceLanguage" : "en",
+  "strings" : {
+    "" : {
+      "shouldTranslate" : false
     },
-    "%@\nThe key needs the person.read and album.read permissions.": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@\n金鑰需要 person.read 和 album.read 權限。"
+    "%@\nThe key needs the person.read and album.read permissions." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@\n金鑰需要 person.read 和 album.read 權限。"
           }
         }
       }
     },
-    "%@ · Age %lld": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ · %2$lld 歲"
+    "%@ · Age %lld" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ · %2$lld 歲"
           }
         }
       }
     },
-    "%lld Stars": {
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld Star"
+    "%lld albums" : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld album"
                 }
               },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld Stars"
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld albums"
                 }
               }
             }
           }
         },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld 顆星"
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld 本"
           }
         }
       }
     },
-    "%lld albums": {
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld album"
+    "%lld items" : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld item"
                 }
               },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld albums"
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld items"
                 }
               }
             }
           }
         },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld 本"
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld 項"
           }
         }
       }
     },
-    "%lld items": {
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld item"
+    "%lld items, %lld failed" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld items, %2$lld failed"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld 項，%2$lld 張失敗"
+          }
+        }
+      }
+    },
+    "%lld people" : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld person"
                 }
               },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld items"
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld people"
                 }
               }
             }
           }
         },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld 項"
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld 位"
           }
         }
       }
     },
-    "%lld items, %lld failed": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "new",
-            "value": "%1$lld items, %2$lld failed"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$lld 項，%2$lld 張失敗"
+    "%lld selected" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已選取 %lld 項"
           }
         }
       }
     },
-    "%lld people": {
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld person"
+    "%lld shown" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "顯示 %lld 個"
+          }
+        }
+      }
+    },
+    "%lld Stars" : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Star"
                 }
               },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld people"
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld Stars"
                 }
               }
             }
           }
         },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld 位"
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld 顆星"
           }
         }
       }
     },
-    "%lld selected": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已選取 %lld 項"
+    "%lld tags" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld 個標籤"
           }
         }
       }
     },
-    "%lld shown": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "顯示 %lld 個"
+    "A slash makes a tag inside another one." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用斜線可以把標籤放在另一個標籤底下。"
           }
         }
       }
     },
-    "%lld tags": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld 個標籤"
+    "Add a Description" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "加入說明"
           }
         }
       }
     },
-    "A slash makes a tag inside another one.": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "用斜線可以把標籤放在另一個標籤底下。"
+    "Add Location…" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "加入位置…"
           }
         }
       }
     },
-    "API Key": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "API 金鑰"
+    "Add Server" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新增伺服器"
           }
         }
       }
     },
-    "Add Location…": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "加入位置…"
+    "Add Server…" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "加入伺服器…"
           }
         }
       }
     },
-    "Add Server": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "新增伺服器"
+    "Add Tag" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "加入標籤"
           }
         }
       }
     },
-    "Add Server…": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "加入伺服器…"
+    "Add Tag…" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "加入標籤…"
           }
         }
       }
     },
-    "Add Tag": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "加入標籤"
+    "Add to Album" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "加入相簿"
           }
         }
       }
     },
-    "Add Tag…": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "加入標籤…"
+    "Add to Favorites" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "加入喜好項目"
           }
         }
       }
     },
-    "Add a Description": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "加入說明"
+    "Add to Favorites (.)" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "加入喜好項目（.）"
           }
         }
       }
     },
-    "Add to Album": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "加入相簿"
+    "Adjust Date and Time" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "調整日期與時間"
           }
         }
       }
     },
-    "Add to Favorites": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "加入喜好項目"
+    "Adjust Date and Time…" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "調整日期與時間…"
           }
         }
       }
     },
-    "Add to Favorites (.)": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "加入喜好項目（.）"
+    "Age, Oldest First" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "年齡（大到小）"
           }
         }
       }
     },
-    "Adjust Date and Time": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "調整日期與時間"
+    "Age, Youngest First" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "年齡（小到大）"
           }
         }
       }
     },
-    "Adjust Date and Time…": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "調整日期與時間…"
+    "Albums" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "相簿"
           }
         }
       }
     },
-    "Age, Oldest First": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "年齡（大到小）"
+    "All" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "不分組"
           }
         }
       }
     },
-    "Age, Youngest First": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "年齡（小到大）"
+    "All Albums" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "所有相簿"
           }
         }
       }
     },
-    "Albums": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "相簿"
+    "API Key" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "API 金鑰"
           }
         }
       }
     },
-    "All": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "不分組"
+    "Appearance" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "外觀"
           }
         }
       }
     },
-    "Appearance": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "外觀"
+    "Archive" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "封存"
           }
         }
       }
     },
-    "Archive": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "封存"
+    "Birthday" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "生日"
           }
         }
       }
     },
-    "Birthday": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "生日"
+    "Born %@ · Age %lld" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "生日 %1$@ · %2$lld 歲"
           }
         }
       }
     },
-    "Born %@ · Age %lld": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "生日 %1$@ · %2$lld 歲"
+    "Born on" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "出生日期"
           }
         }
       }
     },
-    "Born on": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "出生日期"
+    "Busiest Days" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最多照片的日子"
           }
         }
       }
     },
-    "Calculating…": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "計算中…"
+    "By Hour" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "按時段"
           }
         }
       }
     },
-    "Cancel": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "取消"
+    "By Weekday" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "按星期"
           }
         }
       }
     },
-    "Can’t Load": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "無法載入"
+    "By Year" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "按年份"
           }
         }
       }
     },
-    "Change Key": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "更改金鑰"
+    "Calculating…" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "計算中…"
           }
         }
       }
     },
-    "Change Key…": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "更改金鑰…"
+    "Can’t Load" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法載入"
           }
         }
       }
     },
-    "Change Location…": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "更改位置…"
+    "Cancel" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "取消"
           }
         }
       }
     },
-    "Change Person": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "更改人物"
+    "Change Key" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更改金鑰"
           }
         }
       }
     },
-    "Change Person…": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "更改人物…"
+    "Change Key…" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更改金鑰…"
           }
         }
       }
     },
-    "Check for Updates Automatically": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "自動檢查更新"
+    "Change Location…" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更改位置…"
           }
         }
       }
     },
-    "Check for Updates…": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "檢查更新…"
+    "Change Person" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更改人物"
           }
         }
       }
     },
-    "Clear": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "清除"
+    "Change Person…" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更改人物…"
           }
         }
       }
     },
-    "Clear Cache…": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "清除快取…"
+    "Check for Updates Automatically" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自動檢查更新"
           }
         }
       }
     },
-    "Clear Filters": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "清除篩選"
+    "Check for Updates…" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "檢查更新…"
           }
         }
       }
     },
-    "Clear Rating": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "清除評分"
+    "Clear" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "清除"
           }
         }
       }
     },
-    "Clear all cached thumbnails?": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "清除所有快取的縮圖？"
+    "Clear all cached thumbnails?" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "清除所有快取的縮圖？"
           }
         }
       }
     },
-    "Click the map to place the pin.": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "點一下地圖來放置大頭針。"
+    "Clear Cache…" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "清除快取…"
           }
         }
       }
     },
-    "Close": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "關閉"
+    "Clear Filters" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "清除篩選"
           }
         }
       }
     },
-    "Close (Esc)": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "關閉（Esc）"
+    "Clear Rating" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "清除評分"
           }
         }
       }
     },
-    "Commands for %@": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ 的指令"
+    "Click the map to place the pin." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "點一下地圖來放置大頭針。"
           }
         }
       }
     },
-    "Commands run in zsh, as in Terminal. For a server on another computer, run them over SSH with key login, for example: ssh nas 'cd immich-app && docker compose up -d'": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "指令在 zsh 中執行，和在「終端機」裡一樣。伺服器在其他電腦上時，可透過 SSH（使用金鑰登入）執行，例如：ssh nas 'cd immich-app && docker compose up -d'"
+    "Close" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "關閉"
           }
         }
       }
     },
-    "Connect": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "連線"
+    "Close (Esc)" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "關閉（Esc）"
           }
         }
       }
     },
-    "Connect to Immich": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "連線到 Immich"
+    "Collections" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "收藏項目"
           }
         }
       }
     },
-    "Connected": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已連線"
+    "Commands for %@" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 的指令"
           }
         }
       }
     },
-    "Connection": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "連線"
+    "Commands run in zsh, as in Terminal. For a server on another computer, run them over SSH with key login, for example: ssh nas 'cd immich-app && docker compose up -d'" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "指令在 zsh 中執行，和在「終端機」裡一樣。伺服器在其他電腦上時，可透過 SSH（使用金鑰登入）執行，例如：ssh nas 'cd immich-app && docker compose up -d'"
           }
         }
       }
     },
-    "Corner Radius": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "圓角"
+    "Connect" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "連線"
           }
         }
       }
     },
-    "Couldn’t Make the Change": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "無法完成變更"
+    "Connect to Immich" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "連線到 Immich"
           }
         }
       }
     },
-    "Couldn’t reach %@: %@ Check the address and port, and that the server is running. For a server on another computer, also check that Immich Viewer is on in System Settings > Privacy & Security > Local Network.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "new",
-            "value": "Couldn’t reach %1$@: %2$@ Check the address and port, and that the server is running. For a server on another computer, also check that Immich Viewer is on in System Settings > Privacy & Security > Local Network."
+    "Connected" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已連線"
+          }
+        }
+      }
+    },
+    "Connection" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "連線"
+          }
+        }
+      }
+    },
+    "Corner Radius" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "圓角"
+          }
+        }
+      }
+    },
+    "Couldn’t Make the Change" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法完成變更"
+          }
+        }
+      }
+    },
+    "Couldn’t reach %@: %@ Check the address and port, and that the server is running. For a server on another computer, also check that Immich Viewer is on in System Settings > Privacy & Security > Local Network." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Couldn’t reach %1$@: %2$@ Check the address and port, and that the server is running. For a server on another computer, also check that Immich Viewer is on in System Settings > Privacy & Security > Local Network."
           }
         },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "無法連線到 %1$@：%2$@ 請檢查位址和連接埠，以及伺服器是否正在執行。如果伺服器在其他電腦上，也請到「系統設定」>「隱私權與安全性」>「區域網路」確認 Immich Viewer 已開啟。"
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法連線到 %1$@：%2$@ 請檢查位址和連接埠，以及伺服器是否正在執行。如果伺服器在其他電腦上，也請到「系統設定」>「隱私權與安全性」>「區域網路」確認 Immich Viewer 已開啟。"
           }
         }
       }
     },
-    "Current": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "使用中"
+    "Current" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使用中"
           }
         }
       }
     },
-    "Dark": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "深色"
+    "Dark" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "深色"
           }
         }
       }
     },
-    "Date": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "日期"
+    "Date" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "日期"
           }
         }
       }
     },
-    "Date and time": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "日期與時間"
+    "Date and time" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "日期與時間"
           }
         }
       }
     },
-    "Days": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "依日"
+    "Day" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "日"
           }
         }
       }
     },
-    "Default": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "預設"
+    "Days" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "依日"
           }
         }
       }
     },
-    "Delete": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "刪除"
+    "Default" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "預設"
           }
         }
       }
     },
-    "Delete %lld Photos Permanently?": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "要永久刪除 %lld 張照片嗎？"
+    "Delete" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "刪除"
           }
         }
       }
     },
-    "Delete %lld Photos?": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "要刪除 %lld 張照片嗎？"
+    "Delete %lld Photos Permanently?" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要永久刪除 %lld 張照片嗎？"
           }
         }
       }
     },
-    "Delete Album…": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "刪除相簿…"
+    "Delete %lld Photos?" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要刪除 %lld 張照片嗎？"
           }
         }
       }
     },
-    "Delete Permanently": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "永久刪除"
+    "Delete Album…" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "刪除相簿…"
           }
         }
       }
     },
-    "Delete Permanently…": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "永久刪除…"
+    "Delete Permanently" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "永久刪除"
           }
         }
       }
     },
-    "Delete Tag…": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "刪除標籤…"
+    "Delete Permanently…" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "永久刪除…"
           }
         }
       }
     },
-    "Delete This Album?": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "要刪除這本相簿嗎？"
+    "Delete Tag…" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "刪除標籤…"
           }
         }
       }
     },
-    "Delete This Photo Permanently?": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "要永久刪除這張照片嗎？"
+    "Delete This Album?" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要刪除這本相簿嗎？"
           }
         }
       }
     },
-    "Delete This Photo?": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "要刪除這張照片嗎？"
+    "Delete This Photo Permanently?" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要永久刪除這張照片嗎？"
           }
         }
       }
     },
-    "Delete This Tag?": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "要刪除這個標籤嗎？"
+    "Delete This Photo?" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要刪除這張照片嗎？"
           }
         }
       }
     },
-    "Delete…": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "刪除…"
+    "Delete This Tag?" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要刪除這個標籤嗎？"
           }
         }
       }
     },
-    "Description": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "說明"
+    "Delete…" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "刪除…"
           }
         }
       }
     },
-    "Download": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "下載"
+    "Description" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "說明"
           }
         }
       }
     },
-    "Download and Install Updates Automatically": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "自動下載並安裝更新"
+    "Done" : {
+
+    },
+    "Download" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "下載"
           }
         }
       }
     },
-    "Downloading %lld of %lld": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "new",
-            "value": "Downloading %1$lld of %2$lld"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "正在下載第 %lld 個，共 %lld 個"
+    "Download and Install Updates Automatically" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自動下載並安裝更新"
           }
         }
       }
     },
-    "Downloading thumbnails %lld of %lld": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "new",
-            "value": "Downloading thumbnails %1$lld of %2$lld"
+    "Downloading %lld of %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Downloading %1$lld of %2$lld"
           }
         },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "正在下載縮圖 %1$lld / %2$lld"
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在下載第 %lld 個，共 %lld 個"
           }
         }
       }
     },
-    "Downloading thumbnails %lld of %lld, %lld failed": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "new",
-            "value": "Downloading thumbnails %1$lld of %2$lld, %3$lld failed"
+    "Downloading thumbnails %lld of %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Downloading thumbnails %1$lld of %2$lld"
           }
         },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "正在下載縮圖 %1$lld / %2$lld，%3$lld 張失敗"
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在下載縮圖 %1$lld / %2$lld"
           }
         }
       }
     },
-    "Each server keeps its own API key, list and thumbnails. Double-click one to switch to it.": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "每台伺服器各自保存 API 金鑰、照片清單和縮圖。點兩下即可切換。"
-          }
-        }
-      }
-    },
-    "Edit Album": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "編輯相簿"
-          }
-        }
-      }
-    },
-    "Edit Album…": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "編輯相簿…"
-          }
-        }
-      }
-    },
-    "Edit Description": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "編輯說明"
-          }
-        }
-      }
-    },
-    "Edit Person": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "編輯人物"
-          }
-        }
-      }
-    },
-    "Edit Person…": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "編輯人物…"
-          }
-        }
-      }
-    },
-    "Empty Trash": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "清空垃圾桶"
-          }
-        }
-      }
-    },
-    "Empty Trash…": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "清空垃圾桶…"
-          }
-        }
-      }
-    },
-    "Empty the Trash?": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "要清空垃圾桶嗎？"
-          }
-        }
-      }
-    },
-    "Faces": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "人物頭像"
-          }
-        }
-      }
-    },
-    "Favorite": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "喜好"
-          }
-        }
-      }
-    },
-    "Favorites": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "喜好"
-          }
-        }
-      }
-    },
-    "Filter": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "篩選"
-          }
-        }
-      }
-    },
-    "General": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "一般"
-          }
-        }
-      }
-    },
-    "Go": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "跳轉"
-          }
-        }
-      }
-    },
-    "Go to Bottom": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "跳到最下方"
-          }
-        }
-      }
-    },
-    "Go to Date": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "跳到日期"
-          }
-        }
-      }
-    },
-    "Go to Date…": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "跳到日期…"
-          }
-        }
-      }
-    },
-    "Go to Top": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "跳到最上方"
-          }
-        }
-      }
-    },
-    "Group By": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "分組方式"
-          }
-        }
-      }
-    },
-    "Has Birthday": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已設定生日"
-          }
-        }
-      }
-    },
-    "Hide Person": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "隱藏人物"
-          }
-        }
-      }
-    },
-    "Import…": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "輸入…"
-          }
-        }
-      }
-    },
-    "In the Immich web UI, open Account Settings > API Keys and create a key with asset.read, asset.view, person.read and album.read. To make changes and share originals too, give it all permissions. The key is kept in the keychain.": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "在 Immich 網頁的「帳號設定 > API 金鑰」建立新金鑰，權限勾選 asset.read、asset.view、person.read 和 album.read。若也要修改內容或分享原始檔，請勾選全部權限。金鑰存在鑰匙圈裡。"
-          }
-        }
-      }
-    },
-    "In the Immich web UI, open Account Settings > API Keys and create a new key with asset.read, asset.view, person.read and album.read. To copy or drag out originals, also add asset.download (without it, the large preview is used). The key is kept in the keychain.": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "在 Immich 網頁的「帳號設定 > API 金鑰」建立新金鑰，權限勾選 asset.read、asset.view、person.read 和 album.read。想拷貝或拖出原始檔，再加 asset.download（沒有就用大預覽圖）。金鑰存在鑰匙圈裡。"
-          }
-        }
-      }
-    },
-    "Info": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "資訊"
-          }
-        }
-      }
-    },
-    "Info (⌘I)": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "資訊（⌘I）"
-          }
-        }
-      }
-    },
-    "Item Count": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "照片數量"
-          }
-        }
-      }
-    },
-    "Its API key, list and thumbnails are deleted from this Mac. Photos on the server are not affected.": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "會從這台 Mac 刪除它的 API 金鑰、照片清單和縮圖。伺服器上的照片不受影響。"
-          }
-        }
-      }
-    },
-    "Its API key, list and thumbnails are deleted from this device. Photos on the server are not affected.": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "它的 API 金鑰、清單和縮圖會從這台裝置刪除，伺服器上的照片不受影響。"
-          }
-        }
-      }
-    },
-    "LIVE": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "原況"
-          }
-        }
-      }
-    },
-    "Library": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "圖庫"
-          }
-        }
-      }
-    },
-    "Light": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "淺色"
-          }
-        }
-      }
-    },
-    "Live Photos": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "原況照片"
-          }
-        }
-      }
-    },
-    "Loop": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "重複播放"
-          }
-        }
-      }
-    },
-    "Make Album Cover": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "設為相簿封面"
-          }
-        }
-      }
-    },
-    "Make Profile Photo": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "設為人物照片"
-          }
-        }
-      }
-    },
-    "Mark Videos (▶)": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "標示影片（▶）"
-          }
-        }
-      }
-    },
-    "Merge People": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "合併人物"
-          }
-        }
-      }
-    },
-    "Merge With…": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "與…合併"
-          }
-        }
-      }
-    },
-    "Mine": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "我的"
-          }
-        }
-      }
-    },
-    "Months": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "依月"
-          }
-        }
-      }
-    },
-    "More": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "更多"
-          }
-        }
-      }
-    },
-    "Mute": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "靜音"
-          }
-        }
-      }
-    },
-    "Name": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "名稱"
-          }
-        }
-      }
-    },
-    "Name, A to Z": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "名稱（A→Z）"
-          }
-        }
-      }
-    },
-    "Name, Z to A": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "名稱（Z→A）"
-          }
-        }
-      }
-    },
-    "Named": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已命名"
-          }
-        }
-      }
-    },
-    "New Album": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "新增相簿"
-          }
-        }
-      }
-    },
-    "New Album…": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "新增相簿…"
-          }
-        }
-      }
-    },
-    "Newest First": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "最新的在上"
-          }
-        }
-      }
-    },
-    "No Albums": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "沒有相簿"
-          }
-        }
-      }
-    },
-    "No Matches": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "沒有符合的項目"
-          }
-        }
-      }
-    },
-    "No People": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "沒有人物"
-          }
-        }
-      }
-    },
-    "No Tags": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "沒有標籤"
-          }
-        }
-      }
-    },
-    "No place found.": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "找不到這個地點。"
-          }
-        }
-      }
-    },
-    "OK": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "好"
-          }
-        }
-      }
-    },
-    "Oldest First": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "最舊的在上"
-          }
-        }
-      }
-    },
-    "On this Mac: http://localhost:2283. On another computer in your network: its address and port, for example http://192.168.1.20:2283 or http://nas.local:2283. From outside your network: the https address of your reverse proxy, or the server’s Tailscale address.": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "伺服器在這台 Mac 上：http://localhost:2283。在同一個網路的其他電腦上：填入那台電腦的位址和連接埠，例如 http://192.168.1.20:2283 或 http://nas.local:2283。從外部網路連線：填入反向代理的 https 位址，或伺服器的 Tailscale 位址。"
-          }
-        }
-      }
-    },
-    "Open in Browser": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "在瀏覽器開啟"
-          }
-        }
-      }
-    },
-    "Open in Browser (Edit, Delete)": {
-      "extractionState": "stale",
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "在瀏覽器開啟（編輯、刪除）"
-          }
-        }
-      }
-    },
-    "Open in Maps": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "在「地圖」中開啟"
-          }
-        }
-      }
-    },
-    "Original": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "原本"
-          }
-        }
-      }
-    },
-    "Pause": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "暫停"
-          }
-        }
-      }
-    },
-    "People": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "人物"
-          }
-        }
-      }
-    },
-    "Photo Grid": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "照片網格"
-          }
-        }
-      }
-    },
-    "Photos": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "照片"
-          }
-        }
-      }
-    },
-    "Photos on the server are not affected.": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "伺服器上的照片不受影響。"
-          }
-        }
-      }
-    },
-    "Play": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "播放"
-          }
-        }
-      }
-    },
-    "Play Automatically": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "打開時自動播放"
-          }
-        }
-      }
-    },
-    "Rate": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "評分"
-          }
-        }
-      }
-    },
-    "Recent": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "最近"
-          }
-        }
-      }
-    },
-    "Refresh": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "重新整理"
-          }
-        }
-      }
-    },
-    "Remove": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "移除"
-          }
-        }
-      }
-    },
-    "Remove %@?": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "要移除 %@ 嗎？"
-          }
-        }
-      }
-    },
-    "Remove Server": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "移除伺服器"
-          }
-        }
-      }
-    },
-    "Remove Tag": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "移除標籤"
-          }
-        }
-      }
-    },
-    "Remove from Album": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "從相簿移除"
-          }
-        }
-      }
-    },
-    "Remove from Favorites": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "從喜好項目移除"
-          }
-        }
-      }
-    },
-    "Remove from Favorites (.)": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "從喜好項目移除（.）"
-          }
-        }
-      }
-    },
-    "Restore": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "復原"
-          }
-        }
-      }
-    },
-    "Restore All": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "全部復原"
-          }
-        }
-      }
-    },
-    "Rotate": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "旋轉"
-          }
-        }
-      }
-    },
-    "Rotate Left": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "向左旋轉"
-          }
-        }
-      }
-    },
-    "Rotate Right": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "向右旋轉"
-          }
-        }
-      }
-    },
-    "Save": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "儲存"
-          }
-        }
-      }
-    },
-    "Search": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "搜尋"
-          }
-        }
-      }
-    },
-    "Search for a place": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "搜尋地點"
-          }
-        }
-      }
-    },
-    "Select": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "選擇"
-          }
-        }
-      }
-    },
-    "Select Items": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "選擇項目"
-          }
-        }
-      }
-    },
-    "Server": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "伺服器"
-          }
-        }
-      }
-    },
-    "Server URL": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "伺服器網址"
-          }
-        }
-      }
-    },
-    "Server stopped": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "伺服器已停止"
-          }
-        }
-      }
-    },
-    "Servers": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "伺服器"
-          }
-        }
-      }
-    },
-    "Set Location": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "設定位置"
-          }
-        }
-      }
-    },
-    "Set Location…": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "設定位置…"
-          }
-        }
-      }
-    },
-    "Settings": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "設定"
-          }
-        }
-      }
-    },
-    "Shared": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "共享"
-          }
-        }
-      }
-    },
-    "Share…": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "分享…"
-          }
-        }
-      }
-    },
-    "Show Their Photos": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "顯示這個人的照片"
-          }
-        }
-      }
-    },
-    "Show Whole Photos": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "顯示完整比例"
-          }
-        }
-      }
-    },
-    "Show in Finder": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "在 Finder 中顯示"
-          }
-        }
-      }
-    },
-    "Something answered at %@, but it isn’t an Immich server. Check the port.": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ 有回應，但不是 Immich 伺服器。請檢查連接埠。"
-          }
-        }
-      }
-    },
-    "Sort": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "排序"
-          }
-        }
-      }
-    },
-    "Spacing": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "間距"
-          }
-        }
-      }
-    },
-    "Start": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "啟動"
-          }
-        }
-      }
-    },
-    "Start Automatically": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "自動啟動"
-          }
-        }
-      }
-    },
-    "Start Muted": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "開始時靜音"
-          }
-        }
-      }
-    },
-    "Start Now": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "立即啟動"
-          }
-        }
-      }
-    },
-    "Start Server": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "啟動伺服器"
-          }
-        }
-      }
-    },
-    "Start and Stop Commands…": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "啟動與停止指令…"
-          }
-        }
-      }
-    },
-    "Starting the server…": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "正在啟動伺服器…"
-          }
-        }
-      }
-    },
-    "Starts the server when Immich Viewer opens or switches to it, if it isn’t running. Stops it at quit only if Immich Viewer started it.": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "打開 Immich Viewer 或切換到這台伺服器時，如果它沒有在執行就啟動它。結束時只停止由 Immich Viewer 啟動的伺服器。"
-          }
-        }
-      }
-    },
-    "Stop": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "停止"
-          }
-        }
-      }
-    },
-    "Stop Now": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "立即停止"
-          }
-        }
-      }
-    },
-    "Stop Server": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "停止伺服器"
-          }
-        }
-      }
-    },
-    "Stop When Quitting": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "結束時停止"
-          }
-        }
-      }
-    },
-    "Stopping the server…": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "正在停止伺服器…"
-          }
-        }
-      }
-    },
-    "Storage": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "儲存空間"
-          }
-        }
-      }
-    },
-    "Sync failed: %@": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "同步失敗：%@"
-          }
-        }
-      }
-    },
-    "Syncing the list…": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "正在同步清單…"
-          }
-        }
-      }
-    },
-    "System": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "跟隨系統"
-          }
-        }
-      }
-    },
-    "Tag": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "標籤"
-          }
-        }
-      }
-    },
-    "Tags": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "標籤"
-          }
-        }
-      }
-    },
-    "Tap a server to switch to it. Swipe left on one to change its API key or remove it.": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "點一下伺服器即可切換。在伺服器上向左滑動，可以更改 API 金鑰或移除。"
-          }
-        }
-      }
-    },
-    "That isn’t a server address.": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "這不是伺服器位址。"
-          }
-        }
-      }
-    },
-    "The command failed (exit code %d)": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "指令執行失敗（結束代碼 %d）"
-          }
-        }
-      }
-    },
-    "The person you choose becomes %@: their photos move over and they are gone. This can’t be undone.": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "你選的人物會併入「%@」：他們的照片會移過來，原本的人物會消失。此動作無法還原。"
-          }
-        }
-      }
-    },
-    "The photos in it stay in your library.": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "裡面的照片會留在圖庫中。"
-          }
-        }
-      }
-    },
-    "The photos with it stay in your library.": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "有這個標籤的照片會保留在圖庫中。"
-          }
-        }
-      }
-    },
-    "The server didn’t accept this API key.": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "伺服器不接受這組 API 金鑰。"
-          }
-        }
-      }
-    },
-    "The server didn’t answer within 3 minutes": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "伺服器在 3 分鐘內沒有回應"
-          }
-        }
-      }
-    },
-    "The server’s trash is turned off, so they are deleted for good.": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "伺服器的垃圾桶已關閉，所以會永久刪除。"
-          }
-        }
-      }
-    },
-    "They go to the server’s trash, which keeps them for 30 days unless the server is set otherwise.": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "照片會移到伺服器的垃圾桶，除非伺服器另有設定，否則會保留 30 天。"
-          }
-        }
-      }
-    },
-    "They go to the server’s trash, which keeps them for 30 days unless the server is set otherwise. ⌘Z puts them back.": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "照片會移到伺服器的垃圾桶，除非伺服器另有設定，否則保留 30 天。按 ⌘Z 可以復原。"
-          }
-        }
-      }
-    },
-    "This can’t be undone.": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "此動作無法還原。"
-          }
-        }
-      }
-    },
-    "This is the first photo’s date. All %lld photos move by the same amount.": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "這是第一張照片的日期。%lld 張照片都會移動相同的時間。"
-          }
-        }
-      }
-    },
-    "Thumbnails": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "縮圖"
-          }
-        }
-      }
-    },
-    "Thumbnails are kept on this Mac, so scrolling doesn’t wait on the server. After clearing, photos download again when they are shown; Refresh (⌘R) gets them all back at once.": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "縮圖存在這台 Mac 上，捲動時不必向伺服器要。清除後，照片會在下次顯示時重新下載；重新整理（⌘R）會一次全部補回。"
-          }
-        }
-      }
-    },
-    "Thumbnails are kept on this device, so scrolling doesn’t wait on the server. After clearing, photos download again when they are shown.": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "縮圖會保存在這部裝置上，捲動時不必等待伺服器。清除後，照片會在顯示時重新下載。"
-          }
-        }
-      }
-    },
-    "Trash": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "垃圾桶"
-          }
-        }
-      }
-    },
-    "Trips/Japan": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "旅行/日本"
-          }
-        }
-      }
-    },
-    "Unarchive": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "取消封存"
-          }
-        }
-      }
-    },
-    "Unfavorite": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "取消喜好"
-          }
-        }
-      }
-    },
-    "Unmute": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "取消靜音"
-          }
-        }
-      }
-    },
-    "Unnamed": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "未命名"
-          }
-        }
-      }
-    },
-    "Updates": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "更新"
-          }
-        }
-      }
-    },
-    "Upload": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "上傳"
-          }
-        }
-      }
-    },
-    "Uploading %lld of %lld": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "new",
-            "value": "Uploading %1$lld of %2$lld"
+    "Downloading thumbnails %lld of %lld, %lld failed" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Downloading thumbnails %1$lld of %2$lld, %3$lld failed"
           }
         },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "正在上傳第 %lld 個，共 %lld 個"
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在下載縮圖 %1$lld / %2$lld，%3$lld 張失敗"
           }
         }
       }
     },
-    "Use": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "使用"
+    "Each server keeps its own API key, list and thumbnails. Double-click one to switch to it." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每台伺服器各自保存 API 金鑰、照片清單和縮圖。點兩下即可切換。"
           }
         }
       }
     },
-    "Version": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "版本"
+    "Edit Album" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "編輯相簿"
           }
         }
       }
     },
-    "Video": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "影片"
+    "Edit Album…" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "編輯相簿…"
           }
         }
       }
     },
-    "Videos": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "影片"
+    "Edit Description" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "編輯說明"
           }
         }
       }
     },
-    "Waiting for the server…": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "正在等待伺服器…"
+    "Edit Person" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "編輯人物"
           }
         }
       }
     },
-    "Who is this?": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "這是誰？"
+    "Edit Person…" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "編輯人物…"
           }
         }
       }
     },
-    "Zoom In": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "放大"
+    "Empty the Trash?" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要清空垃圾桶嗎？"
           }
         }
       }
     },
-    "Zoom In (⌘+)": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "放大（⌘＋）"
+    "Empty Trash" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "清空垃圾桶"
           }
         }
       }
     },
-    "Zoom Out": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "縮小"
+    "Empty Trash…" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "清空垃圾桶…"
           }
         }
       }
     },
-    "Zoom Out (⌘−)": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "縮小（⌘−）"
+    "Faces" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "人物頭像"
           }
         }
       }
     },
-    "place.separator": {
-      "comment": "Between city, state and country",
-      "extractionState": "extracted_with_value",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "new",
-            "value": ", "
+    "Favorite" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "喜好"
+          }
+        }
+      }
+    },
+    "Favorites" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "喜好"
+          }
+        }
+      }
+    },
+    "Filter" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "篩選"
+          }
+        }
+      }
+    },
+    "General" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一般"
+          }
+        }
+      }
+    },
+    "Go" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "跳轉"
+          }
+        }
+      }
+    },
+    "Go to Bottom" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "跳到最下方"
+          }
+        }
+      }
+    },
+    "Go to Date" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "跳到日期"
+          }
+        }
+      }
+    },
+    "Go to Date…" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "跳到日期…"
+          }
+        }
+      }
+    },
+    "Go to Top" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "跳到最上方"
+          }
+        }
+      }
+    },
+    "Group By" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "分組方式"
+          }
+        }
+      }
+    },
+    "Has Birthday" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已設定生日"
+          }
+        }
+      }
+    },
+    "Heat Map" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "熱力圖"
+          }
+        }
+      }
+    },
+    "Hide Person" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "隱藏人物"
+          }
+        }
+      }
+    },
+    "Hour" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "時"
+          }
+        }
+      }
+    },
+    "Import…" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "輸入…"
+          }
+        }
+      }
+    },
+    "In the Immich web UI, open Account Settings > API Keys and create a key with asset.read, asset.view, person.read and album.read. To make changes and share originals too, give it all permissions. The key is kept in the keychain." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在 Immich 網頁的「帳號設定 > API 金鑰」建立新金鑰，權限勾選 asset.read、asset.view、person.read 和 album.read。若也要修改內容或分享原始檔，請勾選全部權限。金鑰存在鑰匙圈裡。"
+          }
+        }
+      }
+    },
+    "In the Immich web UI, open Account Settings > API Keys and create a new key with asset.read, asset.view, person.read and album.read. To copy or drag out originals, also add asset.download (without it, the large preview is used). The key is kept in the keychain." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在 Immich 網頁的「帳號設定 > API 金鑰」建立新金鑰，權限勾選 asset.read、asset.view、person.read 和 album.read。想拷貝或拖出原始檔，再加 asset.download（沒有就用大預覽圖）。金鑰存在鑰匙圈裡。"
+          }
+        }
+      }
+    },
+    "Info" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "資訊"
+          }
+        }
+      }
+    },
+    "Info (⌘I)" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "資訊（⌘I）"
+          }
+        }
+      }
+    },
+    "Item Count" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "照片數量"
+          }
+        }
+      }
+    },
+    "Items" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "項目"
+          }
+        }
+      }
+    },
+    "Items per Day" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每日項目數"
+          }
+        }
+      }
+    },
+    "Items per Month" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每月項目數"
+          }
+        }
+      }
+    },
+    "Its API key, list and thumbnails are deleted from this device. Photos on the server are not affected." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "它的 API 金鑰、清單和縮圖會從這台裝置刪除，伺服器上的照片不受影響。"
+          }
+        }
+      }
+    },
+    "Its API key, list and thumbnails are deleted from this Mac. Photos on the server are not affected." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "會從這台 Mac 刪除它的 API 金鑰、照片清單和縮圖。伺服器上的照片不受影響。"
+          }
+        }
+      }
+    },
+    "Kind" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "類型"
+          }
+        }
+      }
+    },
+    "Less" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "較少"
+          }
+        }
+      }
+    },
+    "Library" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "圖庫"
+          }
+        }
+      }
+    },
+    "Light" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "淺色"
+          }
+        }
+      }
+    },
+    "LIVE" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "原況"
+          }
+        }
+      }
+    },
+    "Live Photos" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "原況照片"
+          }
+        }
+      }
+    },
+    "Loading…" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "載入中…"
+          }
+        }
+      }
+    },
+    "Loop" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重複播放"
+          }
+        }
+      }
+    },
+    "Make Album Cover" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "設為相簿封面"
+          }
+        }
+      }
+    },
+    "Make Profile Photo" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "設為人物照片"
+          }
+        }
+      }
+    },
+    "Mark Videos (▶)" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "標示影片（▶）"
+          }
+        }
+      }
+    },
+    "Merge People" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "合併人物"
+          }
+        }
+      }
+    },
+    "Merge With…" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "與…合併"
+          }
+        }
+      }
+    },
+    "Mine" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "我的"
+          }
+        }
+      }
+    },
+    "Month" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "月"
+          }
+        }
+      }
+    },
+    "Months" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "依月"
+          }
+        }
+      }
+    },
+    "More" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更多"
+          }
+        }
+      }
+    },
+    "Mute" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "靜音"
+          }
+        }
+      }
+    },
+    "Name" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "名稱"
+          }
+        }
+      }
+    },
+    "Name, A to Z" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "名稱（A→Z）"
+          }
+        }
+      }
+    },
+    "Name, Z to A" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "名稱（Z→A）"
+          }
+        }
+      }
+    },
+    "Named" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已命名"
+          }
+        }
+      }
+    },
+    "New Album" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新增相簿"
+          }
+        }
+      }
+    },
+    "New Album…" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新增相簿…"
+          }
+        }
+      }
+    },
+    "Newest First" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最新的在上"
+          }
+        }
+      }
+    },
+    "No Albums" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "沒有相簿"
+          }
+        }
+      }
+    },
+    "No Matches" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "沒有符合的項目"
+          }
+        }
+      }
+    },
+    "No People" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "沒有人物"
+          }
+        }
+      }
+    },
+    "No Photos" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "沒有照片"
+          }
+        }
+      }
+    },
+    "No place found." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "找不到這個地點。"
+          }
+        }
+      }
+    },
+    "No Tags" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "沒有標籤"
+          }
+        }
+      }
+    },
+    "None" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無"
+          }
+        }
+      }
+    },
+    "OK" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "好"
+          }
+        }
+      }
+    },
+    "Oldest First" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最舊的在上"
+          }
+        }
+      }
+    },
+    "On this Mac: http://localhost:2283. On another computer in your network: its address and port, for example http://192.168.1.20:2283 or http://nas.local:2283. From outside your network: the https address of your reverse proxy, or the server’s Tailscale address." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "伺服器在這台 Mac 上：http://localhost:2283。在同一個網路的其他電腦上：填入那台電腦的位址和連接埠，例如 http://192.168.1.20:2283 或 http://nas.local:2283。從外部網路連線：填入反向代理的 https 位址，或伺服器的 Tailscale 位址。"
+          }
+        }
+      }
+    },
+    "Open in Browser" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在瀏覽器開啟"
+          }
+        }
+      }
+    },
+    "Open in Browser (Edit, Delete)" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在瀏覽器開啟（編輯、刪除）"
+          }
+        }
+      }
+    },
+    "Open in Maps" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在「地圖」中開啟"
+          }
+        }
+      }
+    },
+    "Original" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "原本"
+          }
+        }
+      }
+    },
+    "Pause" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "暫停"
+          }
+        }
+      }
+    },
+    "People" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "人物"
+          }
+        }
+      }
+    },
+    "Photo Grid" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "照片網格"
+          }
+        }
+      }
+    },
+    "Photos" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "照片"
+          }
+        }
+      }
+    },
+    "Photos on the server are not affected." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "伺服器上的照片不受影響。"
+          }
+        }
+      }
+    },
+    "place.separator" : {
+      "comment" : "Between city, state and country",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : ", "
           }
         },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "，"
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "，"
           }
         }
       }
     },
-    "Loading…": {
-      "localizations": {
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "載入中…"
+    "Play" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "播放"
+          }
+        }
+      }
+    },
+    "Play Automatically" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打開時自動播放"
+          }
+        }
+      }
+    },
+    "Rate" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "評分"
+          }
+        }
+      }
+    },
+    "Recent" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最近"
+          }
+        }
+      }
+    },
+    "Refresh" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重新整理"
+          }
+        }
+      }
+    },
+    "Remove" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "移除"
+          }
+        }
+      }
+    },
+    "Remove %@?" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要移除 %@ 嗎？"
+          }
+        }
+      }
+    },
+    "Remove from Album" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "從相簿移除"
+          }
+        }
+      }
+    },
+    "Remove from Favorites" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "從喜好項目移除"
+          }
+        }
+      }
+    },
+    "Remove from Favorites (.)" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "從喜好項目移除（.）"
+          }
+        }
+      }
+    },
+    "Remove Server" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "移除伺服器"
+          }
+        }
+      }
+    },
+    "Remove Tag" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "移除標籤"
+          }
+        }
+      }
+    },
+    "Restore" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "復原"
+          }
+        }
+      }
+    },
+    "Restore All" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "全部復原"
+          }
+        }
+      }
+    },
+    "Rotate" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "旋轉"
+          }
+        }
+      }
+    },
+    "Rotate Left" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "向左旋轉"
+          }
+        }
+      }
+    },
+    "Rotate Right" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "向右旋轉"
+          }
+        }
+      }
+    },
+    "Save" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "儲存"
+          }
+        }
+      }
+    },
+    "Save to Photos" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "儲存到照片"
+          }
+        }
+      }
+    },
+    "Scale" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "單位"
+          }
+        }
+      }
+    },
+    "Search" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "搜尋"
+          }
+        }
+      }
+    },
+    "Search for a place" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "搜尋地點"
+          }
+        }
+      }
+    },
+    "Select" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選擇"
+          }
+        }
+      }
+    },
+    "Select Items" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選擇項目"
+          }
+        }
+      }
+    },
+    "Server" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "伺服器"
+          }
+        }
+      }
+    },
+    "Server stopped" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "伺服器已停止"
+          }
+        }
+      }
+    },
+    "Server URL" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "伺服器網址"
+          }
+        }
+      }
+    },
+    "Servers" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "伺服器"
+          }
+        }
+      }
+    },
+    "Set Location" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "設定位置"
+          }
+        }
+      }
+    },
+    "Set Location…" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "設定位置…"
+          }
+        }
+      }
+    },
+    "Settings" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "設定"
+          }
+        }
+      }
+    },
+    "Share…" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "分享…"
+          }
+        }
+      }
+    },
+    "Shared" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "共享"
+          }
+        }
+      }
+    },
+    "Show in Finder" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在 Finder 中顯示"
+          }
+        }
+      }
+    },
+    "Show Their Photos" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "顯示這個人的照片"
+          }
+        }
+      }
+    },
+    "Show Whole Photos" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "顯示完整比例"
+          }
+        }
+      }
+    },
+    "Since" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最早"
+          }
+        }
+      }
+    },
+    "Something answered at %@, but it isn’t an Immich server. Check the port." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 有回應，但不是 Immich 伺服器。請檢查連接埠。"
+          }
+        }
+      }
+    },
+    "Sort" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "排序"
+          }
+        }
+      }
+    },
+    "Spacing" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "間距"
+          }
+        }
+      }
+    },
+    "Start" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "啟動"
+          }
+        }
+      }
+    },
+    "Start and Stop Commands…" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "啟動與停止指令…"
+          }
+        }
+      }
+    },
+    "Start Automatically" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自動啟動"
+          }
+        }
+      }
+    },
+    "Start Muted" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "開始時靜音"
+          }
+        }
+      }
+    },
+    "Start Now" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "立即啟動"
+          }
+        }
+      }
+    },
+    "Start Server" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "啟動伺服器"
+          }
+        }
+      }
+    },
+    "Starting the server…" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在啟動伺服器…"
+          }
+        }
+      }
+    },
+    "Starts the server when Immich Viewer opens or switches to it, if it isn’t running. Stops it at quit only if Immich Viewer started it." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打開 Immich Viewer 或切換到這台伺服器時，如果它沒有在執行就啟動它。結束時只停止由 Immich Viewer 啟動的伺服器。"
+          }
+        }
+      }
+    },
+    "Statistics" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "統計"
+          }
+        }
+      }
+    },
+    "Stop" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "停止"
+          }
+        }
+      }
+    },
+    "Stop Now" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "立即停止"
+          }
+        }
+      }
+    },
+    "Stop Server" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "停止伺服器"
+          }
+        }
+      }
+    },
+    "Stop When Quitting" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "結束時停止"
+          }
+        }
+      }
+    },
+    "Stopping the server…" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在停止伺服器…"
+          }
+        }
+      }
+    },
+    "Storage" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "儲存空間"
+          }
+        }
+      }
+    },
+    "Sync failed: %@" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "同步失敗：%@"
+          }
+        }
+      }
+    },
+    "Syncing the list…" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在同步清單…"
+          }
+        }
+      }
+    },
+    "System" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "跟隨系統"
+          }
+        }
+      }
+    },
+    "Tag" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "標籤"
+          }
+        }
+      }
+    },
+    "Tags" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "標籤"
+          }
+        }
+      }
+    },
+    "Tap a server to switch to it. Swipe left on one to change its API key or remove it." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "點一下伺服器即可切換。在伺服器上向左滑動，可以更改 API 金鑰或移除。"
+          }
+        }
+      }
+    },
+    "That isn’t a server address." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這不是伺服器位址。"
+          }
+        }
+      }
+    },
+    "The command failed (exit code %d)" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "指令執行失敗（結束代碼 %d）"
+          }
+        }
+      }
+    },
+    "The key needs the person.read and album.read permissions." : {
+
+    },
+    "The person you choose becomes %@: their photos move over and they are gone. This can’t be undone." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你選的人物會併入「%@」：他們的照片會移過來，原本的人物會消失。此動作無法還原。"
+          }
+        }
+      }
+    },
+    "The photos in it stay in your library." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "裡面的照片會留在圖庫中。"
+          }
+        }
+      }
+    },
+    "The photos with it stay in your library." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "有這個標籤的照片會保留在圖庫中。"
+          }
+        }
+      }
+    },
+    "The server didn’t accept this API key." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "伺服器不接受這組 API 金鑰。"
+          }
+        }
+      }
+    },
+    "The server didn’t answer within 3 minutes" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "伺服器在 3 分鐘內沒有回應"
+          }
+        }
+      }
+    },
+    "The server’s trash is turned off, so they are deleted for good." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "伺服器的垃圾桶已關閉，所以會永久刪除。"
+          }
+        }
+      }
+    },
+    "They go to the server’s trash, which keeps them for 30 days unless the server is set otherwise." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "照片會移到伺服器的垃圾桶，除非伺服器另有設定，否則會保留 30 天。"
+          }
+        }
+      }
+    },
+    "They go to the server’s trash, which keeps them for 30 days unless the server is set otherwise. ⌘Z puts them back." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "照片會移到伺服器的垃圾桶，除非伺服器另有設定，否則保留 30 天。按 ⌘Z 可以復原。"
+          }
+        }
+      }
+    },
+    "This can’t be undone." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此動作無法還原。"
+          }
+        }
+      }
+    },
+    "This is the first photo’s date. All %lld photos move by the same amount." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這是第一張照片的日期。%lld 張照片都會移動相同的時間。"
+          }
+        }
+      }
+    },
+    "Thumbnails" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "縮圖"
+          }
+        }
+      }
+    },
+    "Thumbnails are kept on this device, so scrolling doesn’t wait on the server. After clearing, photos download again when they are shown." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "縮圖會保存在這部裝置上，捲動時不必等待伺服器。清除後，照片會在顯示時重新下載。"
+          }
+        }
+      }
+    },
+    "Thumbnails are kept on this Mac, so scrolling doesn’t wait on the server. After clearing, photos download again when they are shown; Refresh (⌘R) gets them all back at once." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "縮圖存在這台 Mac 上，捲動時不必向伺服器要。清除後，照片會在下次顯示時重新下載；重新整理（⌘R）會一次全部補回。"
+          }
+        }
+      }
+    },
+    "Trash" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "垃圾桶"
+          }
+        }
+      }
+    },
+    "Trips/Japan" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "旅行/日本"
+          }
+        }
+      }
+    },
+    "Unarchive" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "取消封存"
+          }
+        }
+      }
+    },
+    "Unfavorite" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "取消喜好"
+          }
+        }
+      }
+    },
+    "Unmute" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "取消靜音"
+          }
+        }
+      }
+    },
+    "Unnamed" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未命名"
+          }
+        }
+      }
+    },
+    "Updates" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更新"
+          }
+        }
+      }
+    },
+    "Upload" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "上傳"
+          }
+        }
+      }
+    },
+    "Uploading %lld of %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Uploading %1$lld of %2$lld"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在上傳第 %lld 個，共 %lld 個"
+          }
+        }
+      }
+    },
+    "Use" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使用"
+          }
+        }
+      }
+    },
+    "Utilities" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "工具程式"
+          }
+        }
+      }
+    },
+    "Version" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "版本"
+          }
+        }
+      }
+    },
+    "Video" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "影片"
+          }
+        }
+      }
+    },
+    "Videos" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "影片"
+          }
+        }
+      }
+    },
+    "Waiting for the server…" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在等待伺服器…"
+          }
+        }
+      }
+    },
+    "Week" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "週"
+          }
+        }
+      }
+    },
+    "Weekday" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "星期"
+          }
+        }
+      }
+    },
+    "Who is this?" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這是誰？"
+          }
+        }
+      }
+    },
+    "Year" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "年份"
+          }
+        }
+      }
+    },
+    "Zoom In" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "放大"
+          }
+        }
+      }
+    },
+    "Zoom In (⌘+)" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "放大（⌘＋）"
+          }
+        }
+      }
+    },
+    "Zoom Out" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "縮小"
+          }
+        }
+      }
+    },
+    "Zoom Out (⌘−)" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "縮小（⌘−）"
           }
         }
       }
     }
   },
-  "version": "1.0"
+  "version" : "1.0"
 }

@@ -54,6 +54,10 @@ struct PhoneSettings: View {
                 .listRowInsets(EdgeInsets())
             }
 
+            SwiftUI.Section {
+                NavigationLink { StatisticsView() } label: { Label("Statistics", systemImage: "chart.bar") }
+            }
+
             SwiftUI.Section("Video") {
                 Toggle("Play Automatically", isOn: $autoplay)
                 Toggle("Start Muted", isOn: $muted)
@@ -77,6 +81,7 @@ struct PhoneSettings: View {
                 }
             }
         }
+        .readableWidth()
         .pageBar()
         .navigationTitle("Settings")
         .task { await measure() }
@@ -145,6 +150,7 @@ struct PhoneConnectForm: View {
                 Text(error).foregroundStyle(.red)
             }
         }
+        .readableWidth()
         .navigationTitle(changingKey ? "Change Key" : "Connect to Immich")
         .toolbar {
             if let done {
@@ -170,6 +176,36 @@ struct PhoneConnectForm: View {
             }
         }
         .onAppear { server = address ?? (library.servers.isEmpty ? "" : library.serverURL) }
+    }
+}
+extension View {
+    /// Keeps a form's rows from stretching across a wide screen (iPad), like Settings there.
+    func readableWidth() -> some View { modifier(ReadableWidth()) }
+}
+
+private struct ReadableWidth: ViewModifier {
+    /// Only on a screen wider than the form: a margin set at all replaces the form's own inset, which would leave a
+    /// phone's rows running edge to edge.
+    @State private var margins: EdgeInsets?
+
+    func body(content: Content) -> some View {
+        Group {
+            if let margins {
+                content
+                    .contentMargins(.leading, margins.leading, for: .scrollContent)
+                    .contentMargins(.trailing, margins.trailing, for: .scrollContent)
+                    // a large title stays at the left edge, away from the centred rows: centre it above them instead
+                    .navigationBarTitleDisplayMode(.inline)
+            } else {
+                content
+            }
+        }
+        // centred in the width beside a sidebar, which floats over the content
+        .onGeometryChange(for: EdgeInsets?.self) { proxy in
+            let safe = proxy.safeAreaInsets
+            let extra = (proxy.size.width - safe.leading - safe.trailing - 720) / 2
+            return extra > 20 ? EdgeInsets(top: 0, leading: safe.leading + extra, bottom: 0, trailing: safe.trailing + extra) : nil
+        } action: { margins = $0 }
     }
 }
 #endif

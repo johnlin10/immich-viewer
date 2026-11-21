@@ -1,5 +1,9 @@
 import MapKit
 import SwiftUI
+#if os(iOS)
+import Photos
+import UniformTypeIdentifiers
+#endif
 
 /// Which photos a grid shows, for the actions that only make sense there.
 enum BrowserContext: Hashable {
@@ -122,9 +126,9 @@ final class PhotoEditor {
         case .restore: Task { await library.restore(ids, undo: undo) }
         case .download:
             #if os(iOS)
-            Task { share(await library.download(ids)) }
+            Task { share(await library.download(assets)) }
             #else
-            Task { await library.download(ids) }
+            Task { await library.download(assets) }
             #endif
         case .addTag: sheet = .tag(ids)
         case .removeTag:
@@ -299,12 +303,62 @@ func share(_ files: [URL]) {
           let scene = UIApplication.shared.connectedScenes.first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene,
           var top = scene.keyWindow?.rootViewController else { return }
     while let next = top.presentedViewController, !next.isBeingDismissed { top = next }
-    let sheet = UIActivityViewController(activityItems: files, applicationActivities: nil)
+    let pairs = livePairs(files)
+    let sheet = UIActivityViewController(activityItems: files, applicationActivities: pairs.isEmpty ? nil : [SaveToPhotos(files)])
+    if !pairs.isEmpty { sheet.excludedActivityTypes = [.saveToCameraRoll] } // it would save a Live Photo as two items
     sheet.popoverPresentationController?.sourceView = top.view // iPad: from the middle
     sheet.popoverPresentationController?.sourceRect = CGRect(x: top.view.bounds.midX, y: top.view.bounds.midY, width: 0, height: 0)
     sheet.popoverPresentationController?.permittedArrowDirections = []
     sheet.completionWithItemsHandler = { _, _, _, _ in try? FileManager.default.removeItem(at: first.deletingLastPathComponent()) }
     top.present(sheet, animated: true)
+}
+
+/// Stills that have a video of the same name beside them (a Live Photo, as `Library.download` saves one), with that video.
+private func livePairs(_ files: [URL]) -> [URL: URL] {
+    let videos = Dictionary(files.filter { UTType(filenameExtension: $0.pathExtension)?.conforms(to: .movie) == true }
+        .map { ($0.deletingPathExtension(), $0) }, uniquingKeysWith: { a, _ in a })
+    var pairs: [URL: URL] = [:]
+    for file in files where UTType(filenameExtension: file.pathExtension)?.conforms(to: .image) == true {
+        pairs[file] = videos[file.deletingPathExtension()]
+    }
+    return pairs
+}
+
+/// Save to Photos that keeps a Live Photo live, in place of the built-in one, which saves its still and video apart.
+private final class SaveToPhotos: UIActivity {
+    let files: [URL]
+    init(_ files: [URL]) { self.files = files }
+    override class var activityCategory: UIActivity.Category { .action }
+    override var activityType: UIActivity.ActivityType? { .init("ImmichViewer.SaveToPhotos") }
+    override var activityTitle: String? { String(localized: "Save to Photos") }
+    override var activityImage: UIImage? { UIImage(systemName: "square.and.arrow.down") }
+    override func canPerform(withActivityItems activityItems: [Any]) -> Bool { true }
+
+    override func perform() {
+        let files = files
+        Task {
+            guard await PHPhotoLibrary.requestAuthorization(for: .addOnly) == .authorized else { return activityDidFinish(false) }
+            do {
+                try await Self.save(files, live: true)
+            } catch { // a video the still doesn't recognize as its own (some motion photos): save them apart
+                try? await Self.save(files, live: false)
+            }
+            activityDidFinish(true)
+        }
+    }
+
+    private static func save(_ files: [URL], live: Bool) async throws {
+        let pairs = live ? livePairs(files) : [:]
+        let paired = Set(pairs.values)
+        try await PHPhotoLibrary.shared().performChanges {
+            for file in files where !paired.contains(file) {
+                let request = PHAssetCreationRequest.forAsset()
+                let isImage = UTType(filenameExtension: file.pathExtension)?.conforms(to: .image) == true
+                request.addResource(with: isImage ? .photo : .video, fileURL: file, options: nil)
+                if let video = pairs[file] { request.addResource(with: .pairedVideo, fileURL: video, options: nil) }
+            }
+        }
+    }
 }
 #endif
 

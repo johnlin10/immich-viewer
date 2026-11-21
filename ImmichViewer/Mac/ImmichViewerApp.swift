@@ -115,6 +115,9 @@ struct ServerCommands: Commands {
     let library: Library
     @AppStorage("settingsTab") private var tab = "general"
     @Environment(\.openSettings) private var openSettings
+    // the sidebar's sections, open or closed as last left
+    @AppStorage("sidebarAlbums") private var albumsShown = true
+    @AppStorage("sidebarUtilities") private var utilitiesShown = true
 
     var body: some Commands {
         CommandMenu("Server") {
@@ -162,11 +165,15 @@ private struct StartStopItems: View {
 
 /// The sidebar's pages.
 enum Page: Hashable {
-    case library, people, albums, tags, archive, trash
+    case library, collections, albums, album(String), archive, trash
 }
 
 struct ContentView: View {
     @Environment(Library.self) private var library
+    @Environment(\.openSettings) private var openSettings
+    // the sidebar's sections, open or closed as last left
+    @AppStorage("sidebarAlbums") private var albumsShown = true
+    @AppStorage("sidebarUtilities") private var utilitiesShown = true
     @State private var page: Page? = .library
     /// What's open on top of each page; back returns to where you were.
     @State private var paths: [Page: NavigationPath] = [:]
@@ -178,28 +185,12 @@ struct ContentView: View {
                 ConnectionForm().padding(20).frame(width: 440)
             } else {
                 NavigationSplitView {
-                    List(selection: $page) {
-                        Label("Library", systemImage: "photo.on.rectangle").tag(Page.library)
-                        Label("People", systemImage: "person.crop.circle").tag(Page.people)
-                        Label("Albums", systemImage: "rectangle.stack").tag(Page.albums)
-                        Label("Tags", systemImage: "tag").tag(Page.tags)
-                        Label("Archive", systemImage: "archivebox").tag(Page.archive)
-                        Label("Trash", systemImage: "trash").tag(Page.trash)
-                    }
+                    sidebar
                     .navigationSplitViewColumnWidth(min: 150, ideal: 180, max: 260)
                 } detail: {
                     let current = page ?? .library
                     NavigationStack(path: Binding { paths[current] ?? NavigationPath() } set: { paths[current] = $0 }) {
-                        root(current)
-                            .navigationDestination(for: Person.self) {
-                                CollectionTimeline(context: .person($0.id), fallbackTitle: $0.name)
-                            }
-                            .navigationDestination(for: Album.self) {
-                                CollectionTimeline(context: .album($0.id), fallbackTitle: $0.albumName)
-                            }
-                            .navigationDestination(for: Tag.self) {
-                                CollectionTimeline(context: .tag($0.id), fallbackTitle: $0.value)
-                            }
+                        root(current).collectionDestinations()
                     }
                     .id(current) // each page its own stack
                     .environment(\.showPerson) { paths[current, default: NavigationPath()].append($0) }
@@ -219,14 +210,33 @@ struct ContentView: View {
         .onChange(of: appearance, initial: true) { applyAppearance(appearance) }
     }
 
+    /// Like iPad: Library and Collections, then every album and the utilities.
+    private var sidebar: some View {
+        List(selection: $page) {
+            Label("Library", systemImage: "photo.on.rectangle").tag(Page.library)
+            Label("Collections", systemImage: "square.stack").tag(Page.collections)
+            SwiftUI.Section("Albums", isExpanded: $albumsShown) {
+                Label("All Albums", systemImage: "rectangle.stack").tag(Page.albums)
+                ForEach(library.albums) { album in
+                    Label(album.albumName, systemImage: "rectangle.stack").tag(Page.album(album.id))
+                }
+            }
+            SwiftUI.Section("Utilities", isExpanded: $utilitiesShown) {
+                Label("Archive", systemImage: "archivebox").tag(Page.archive)
+                Label("Trash", systemImage: "trash").tag(Page.trash)
+            }
+        }
+    }
+
     @ViewBuilder private func root(_ page: Page) -> some View {
         switch page {
         case .library:
             TimelineBrowser(title: String(localized: "Library"), subtitle: library.status, assets: library.assets,
                             revision: library.revision, context: .library)
-        case .people: PeopleGrid()
+        case .collections: CollectionsPage { openSettings() }
         case .albums: AlbumGrid()
-        case .tags: TagList()
+        case .album(let id):
+            CollectionTimeline(context: .album(id), fallbackTitle: library.albums.first { $0.id == id }?.albumName ?? "")
         case .archive: CollectionTimeline(context: .archive, fallbackTitle: String(localized: "Archive"))
         case .trash: CollectionTimeline(context: .trash, fallbackTitle: String(localized: "Trash"))
         }

@@ -1,6 +1,7 @@
 #if os(iOS)
 import SwiftUI
 import UIKit
+import AVFoundation // AVMakeRect
 
 /// The iOS photo grid as a UICollectionView laid out by `GridMath`, like the Mac's NSCollectionView:
 /// only the squares on screen exist, so 100k+ photos scroll and update without stalling.
@@ -72,6 +73,8 @@ final class PhoneGridController: UIViewController, UICollectionViewDataSource, U
     /// The open photo view, which follows the list as it changes.
     private var pager: PagerState?
     private weak var pagerHost: UIViewController?
+    /// The open and close of the photo view; a presented view controller holds its transitioning delegate weakly.
+    private var zoom: PhotoZoom?
 
     init(library: Library) {
         self.library = library
@@ -85,6 +88,7 @@ final class PhoneGridController: UIViewController, UICollectionViewDataSource, U
         collection = UICollectionView(frame: view.bounds, collectionViewLayout: layout)
         collection.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         collection.backgroundColor = .systemBackground
+        collection.contentInsetAdjustmentBehavior = .always // also beside an iPad's sidebar and a phone's notch
         collection.dataSource = self
         collection.delegate = self
         collection.topEdgeEffect.style = .soft // a progressive blur under the title, not the solid backdrop iOS picks here
@@ -257,7 +261,7 @@ final class PhoneGridController: UIViewController, UICollectionViewDataSource, U
     }
 
     /// Scrolls `index` into view if it isn't, so closing the photo view has a square to shrink into.
-    private func reveal(_ index: Int) -> UIView? {
+    fileprivate func reveal(_ index: Int) -> UIView? {
         guard let frame = frame(of: index) else { return nil }
         let visible = collection.bounds.inset(by: collection.adjustedContentInset)
         if !visible.contains(frame) {
@@ -377,7 +381,8 @@ final class PhoneGridController: UIViewController, UICollectionViewDataSource, U
         }
     }
 
-    private static let columnRange = 2...8
+    /// Up to 8 on a phone; a wider screen (iPad) allows more, down to tiles about 90 points across.
+    private var columnRange: ClosedRange<Int> { 2...max(8, Int(view.bounds.width / 90)) }
 
     /// Like the Mac's (and Photos'): the fingers drive the zoom. The grid grows or shrinks around them and fades into
     /// the next column count, lined up so the same photo sits in the same place; past that count the next one is
@@ -385,7 +390,7 @@ final class PhoneGridController: UIViewController, UICollectionViewDataSource, U
     @objc private func pinched(_ gesture: UIPinchGestureRecognizer) {
         if UIAccessibility.isReduceMotionEnabled { // one step per pinch, no moving pictures
             guard gesture.state == .ended else { return }
-            let next = min(max(layout.columns + (gesture.scale > 1 ? -1 : 1), Self.columnRange.lowerBound), Self.columnRange.upperBound)
+            let next = min(max(layout.columns + (gesture.scale > 1 ? -1 : 1), columnRange.lowerBound), columnRange.upperBound)
             if next != layout.columns { handlers.onColumns(next) }
             return
         }
@@ -396,8 +401,8 @@ final class PhoneGridController: UIViewController, UICollectionViewDataSource, U
             guard var p = pinch else { return }
             if gesture.numberOfTouches >= 2 { p.pointer = gesture.location(in: view) } // one finger up: stay put
             // past the fewest and most columns it only gives a little
-            let low = p.base.columns < Self.columnRange.upperBound ? 0.0 : 0.95
-            let high = p.base.columns > Self.columnRange.lowerBound ? Double.infinity : 1.15
+            let low = p.base.columns < columnRange.upperBound ? 0.0 : 0.95
+            let high = p.base.columns > columnRange.lowerBound ? Double.infinity : 1.15
             p.scale = min(max(p.startSide * gesture.scale / p.base.side, low), high) * p.base.side / p.startSide
             pinch = p
             advance()
@@ -431,9 +436,9 @@ final class PhoneGridController: UIViewController, UICollectionViewDataSource, U
     /// then places the pictures.
     private func advance() {
         guard var p = pinch else { return }
-        for _ in Self.columnRange {
+        for _ in columnRange {
             let to = p.base.columns + (p.side > p.base.side ? -1 : 1)
-            guard p.side != p.base.side, Self.columnRange.contains(to) else { break }
+            guard p.side != p.base.side, columnRange.contains(to) else { break }
             if p.target?.columns != to {
                 p.target?.layer.removeFromSuperlayer()
                 p.target = prepare(to, for: p)
@@ -587,7 +592,7 @@ final class PhoneGridController: UIViewController, UICollectionViewDataSource, U
 
     private func open(_ index: Int) {
         let state = PagerState(position: index, assets: assets)
-        let host = UIHostingController(rootView: AnyView(EmptyView()))
+        let host = PageController(rootView: AnyView(EmptyView()))
         pager = state
         pagerHost = host
         host.rootView = AnyView(
@@ -595,16 +600,244 @@ final class PhoneGridController: UIViewController, UICollectionViewDataSource, U
                       close: { [weak host] in host?.dismiss(animated: true) },
                       onPerson: { [weak self, weak host] person in
                           host?.dismiss(animated: true) { self?.handlers.onPerson(person) }
+                      },
+                      onDark: { [weak state, weak host] in
+                          state?.dark = $0
+                          host?.statusBarHidden = $0
                       })
                 .environment(library))
         // over, not instead of, the grid: off screen SwiftUI stops updating it, and an edit here must reach it
         host.modalPresentationStyle = .overFullScreen
-        host.modalPresentationCapturesStatusBarAppearance = true
-        host.preferredTransition = .zoom { [weak self, weak state] _ in
-            guard let self, let position = state?.position else { return nil }
-            return self.reveal(position)
-        }
+        let zoom = PhotoZoom(grid: self, state: state, page: host)
+        self.zoom = zoom
+        host.transitioningDelegate = zoom
         present(host, animated: true)
+    }
+}
+
+// MARK: Opening and closing a photo
+
+/// Like Photos: only the photo flies between its square in the grid and its place on the screen (cropped to the square
+/// at one end, whole at the other) while the page's background fades in or out behind it. UIKit's zoom transition grows
+/// the whole screen-sized page instead, a frame with a shadow around the photo. A swipe down drags the photo off and
+/// closes it from wherever it's let go, or puts it back.
+/// The photo page. Its hidden bars hide the status bar, through the app's root; closing brings it back.
+private final class PageController: UIHostingController<AnyView> {
+    var statusBarHidden = false { didSet { Immersion.shared.on = statusBarHidden } }
+
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        Immersion.shared.on = false
+    }
+}
+
+private final class PhotoZoom: NSObject, UIViewControllerTransitioningDelegate, UIViewControllerAnimatedTransitioning,
+                               UIGestureRecognizerDelegate {
+    private weak var grid: PhoneGridController?
+    private let state: PagerState
+    private weak var page: UIViewController?
+    /// The photo lifted off the page and the backdrop in its place, while a swipe down drags it or the page closes.
+    private var lifted: (photo: UIImageView, backdrop: UIView, start: CGPoint)?
+
+    init(grid: PhoneGridController, state: PagerState, page: UIViewController) {
+        self.grid = grid
+        self.state = state
+        self.page = page
+        state.flying = true // set before the page first draws; open() clears it
+        super.init()
+        let pan = UIPanGestureRecognizer(target: self, action: #selector(drag(_:)))
+        pan.delegate = self
+        page.view.addGestureRecognizer(pan)
+    }
+
+    func animationController(forPresented presented: UIViewController, presenting: UIViewController,
+                             source: UIViewController) -> (any UIViewControllerAnimatedTransitioning)? { self }
+
+    func animationController(forDismissed dismissed: UIViewController) -> (any UIViewControllerAnimatedTransitioning)? { self }
+
+    func transitionDuration(using context: (any UIViewControllerContextTransitioning)?) -> TimeInterval { 0.4 }
+
+    func animateTransition(using context: any UIViewControllerContextTransitioning) {
+        if let page = context.viewController(forKey: .to), page.isBeingPresented { open(page, context) } else { close(context) }
+    }
+
+    /// The photo's square in the grid, scrolled into view.
+    private func square() -> PhoneCell? { state.position.flatMap { grid?.reveal($0) } as? PhoneCell }
+
+    private func open(_ page: UIViewController, _ context: any UIViewControllerContextTransitioning) {
+        let container = context.containerView
+        page.view.frame = context.finalFrame(for: page)
+        page.view.alpha = 0
+        container.addSubview(page.view)
+        guard let cell = square(), let image = cell.image.image else { // not loaded yet: just fade in
+            state.flying = false
+            UIView.animate(withDuration: 0.25) { page.view.alpha = 1 } completion: { _ in context.completeTransition(true) }
+            return
+        }
+        // the photo flies under the page's bars, which fade in with the background, like in Photos; the page is
+        // see-through and its own photo hidden until it lands
+        page.view.layoutIfNeeded()
+        let opaque = Self.fullScreenBackgrounds(in: page.view) // e.g. the side panel's main column
+        opaque.forEach { $0.view.backgroundColor = .clear }
+        page.view.backgroundColor = .clear
+        let backdrop = Self.backdrop(container, dark: false)
+        backdrop.alpha = 0
+        let photo = Self.photo(image, frame: cell.convert(cell.bounds, to: container))
+        container.insertSubview(backdrop, belowSubview: page.view)
+        container.insertSubview(photo, belowSubview: page.view)
+        cell.isHidden = true
+        UIView.animate(withDuration: 0.25) {
+            page.view.alpha = 1
+            backdrop.alpha = 1
+        }
+        UIView.animate(springDuration: 0.4, bounce: 0.12) {
+            photo.frame = AVMakeRect(aspectRatio: image.size, insideRect: page.view.frame)
+        } completion: { _ in
+            cell.isHidden = false
+            self.state.flying = false // the page's photo, the thumbnail at once, in the same place
+            opaque.forEach { $0.view.backgroundColor = $0.color }
+            DispatchQueue.main.async { // after SwiftUI shows it
+                photo.removeFromSuperview()
+                backdrop.removeFromSuperview()
+                context.completeTransition(true)
+            }
+        }
+    }
+
+    private func close(_ context: any UIViewControllerContextTransitioning) {
+        guard let page = context.viewController(forKey: .from) else { return context.completeTransition(true) }
+        guard let (photo, backdrop, _) = lifted ?? lift(page, into: context.containerView) else {
+            UIView.animate(withDuration: 0.25) { page.view.alpha = 0 } completion: { _ in context.completeTransition(true) }
+            return
+        }
+        lifted = nil
+        let cell = square()
+        let target = cell.map { $0.convert($0.bounds, to: context.containerView) }
+        cell?.isHidden = true
+        UIView.animate(springDuration: 0.4, bounce: 0.08) {
+            if let target { photo.frame = target } else { photo.alpha = 0 }
+            backdrop.alpha = 0
+        } completion: { _ in
+            cell?.isHidden = false
+            photo.removeFromSuperview()
+            backdrop.removeFromSuperview()
+            context.completeTransition(true)
+        }
+    }
+
+    /// The page's views that fill it with a colour, which would hide the photo flying under its bars.
+    private static func fullScreenBackgrounds(in page: UIView) -> [(view: UIView, color: UIColor)] {
+        var found: [(UIView, UIColor)] = []
+        func walk(_ view: UIView) {
+            if let color = view.backgroundColor, color.cgColor.alpha > 0, view.bounds.size == page.bounds.size {
+                found.append((view, color))
+            }
+            view.subviews.forEach(walk)
+        }
+        page.subviews.forEach(walk)
+        return found
+    }
+
+    /// Hides the page behind a copy of its photo, in the same place, on a backdrop of the page's colour.
+    private func lift(_ page: UIViewController, into container: UIView) -> (UIImageView, UIView, CGPoint)? {
+        let frame: CGRect
+        let image: UIImage
+        if let shown = Self.shownImage(in: page.view), let picture = shown.image {
+            image = picture
+            frame = AVMakeRect(aspectRatio: picture.size, insideRect: shown.convert(shown.bounds, to: container))
+        } else if let picture = square()?.image.image { // a video, or still loading: its thumbnail, fitted to the page
+            image = picture
+            frame = AVMakeRect(aspectRatio: picture.size, insideRect: page.view.frame)
+        } else {
+            return nil
+        }
+        let backdrop = Self.backdrop(container, dark: state.dark)
+        let photo = Self.photo(image, frame: frame)
+        container.addSubview(backdrop)
+        container.addSubview(photo)
+        page.view.alpha = 0
+        return (photo, backdrop, photo.center)
+    }
+
+    @objc private func drag(_ pan: UIPanGestureRecognizer) {
+        guard let page, let container = page.view.superview else { return }
+        let moved = pan.translation(in: container)
+        switch pan.state {
+        case .began:
+            lifted = lift(page, into: container)
+        case .changed:
+            guard let (photo, backdrop, start) = lifted else { return }
+            let progress = min(1, max(0, moved.y / (container.bounds.height / 2)))
+            photo.center = CGPoint(x: start.x + moved.x, y: start.y + moved.y)
+            photo.transform = CGAffineTransform(scaleX: 1 - progress / 2, y: 1 - progress / 2)
+            backdrop.alpha = 1 - progress
+        default:
+            guard let (photo, backdrop, start) = lifted else { return }
+            if pan.state == .ended, moved.y > 80 || pan.velocity(in: container).y > 600 {
+                let frame = photo.frame // the close animates the frame, from where it is now
+                photo.transform = .identity
+                photo.frame = frame
+                page.dismiss(animated: true)
+            } else {
+                lifted = nil
+                UIView.animate(springDuration: 0.3, bounce: 0.15) {
+                    photo.transform = .identity
+                    photo.center = start
+                    backdrop.alpha = 1
+                } completion: { _ in
+                    page.view.alpha = 1
+                    photo.removeFromSuperview()
+                    backdrop.removeFromSuperview()
+                }
+            }
+        }
+    }
+
+    /// Only a downward swipe, not on the details panel's list, and not while a zoomed-in photo is being moved about.
+    func gestureRecognizerShouldBegin(_ recognizer: UIGestureRecognizer) -> Bool {
+        guard let pan = recognizer as? UIPanGestureRecognizer, let view = pan.view else { return false }
+        let velocity = pan.velocity(in: view)
+        guard velocity.y > abs(velocity.x) else { return false }
+        var hit = view.hitTest(pan.location(in: view), with: nil)
+        while let v = hit, v !== view {
+            if v is UICollectionView || v is UITableView { return false }
+            if let scroll = v as? UIScrollView, scroll.zoomScale > scroll.minimumZoomScale + 0.01 { return false }
+            hit = v.superview
+        }
+        return true
+    }
+
+    func gestureRecognizer(_ recognizer: UIGestureRecognizer,
+                           shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool { true }
+
+    private static func backdrop(_ container: UIView, dark: Bool) -> UIView {
+        let view = UIView(frame: container.bounds)
+        view.backgroundColor = dark ? .black : .systemBackground
+        return view
+    }
+
+    private static func photo(_ image: UIImage, frame: CGRect) -> UIImageView {
+        let view = UIImageView(image: image)
+        view.contentMode = .scaleAspectFill // cropped to the square at the grid's end, whole at the screen's
+        view.clipsToBounds = true
+        view.frame = frame
+        return view
+    }
+
+    /// The photo on the page: the biggest picture across the middle of the screen.
+    private static func shownImage(in page: UIView) -> UIImageView? {
+        let middle = CGPoint(x: page.bounds.midX, y: page.bounds.midY)
+        var best: UIImageView?
+        func look(_ view: UIView) {
+            if let picture = view as? UIImageView, picture.image != nil, !picture.isHidden, picture.alpha > 0,
+               picture.convert(picture.bounds, to: page).contains(middle),
+               picture.bounds.width * picture.bounds.height > best.map({ $0.bounds.width * $0.bounds.height }) ?? 0 {
+                best = picture
+            }
+            view.subviews.forEach(look)
+        }
+        look(page)
+        return best
     }
 }
 
@@ -614,6 +847,10 @@ final class PhoneGridController: UIViewController, UICollectionViewDataSource, U
     /// The grid's photos. Replaced after an edit, with `version` counting up.
     private(set) var assets: [Asset]
     private(set) var version = 0
+    /// The page's background is black (its bars hidden).
+    var dark = false
+    /// The opening photo is flying from its square: the page's own photo waits under it.
+    var flying = false
 
     init(position: Int, assets: [Asset]) {
         self.position = position
@@ -634,10 +871,11 @@ private struct PagerHost: View {
     let context: BrowserContext
     let close: () -> Void
     let onPerson: (Person) -> Void
+    let onDark: (Bool) -> Void
 
     var body: some View {
         PhotoPager(assets: state.assets, version: state.version, position: $state.position, context: context, close: close,
-                   onPerson: onPerson)
+                   onPerson: onPerson, onDark: onDark, flying: state.flying)
             .overlay { TransferPanel() } // the root's is under this full screen view
     }
 }
@@ -661,7 +899,7 @@ final class PhoneGridLayout: UICollectionViewLayout {
     }
 
     override func prepare() {
-        let width = collectionView?.bounds.width ?? 1
+        let width = collectionView.map { usable($0.bounds.width) } ?? 1
         // only the math for a new width or new data, not for every invalidation
         guard stale || width != math.width else { return }
         stale = false
@@ -671,7 +909,13 @@ final class PhoneGridLayout: UICollectionViewLayout {
 
     override var collectionViewContentSize: CGSize { CGSize(width: math.width, height: math.height) }
 
-    override func shouldInvalidateLayout(forBoundsChange newBounds: CGRect) -> Bool { newBounds.width != math.width }
+    override func shouldInvalidateLayout(forBoundsChange newBounds: CGRect) -> Bool { usable(newBounds.width) != math.width }
+
+    /// The width left between the safe area's sides (an iPad's sidebar floats over the grid).
+    private func usable(_ width: Double) -> Double {
+        let inset = collectionView?.adjustedContentInset ?? .zero
+        return max(1, width - inset.left - inset.right)
+    }
 
     override func layoutAttributesForElements(in rect: CGRect) -> [UICollectionViewLayoutAttributes]? {
         var result: [UICollectionViewLayoutAttributes] = []

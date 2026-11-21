@@ -686,10 +686,11 @@ final class Library {
         edits += 1
     }
 
-    /// The original files. On the Mac, saved to Downloads and shown in Finder; on iOS, in a new temporary folder for the
-    /// share sheet.
+    /// The original files, and a Live Photo's video beside its still under the same name. On the Mac, saved to Downloads
+    /// and shown in Finder; on iOS, in a new temporary folder for the share sheet.
     @discardableResult
-    func download(_ ids: [String]) async -> [URL] {
+    func download(_ assets: [Asset]) async -> [URL] {
+        let ids = assets.map(\.id)
         guard let api else { return [] }
         #if os(macOS)
         let folder = URL.downloadsDirectory
@@ -708,6 +709,12 @@ final class Library {
                 let target = Self.unused(folder.appending(path: name))
                 try FileManager.default.moveItem(at: file, to: target)
                 saved.append(target)
+                if assets[n].isLive == true, let video = try await api.detail(id).livePhotoVideoId {
+                    let (file, name) = try await api.download(video) // small: not part of the progress
+                    let pair = Self.unused(target.deletingPathExtension().appendingPathExtension((name as NSString).pathExtension))
+                    try FileManager.default.moveItem(at: file, to: pair)
+                    saved.append(pair)
+                }
             } catch {
                 if !progress.isCancelled { editError = error.localizedDescription }
                 break

@@ -165,7 +165,6 @@ struct AlbumGrid: View {
     @AppStorage("albumSort") private var sort = AlbumSort.recent
     @AppStorage("albumsMine") private var mine = false
     @AppStorage("albumsShared") private var shared = false
-
     /// Mine and Shared are either-or; without knowing who owns what, there's no filter.
     private var filtered: Bool { library.ownedAlbums != nil && (mine || shared) }
 
@@ -176,15 +175,6 @@ struct AlbumGrid: View {
             return owned.contains(album.id) ? mine : shared
         })
         ScrollView {
-            #if os(iOS) // above the albums, so they're never a long scroll away; the Mac has them in the sidebar
-            VStack(spacing: 0) {
-                NavigationLink(value: BrowserContext.archive) { UtilityRow(title: "Archive", symbol: "archivebox") }
-                Divider().padding(.leading, 62)
-                NavigationLink(value: BrowserContext.trash) { UtilityRow(title: "Trash", symbol: "trash") }
-                Divider()
-            }
-            .buttonStyle(.plain)
-            #endif
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 170), spacing: 20)], alignment: .leading, spacing: 24) {
                 ForEach(shown) { album in
                     NavigationLink(value: album) {
@@ -384,9 +374,8 @@ struct Thumb: View {
     }
 }
 
-#if os(iOS)
 /// Archive or Trash under the albums, like Photos' Utilities.
-private struct UtilityRow: View {
+struct UtilityRow: View {
     let title: LocalizedStringKey
     let symbol: String
 
@@ -402,7 +391,6 @@ private struct UtilityRow: View {
         .contentShape(.rect)
     }
 }
-#endif
 
 /// Shown over an empty people or album page: why it is empty.
 private struct Empty: View {

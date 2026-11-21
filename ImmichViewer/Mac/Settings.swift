@@ -16,8 +16,9 @@ struct SettingsView: View {
             Tab("Storage", systemImage: "internaldrive", value: "storage") { StorageSettings() }
             Tab("Connection", systemImage: "network", value: "connection") { ServerList().padding(20) }
             Tab("Server", systemImage: "server.rack", value: "server") { ServerSettings(server: library.serverURL).id(library.serverURL) }
+            Tab("Statistics", systemImage: "chart.bar", value: "statistics") { StatisticsView().frame(height: 640) }
         }
-        .frame(width: 460)
+        .frame(width: tab == "statistics" ? 720 : 460)
     }
 }
 
