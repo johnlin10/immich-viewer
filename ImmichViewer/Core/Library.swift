@@ -18,6 +18,8 @@ final class Library {
     /// The download under way, for the progress panel; cancel it to stop. `transferStep` is the file it is on, from 1.
     private(set) var transfer: Progress?
     private(set) var transferStep = 0
+    /// The transfer is an upload, not a download.
+    private(set) var transferIsUpload = false
     private(set) var syncing = false
     private(set) var people: [Person] = []
     private(set) var albums: [Album] = []
@@ -726,6 +728,7 @@ final class Library {
         var saved: [URL] = []
         let progress = Progress(totalUnitCount: Int64(ids.count))
         transfer = progress
+        transferIsUpload = false
         defer { transfer = nil }
         for (n, id) in ids.enumerated() where !progress.isCancelled {
             transferStep = n + 1
@@ -768,18 +771,35 @@ final class Library {
         return url
     }
 
-    /// Uploads files (into `album` too, if given), then syncs. Files the server already has count as uploaded.
-    func upload(_ files: [URL], album: String?) async {
-        guard let api, !files.isEmpty else { return }
+    /// Uploads `count` items (into `album` too, if given), with the progress panel, then syncs. `item` hands over item
+    /// `n`'s files when it's its turn (a Live Photo has two), so they needn't all be copied out first.
+    /// Files the server already has count as uploaded.
+    func upload(count: Int, album: String?, item: (Int) async throws -> [UploadFile]) async {
+        guard let api, count > 0 else { return }
         var ids: [String] = []
         var failures: [String] = []
-        for (n, file) in files.enumerated() {
-            status = String(localized: "Uploading \(n + 1) of \(files.count)")
+        let progress = Progress(totalUnitCount: Int64(count))
+        transfer = progress
+        transferIsUpload = true
+        defer { transfer = nil }
+        for n in 0..<count where !progress.isCancelled {
+            transferStep = n + 1
+            var files: [UploadFile] = []
             do {
-                ids.append(try await api.upload(file))
+                files = try await item(n)
+                var video: String?
+                for file in files {
+                    // the video is small next to the still: only the still counts for the progress
+                    let id = try await api.upload(file, livePhotoVideoId: video, progress: file.liveVideo ? nil : progress)
+                    if file.liveVideo { video = id } else { ids.append(id) }
+                }
             } catch {
-                failures.append("\(file.lastPathComponent): \(error.localizedDescription)")
+                if !progress.isCancelled {
+                    let name = files.last.map { $0.name ?? $0.url.lastPathComponent }
+                    failures.append(name.map { "\($0): \(error.localizedDescription)" } ?? error.localizedDescription)
+                }
             }
+            for file in files where file.temporary { try? FileManager.default.removeItem(at: file.url) }
         }
         if !failures.isEmpty { editError = failures.prefix(10).joined(separator: "\n") }
         if let album, !ids.isEmpty { _ = await albumAssets("PUT", album, ids) }

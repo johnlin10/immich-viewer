@@ -1,6 +1,7 @@
 #if os(iOS)
 import AVKit
 import CoreLocation
+import PhotosUI
 import SwiftUI
 
 /// The iOS photo page: the grid (`PhoneGrid`), the date capsule, Select, and the ⋯ menu with the filter, sort and
@@ -35,6 +36,10 @@ struct TimelineBrowser: View {
     @State private var selecting = false
     @State private var chosen: Set<String> = []
     @State private var editor = PhotoEditor()
+    @State private var uploadShown = false
+    @State private var picked: [PhotosPickerItem] = []
+    /// Uploads from here go into the album too.
+    private var album: String? { if case .album(let id) = context { id } else { nil } }
 
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -92,6 +97,12 @@ struct TimelineBrowser: View {
                                       context: context) { act($0, on: picked) }
                         }
                     }
+                    if !selecting, context == .library || album != nil {
+                        SwiftUI.Section {
+                            Button("Upload from Photos…", systemImage: "photo.badge.plus") { uploadShown = true }
+                                .disabled(library.transfer != nil)
+                        }
+                    }
                     SwiftUI.Section {
                         Menu {
                             Toggle(isOn: $filter.photos) { Label("Photos", systemImage: "photo") }
@@ -131,6 +142,15 @@ struct TimelineBrowser: View {
                             : countSubtitle(subtitle, shown: list.count, filtered: filter.isActive))
         .navigationDestination(item: $person) { CollectionTimeline(context: .person($0.id), fallbackTitle: $0.name) }
         .photoEditor(editor, library: library, undo: undo)
+        // the current version (an edited photo as edited); the library's own copy when it can be read, see uploadFromPhotos
+        .photosPicker(isPresented: $uploadShown, selection: $picked, matching: .any(of: [.images, .videos]),
+                      preferredItemEncoding: .current, photoLibrary: .shared())
+        .onChange(of: picked) {
+            guard !picked.isEmpty else { return }
+            let items = picked
+            picked = []
+            Task { await uploadFromPhotos(items, library: library, album: album) }
+        }
         .onChange(of: revision, initial: true) { regroup() }
         .onChange(of: grouping) { regroup() }
         .onChange(of: newestFirst) { regroup() }

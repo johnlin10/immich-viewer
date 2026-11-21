@@ -66,6 +66,24 @@
           }
         }
       }
+    },
+    "NSPhotoLibraryUsageDescription" : {
+      "comment" : "Photo library read permission prompt (iOS Upload from Photos)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Immich Viewer uploads the photos and videos you pick to your Immich server, with their dates and Live Photo videos."
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Immich Viewer 會把你挑選的照片和影片上傳到 Immich 伺服器，並保留它們的日期和原況照片的影片。"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

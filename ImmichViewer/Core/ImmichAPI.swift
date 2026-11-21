@@ -1,4 +1,6 @@
+import AVFoundation
 import Foundation
+import ImageIO
 import Security
 
 /// The Immich endpoints the app uses.
@@ -104,7 +106,7 @@ struct ImmichAPI: Sendable {
         return (file, response.suggestedFilename ?? id)
     }
 
-    /// Makes a download's own progress part of `parent`.
+    /// Makes a download's or upload's own progress part of `parent`.
     private final class ProgressLink: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
         let parent: Progress
         init(_ parent: Progress) { self.parent = parent }
@@ -115,19 +117,28 @@ struct ImmichAPI: Sendable {
 
     /// Uploads a file as a new asset. Returns its id (the existing one if the server already has the file).
     /// The multipart body is written to a temporary file first, so a large video never has to fit in memory.
-    func upload(_ file: URL) async throws -> String {
+    /// Its bytes count as one unit of `progress`, if given; cancelling that cancels the upload.
+    func upload(_ upload: UploadFile, livePhotoVideoId: String? = nil, progress: Progress? = nil) async throws -> String {
+        let file = upload.url
         let values = try file.resourceValues(forKeys: [.creationDateKey, .contentModificationDateKey])
+        // without a date of its own (EXIF, a video's creation date) the server dates it by this. A copied file's creation
+        // date can be when it was copied, while copies usually keep the modification date: the earlier of the two
+        let fileDates = [values.creationDate, values.contentModificationDate].compactMap { $0 }
+        let created = upload.created ?? fileDates.min() ?? .now
         let boundary = UUID().uuidString
         let body = FileManager.default.temporaryDirectory.appending(path: "ImmichViewer-upload-\(boundary)")
         FileManager.default.createFile(atPath: body.path, contents: nil)
         defer { try? FileManager.default.removeItem(at: body) }
         let out = try FileHandle(forWritingTo: body)
-        let name = file.lastPathComponent.replacingOccurrences(of: "\"", with: "'")
+        let name = (upload.name ?? file.lastPathComponent).replacingOccurrences(of: "\"", with: "'")
         let date = ISO8601DateFormatter()
         var head = ""
-        for (field, value) in [("fileCreatedAt", date.string(from: values.creationDate ?? .now)),
-                               ("fileModifiedAt", date.string(from: values.contentModificationDate ?? .now)),
-                               ("filename", name)] {
+        var fields = [("fileCreatedAt", date.string(from: created)),
+                      ("fileModifiedAt", date.string(from: upload.modified ?? values.contentModificationDate ?? created)),
+                      ("filename", name)]
+        if upload.favorite { fields.append(("isFavorite", "true")) }
+        if let livePhotoVideoId { fields.append(("livePhotoVideoId", livePhotoVideoId)) }
+        for (field, value) in fields {
             head += "--\(boundary)\r\nContent-Disposition: form-data; name=\"\(field)\"\r\n\r\n\(value)\r\n"
         }
         head += "--\(boundary)\r\nContent-Disposition: form-data; name=\"assetData\"; filename=\"\(name)\"\r\n"
@@ -141,10 +152,36 @@ struct ImmichAPI: Sendable {
 
         var request = request("POST", "assets")
         request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "content-type")
-        let (data, response) = try await URLSession.shared.upload(for: request, fromFile: body)
+        let (data, response) = try await URLSession.shared.upload(for: request, fromFile: body,
+                                                                  delegate: progress.map(ProgressLink.init))
         try Self.verify(response, data)
-        struct Result: Decodable { let id: String }
-        return try JSONDecoder().decode(Result.self, from: data).id
+        struct Result: Decodable { let id: String; let status: String? }
+        let result = try JSONDecoder().decode(Result.self, from: data)
+        // a file without a date of its own (an image saved from the web) would be dated by the bare `fileCreatedAt`,
+        // which Immich shows as UTC (8 hours early in Taiwan): give it the date again with this device's time zone,
+        // as editing the date does (the server writes it to the .xmp and reads it back)
+        if result.status != "duplicate", !upload.liveVideo, await !Self.hasOwnDate(file) {
+            let local = ISO8601DateFormatter()
+            local.timeZone = .current
+            try await send("PUT", "assets/\(result.id)", json: ["dateTimeOriginal": local.string(from: created)])
+        }
+        return result.id
+    }
+
+    /// Whether the file says when it was taken, where Immich looks: EXIF, IPTC, XMP, a video's creation date.
+    /// Unsure counts as no: setting the date again with the same moment does no harm.
+    static func hasOwnDate(_ file: URL) async -> Bool {
+        if let source = CGImageSourceCreateWithURL(file as CFURL, nil), CGImageSourceGetCount(source) > 0 {
+            let p = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any] ?? [:]
+            let exif = p[kCGImagePropertyExifDictionary] as? [CFString: Any] ?? [:]
+            let iptc = p[kCGImagePropertyIPTCDictionary] as? [CFString: Any] ?? [:]
+            if exif[kCGImagePropertyExifDateTimeOriginal] != nil || exif[kCGImagePropertyExifDateTimeDigitized] != nil
+                || iptc[kCGImagePropertyIPTCDateCreated] != nil { return true }
+            guard let xmp = CGImageSourceCopyMetadataAtIndex(source, 0, nil) else { return false }
+            return ["exif:DateTimeOriginal", "xmp:CreateDate", "photoshop:DateCreated"]
+                .contains { CGImageMetadataCopyTagWithPath(xmp, nil, $0 as CFString) != nil }
+        }
+        return (try? await AVURLAsset(url: file).load(.creationDate)) != nil
     }
 
     /// `size`: "thumbnail" (~250 px, cached on disk) or "preview" (~1440 px, for the single-photo view).
@@ -243,6 +280,21 @@ struct ImmichAPI: Sendable {
         let albums = try JSONDecoder().decode([Album].self, from: await get("albums"))
         return albums.sorted { ($0.endDate ?? "") > ($1.endDate ?? "") }
     }
+}
+
+/// A file to upload, with what the server should keep that the file itself may not say.
+struct UploadFile: Sendable {
+    var url: URL
+    /// The name on the server; the file's own if nil.
+    var name: String?
+    /// For a file without a date in its metadata; the file's dates if nil.
+    var created: Date?
+    var modified: Date?
+    var favorite = false
+    /// A Live Photo's video: uploaded first, then linked to the file after it, its still.
+    var liveVideo = false
+    /// A copy made for the upload, deleted once it's done.
+    var temporary = false
 }
 
 struct Person: Codable, Identifiable, Hashable, Sendable {

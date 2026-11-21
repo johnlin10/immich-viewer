@@ -269,7 +269,7 @@ struct CollectionMenu: View {
     }
 }
 
-/// Over the middle of the window while originals download (to share, or to Downloads), with Cancel.
+/// Over the middle of the window while originals download (to share, or to Downloads) or files upload, with Cancel.
 struct TransferPanel: View {
     @Environment(Library.self) private var library
 
@@ -277,7 +277,9 @@ struct TransferPanel: View {
         ZStack {
             if let progress = library.transfer {
                 VStack(spacing: 14) {
-                    Text("Downloading \(library.transferStep) of \(Int(progress.totalUnitCount))")
+                    let step = library.transferStep, total = Int(progress.totalUnitCount)
+                    Text(library.transferIsUpload ? String(localized: "Uploading \(step) of \(total)")
+                                                  : String(localized: "Downloading \(step) of \(total)"))
                         .font(.headline)
                         .monospacedDigit()
                         .contentTransition(.numericText())

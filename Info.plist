@@ -23,5 +23,8 @@
 	<!-- iOS: Save Image and Save Video in the share sheet, for photos shared from the server -->
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Immich Viewer saves the photos and videos you share from your Immich server to your photo library.</string>
+	<!-- iOS: Upload from Photos, to upload each photo as the library has it (its date, name, a Live Photo's video) -->
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Immich Viewer uploads the photos and videos you pick to your Immich server, with their dates and Live Photo videos.</string>
 </dict>
 </plist>

@@ -102,7 +102,8 @@ struct ImportCommands: Commands {
                 panel.allowedContentTypes = [.image, .movie]
                 panel.prompt = String(localized: "Upload")
                 guard panel.runModal() == .OK else { return }
-                Task { await library.upload(panel.urls, album: browser?.album) }
+                let urls = panel.urls
+                Task { await library.upload(count: urls.count, album: browser?.album) { [UploadFile(url: urls[$0])] } }
             }
             .keyboardShortcut("i", modifiers: [.command, .shift])
             .disabled(library.api == nil)
