@@ -348,7 +348,7 @@ struct CollectionTimeline: View {
         case .person(let id): library.people.first { $0.id == id }?.name ?? fallbackTitle
         case .album(let id): library.albums.first { $0.id == id }?.albumName ?? fallbackTitle
         case .tag(let id): library.tags.first { $0.id == id }?.value ?? fallbackTitle
-        case .library, .archive, .trash: fallbackTitle
+        case .library, .archive, .trash, .search: fallbackTitle
         }
         return name.isEmpty ? String(localized: "Unnamed") : name
     }
@@ -365,7 +365,7 @@ struct CollectionTimeline: View {
         case .person(let id): ["personId": id, "visibility": "timeline"]
         case .album(let id): ["albumId": id]
         case .tag(let id): ["tagId": id]
-        case .library: ["visibility": "timeline"]
+        case .library, .search: ["visibility": "timeline"]
         case .archive: ["visibility": "archive"]
         case .trash: ["isTrashed": "true"]
         }

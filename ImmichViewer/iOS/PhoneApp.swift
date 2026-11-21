@@ -28,6 +28,24 @@ struct PhoneRoot: View {
     @AppStorage("appearance") private var appearance = "system"
     @Environment(\.horizontalSizeClass) private var sizeClass
     @State private var settingsShown = false
+    /// The search field (in the tab bar's place on the Search tab, like Photos), and what Return last searched for.
+    @State private var searchText = ""
+    @State private var searchQuery = ""
+    @State private var searchShown = false
+
+    private var searchTab: some View {
+        NavigationStack {
+            SearchResults(query: searchQuery)
+                .collectionDestinations()
+                .searchable(text: $searchText, isPresented: $searchShown, prompt: Text("Search your library")) // here, not on the tabs: only this page has the field
+                .onSubmit(of: .search) { searchQuery = searchText.trimmingCharacters(in: .whitespaces) }
+                .onChange(of: searchText) { if searchText.isEmpty { searchQuery = "" } }
+                .task { // iPad: the field open and typing, not folded into a button (once the page is up, or it's ignored)
+                    try? await Task.sleep(for: .milliseconds(300))
+                    searchShown = true
+                }
+        }
+    }
 
     var body: some View {
         Group {
@@ -70,8 +88,11 @@ struct PhoneRoot: View {
                         }
                         .tabPlacement(.sidebarOnly)
                     }
+                    // last: on iPhone a round button apart from the tab bar, that turns into the field, like Photos
+                    Tab(role: .search) { searchTab }
                 }
                 .tabViewStyle(.sidebarAdaptable)
+                .tabViewSearchActivation(.searchTabSelection) // the Search tab opens with the field and keyboard up
                 .tabBarMinimizeBehavior(.onScrollDown)
                 .id(library.serverURL) // another server: every tab starts over
             }

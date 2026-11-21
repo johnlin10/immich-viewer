@@ -20,6 +20,8 @@ struct PhotoGrid: NSViewRepresentable {
     /// The right-click menu for the chosen photos.
     let menu: ([Int]) -> NSMenu?
     let bridge: GridBridge
+    /// False: the system scroll bar instead of the time scrubber (search results, best match first).
+    var scrubbed = true
 
     func makeCoordinator() -> GridController { GridController(library: library) }
 
@@ -60,6 +62,7 @@ struct PhotoGrid: NSViewRepresentable {
         controller.onAction = onAction
         controller.menu = menu
         controller.active = active
+        (scroll as? ScrubbedScrollView)?.scrubbed = scrubbed
         controller.update(data: data, level: level, header: showHeaders ? 40 : 0, style: style, insets: insets)
     }
 }
@@ -164,7 +167,10 @@ final class GridController: NSObject, NSCollectionViewDataSource, NSCollectionVi
                 || data.sections[shift.section].range != self.data.sections[shift.section].range { layout.shift = nil }
             self.data = data
             selected = selectedID.flatMap { id in data.assets.firstIndex { $0.id == id } }
-            if !picked.isEmpty { setPicked(picked.intersection(data.assets.lazy.map(\.id))) } // deleted, archived or filtered out ones go
+            // deleted, archived or filtered out ones go; not setPicked: the visible cells are still the old list's
+            // (indexing the new one with them crashed), and reloadData below draws the rings afresh
+            picked.formIntersection(data.assets.lazy.map(\.id))
+            bridge?.chosen = picked.count
             self.level = level
             requestedLevel = level
             layout.target = zoomLevels[level]
@@ -777,12 +783,16 @@ final class GridController: NSObject, NSCollectionViewDataSource, NSCollectionVi
     }
 }
 
-/// No scroll bar: the time scrubber takes its place. Setting `hasVerticalScroller = false` once isn't enough,
-/// AppKit turns it back on later, so it is fixed here.
+/// No scroll bar while `scrubbed`: the time scrubber takes its place. Setting `hasVerticalScroller = false` once isn't
+/// enough, AppKit turns it back on later, so it is fixed here.
 final class ScrubbedScrollView: NSScrollView {
+    var scrubbed = true {
+        didSet { if scrubbed != oldValue { hasVerticalScroller = !scrubbed } }
+    }
+
     override var hasVerticalScroller: Bool {
-        get { false }
-        set { super.hasVerticalScroller = false }
+        get { !scrubbed }
+        set { super.hasVerticalScroller = !scrubbed }
     }
 }
 

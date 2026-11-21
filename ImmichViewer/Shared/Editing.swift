@@ -13,6 +13,8 @@ enum BrowserContext: Hashable {
     case tag(String)
     case archive
     case trash
+    /// Search results: in the order they came, without date groups.
+    case search
 }
 
 /// Something done to the chosen photos, from the right-click menu, the keyboard or the photo view.
@@ -263,7 +265,7 @@ struct CollectionMenu: View {
             Divider()
             Button("Restore All", systemImage: "arrow.uturn.backward") { Task { await library.restoreAll() } }
             Button("Empty Trash…", systemImage: "trash", role: .destructive) { editor.purging = [] }
-        case .library, .archive:
+        case .library, .archive, .search:
             EmptyView()
         }
     }

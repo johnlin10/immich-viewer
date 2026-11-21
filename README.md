@@ -41,6 +41,7 @@ Changes go straight to the server and show in the app right away. Edit > Undo (�
 - Tags: Add Tag… takes a new or existing tag (a slash nests it, like "Trips/Japan"); on iPhone and iPad the existing ones are listed under the field to tap, narrowed as you type, and the tags the photos already have are listed apart, ✕ (or a swipe) removing one. The Tags page lists them; click one for its photos, right-click to delete it. On iPhone and iPad, Select picks several (tap, or drag with two fingers down the list) and ⋯ > Delete deletes them at once. The info panel shows a photo's tags, ✕ removes one. Immich writes tag changes into the photos' `.xmp` files; if it can only read the library's folder (an external library mounted read-only), a deleted tag comes back the next time it reads the photos.
 - Rotate: the server keeps the original file and stores the turn as an edit (newer Immich servers only), then makes new thumbnails, which the app fetches again after a few seconds.
 - Download saves the original files (a Live Photo's video beside its still, under the same name) to the Downloads folder (a name already there gets " 2") and shows them in Finder. A panel in the middle of the window shows which file is downloading and how far along it is, with Cancel.
+- Search, at the top of the sidebar: type in the field in the toolbar and press Return. One search finds both: photos whose file name, description or text in the picture (OCR) matches come first, newest first, then what the server's machine learning sees in the picture, like "beach at sunset", best match first. Results open, edit and select like any page.
 - File > Import… (⇧⌘I) uploads photos and videos, with a panel showing the progress and Cancel. On an album's page they go into that album too. Files the server already has aren't uploaded twice. The server dates each by its own metadata (EXIF, a video's creation date). One without (an image saved from the web) gets the earlier of the file's creation and modification dates, set again after the upload with this Mac's time zone: the server alone would show it in UTC, hours off.
 - Adjust Date and Time: the first photo gets the new date and time, and the other chosen photos move by the same amount.
 - Set Location: search for a place, or click the map to put the pin.
@@ -80,6 +81,7 @@ The same project also builds an iPhone and iPad app (iOS 26 or later). It isn't 
 - Videos have their own controls under them (play or pause, a scrubber with the time left, sound on or off), which come and go with the bars and hide after a few seconds of playing.
 - Live Photos: long-press the photo, or tap LIVE, to play the moving part.
 - On iPad the grid sits beside the sidebar, a photo's details open as a panel at its side (⋯ > Info opens and closes it), and forms keep a readable width.
+- Search: the round 🔍 button apart from the tabs turns into the search field with the keyboard up, like Photos; ✕ goes back. On iPad, Search (a tab at the top, or in the sidebar) opens with the field ready to type in. Same results as on the Mac.
 - ⋯ > Upload from Photos… on Library or an album's page uploads photos and videos picked from the device's library (into that album too), with the progress panel. With access to the library (asked the first time) each goes as Photos has it: the edited version if it was edited, a Live Photo with its moving part, its original name, favorite, and Photos' date for files whose metadata has none (an image saved from the web: when it was saved), with the device's time zone, like on the Mac. Without access, the picked files go with their own dates. The app has to stay open while it uploads.
 - Settings: servers (tap to switch, swipe to change the key or remove one, Add Server…), appearance, Statistics, video, the cache sizes with Clear Cache…, and the version.
 
@@ -166,6 +168,7 @@ Sources are grouped by where they run. Every file is compiled for both platforms
 | `TimelineModel.swift` | Asset, filters, grouping, grid geometry, row moves, date lookup, year marks |
 | **`Shared/`** | Interface used on the Mac and on iPhone and iPad |
 | `CollectionsPage.swift` | The Collections page: rows of people, albums and tags, and the utilities |
+| `Search.swift` | Search results page, the Mac Search page |
 | `Collections.swift` | Filter and sort menus, People, Albums and Tags pages, one person's, album's or tag's grid, the iOS page bar |
 | `Editing.swift` | Photo menu and what its actions do, page menus, date, location, album, person and tag sheets, download progress, share sheet |
 | `InfoPanel.swift` | A photo's details (⌘I on the Mac, swipe up on iOS) and its row of faces |
@@ -189,13 +192,19 @@ Sources are grouped by where they run. Every file is compiled for both platforms
 
 ## Not in this version
 
-Searching, map, memories, Simplified Chinese interface, and noticing deletions made in the browser until the next refresh. Thumbnails of deleted photos stay in the cache.
+Search filters (people, places, dates), map, memories, Simplified Chinese interface, and noticing deletions made in the browser until the next refresh. Thumbnails of deleted photos stay in the cache.
 
 Planned editing: cropping, dropping files on the window to upload, then stacks, sharing, duplicates and memories.
 
 ## Version history
 
-### v0.11.0 (current)
+### v0.12.0 (current)
+
+- Search on iPhone, iPad and Mac: one field finds photos whose file name, description or text in the picture matches, newest first, then what the server's machine learning sees in the picture, like "beach at sunset", best match first.
+- iPhone: the round 🔍 apart from the tabs turns into the search field with the keyboard up, like Photos. iPad: Search opens with the field ready to type in. Mac: Search at the top of the sidebar.
+- Mac: fixed a crash when the list changed while photos were selected, like a new search with fewer results.
+
+### v0.11.0
 
 - iPhone and iPad: ⋯ > Upload from Photos… on Library or an album's page uploads photos and videos from the device's library (into that album too): the edited version if edited, Live Photos with their moving part, the original name, favorite and date.
 - A file without a date of its own (an image saved from the web) keeps when it was saved (iOS) or its file date (Mac), with the device's time zone, instead of showing in UTC, hours off.

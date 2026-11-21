@@ -2901,6 +2901,48 @@
           }
         }
       }
+    },
+    "Search your library" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "搜尋圖庫"
+          }
+        }
+      }
+    },
+    "Search Your Library" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "搜尋圖庫"
+          }
+        }
+      }
+    },
+    "Find what’s in the picture, like “beach at sunset”, or a file name, description or text in the picture." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "搜尋照片內容，例如「夕陽下的海灘」，或檔名、描述、照片中的文字。"
+          }
+        }
+      }
+    },
+    "Can’t Search" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法搜尋"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

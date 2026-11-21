@@ -58,7 +58,8 @@ struct TimelineBrowser: View {
                         },
                         onAction: { act($0, on: $1) }))
                 .ignoresSafeArea()
-            if grouping != .day, list.indices.contains(top) { // by day, the pinned header shows the date
+            // by day, the pinned header shows the date; search results are best match first, not by date
+            if grouping != .day, context != .search, list.indices.contains(top) {
                 Text(list[top].date.formatted(Self.capsuleStyle))
                     .font(.headline).monospacedDigit()
                     .padding(.horizontal, 14)
@@ -116,19 +117,21 @@ struct TimelineBrowser: View {
                             Label("Filter", systemImage: filter.isActive ? "line.3.horizontal.decrease.circle.fill"
                                                                          : "line.3.horizontal.decrease.circle")
                         }
-                        Picker(selection: $newestFirst) {
-                            Label("Newest First", systemImage: "arrow.down").tag(true)
-                            Label("Oldest First", systemImage: "arrow.up").tag(false)
-                        } label: {
-                            Label("Sort", systemImage: "arrow.up.arrow.down")
+                        if context != .search { // search results stay best match first
+                            Picker(selection: $newestFirst) {
+                                Label("Newest First", systemImage: "arrow.down").tag(true)
+                                Label("Oldest First", systemImage: "arrow.up").tag(false)
+                            } label: {
+                                Label("Sort", systemImage: "arrow.up.arrow.down")
+                            }
+                            .pickerStyle(.menu)
+                            Picker(selection: $grouping) {
+                                ForEach(Grouping.allCases, id: \.self) { Text($0.label).tag($0) }
+                            } label: {
+                                Label("Group By", systemImage: "square.grid.3x3")
+                            }
+                            .pickerStyle(.menu)
                         }
-                        .pickerStyle(.menu)
-                        Picker(selection: $grouping) {
-                            ForEach(Grouping.allCases, id: \.self) { Text($0.label).tag($0) }
-                        } label: {
-                            Label("Group By", systemImage: "square.grid.3x3")
-                        }
-                        .pickerStyle(.menu)
                     }
                     CollectionMenu(library: library, context: context, editor: editor, undo: undo)
                 } label: {
@@ -176,8 +179,9 @@ struct TimelineBrowser: View {
     }
 
     private func regroup() {
-        list = filter.apply(newestFirst ? assets : assets.reversed())
-        sections = makeSections(list, by: grouping)
+        let ranked = context == .search // best match first: no sorting, no date groups
+        list = filter.apply(newestFirst || ranked ? assets : assets.reversed())
+        sections = makeSections(list, by: ranked ? .none : grouping)
         dataID += 1
         if !chosen.isEmpty {
             let shown = Set(list.map(\.id))

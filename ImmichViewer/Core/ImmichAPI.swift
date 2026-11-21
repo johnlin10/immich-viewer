@@ -238,6 +238,63 @@ struct ImmichAPI: Sendable {
         return assets.sorted { $0.date > $1.date }
     }
 
+    /// One search for `query`: photos whose file name, description or text in the picture contains it first, newest first;
+    /// then what smart search finds, best match first.
+    func search(_ query: String) async throws -> [Asset] {
+        async let text = textSearch(query)
+        async let smart = try? smartSearch(query) // a server without machine learning: the text matches alone
+        let found = try await text
+        let ids = Set(found.map(\.id))
+        return found + (await smart ?? []).filter { !ids.contains($0.id) }
+    }
+
+    /// Smart search: photos showing what `query` describes, best match first, as Immich's machine learning ranks them.
+    /// It ranks every photo, so only the best `size` come back.
+    private func smartSearch(_ query: String, size: Int = 500) async throws -> [Asset] {
+        try await searchPage("smart", ["query": query, "size": size]).assets
+    }
+
+    /// Photos whose file name, description or text in the picture contains `query`, newest first.
+    private func textSearch(_ query: String) async throws -> [Asset] {
+        try await withThrowingTaskGroup(of: [Asset].self) { group in
+            for field in ["originalFileName", "description", "ocr"] {
+                group.addTask {
+                    var all: [Asset] = []
+                    for page in 1...10 { // ponytail: 10,000 per field at most
+                        let p = try await searchPage("metadata", [field: query, "size": 1000, "page": page])
+                        all += p.assets
+                        if !p.more { break }
+                    }
+                    return all
+                }
+            }
+            var seen = Set<String>()
+            return try await group.reduce(into: []) { $0 += $1 }.filter { seen.insert($0.id).inserted }.sorted { $0.date > $1.date }
+        }
+    }
+
+    private func searchPage(_ kind: String, _ body: [String: Any]) async throws -> (assets: [Asset], more: Bool) {
+        struct Item: Decodable {
+            let id, type, localDateTime: String
+            let isFavorite: Bool?
+            let livePhotoVideoId: String?
+        }
+        struct Response: Decodable {
+            struct Page: Decodable { let items: [Item]; let nextPage: String? }
+            let assets: Page
+        }
+        let page = try JSONDecoder().decode(Response.self, from: await send("POST", "search/\(kind)", json: body)).assets
+        let parser = UTCDateParser()
+        let assets = page.items.compactMap { item in
+            // localDateTime: the local wall-clock time kept in UTC, like the timeline's
+            parser.date(item.localDateTime).map {
+                Asset(id: item.id, date: $0, isVideo: item.type == "VIDEO", isFavorite: item.isFavorite == true,
+                      isLive: item.livePhotoVideoId != nil)
+            }
+        }
+        return (assets, page.nextPage != nil)
+    }
+
     /// People that aren't hidden, in Immich's order (named and most photographed first).
     func people() async throws -> [Person] {
         struct Page: Decodable {

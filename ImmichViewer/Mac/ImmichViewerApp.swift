@@ -166,7 +166,7 @@ private struct StartStopItems: View {
 
 /// The sidebar's pages.
 enum Page: Hashable {
-    case library, collections, albums, album(String), archive, trash
+    case library, collections, albums, album(String), archive, trash, search
 }
 
 struct ContentView: View {
@@ -214,6 +214,7 @@ struct ContentView: View {
     /// Like iPad: Library and Collections, then every album and the utilities.
     private var sidebar: some View {
         List(selection: $page) {
+            Label("Search", systemImage: "magnifyingglass").tag(Page.search)
             Label("Library", systemImage: "photo.on.rectangle").tag(Page.library)
             Label("Collections", systemImage: "square.stack").tag(Page.collections)
             SwiftUI.Section("Albums", isExpanded: $albumsShown) {
@@ -240,6 +241,7 @@ struct ContentView: View {
             CollectionTimeline(context: .album(id), fallbackTitle: library.albums.first { $0.id == id }?.albumName ?? "")
         case .archive: CollectionTimeline(context: .archive, fallbackTitle: String(localized: "Archive"))
         case .trash: CollectionTimeline(context: .trash, fallbackTitle: String(localized: "Trash"))
+        case .search: SearchPage()
         }
     }
 }
@@ -286,23 +288,27 @@ struct TimelineBrowser: View {
                                                             allFavorite: indices.allSatisfy { grid.assets[$0].isFavorite == true },
                                                             context: context) { perform($0, indices) })
                       },
-                      bridge: bridge)
+                      bridge: bridge, scrubbed: context != .search)
                 .ignoresSafeArea(edges: .vertical)
                 .overlay(alignment: .top) { TitleBarBlur(height: titleBar) }
                 .overlay(alignment: .topLeading) {
-                    // the date of the top row, under the window buttons and title
-                    DateCapsule(bridge: bridge, assets: grid.assets)
-                        .padding(.leading, 12)
-                        .padding(.top, 6)
+                    // the date of the top row, under the window buttons and title; not for search results, best match first
+                    if context != .search {
+                        DateCapsule(bridge: bridge, assets: grid.assets)
+                            .padding(.leading, 12)
+                            .padding(.top, 6)
+                    }
                 }
                 .overlay(alignment: .trailing) {
-                    Scrubber(bridge: bridge, assets: grid.assets, years: grid.years)
-                        .padding(.top, titleBar + 8) // clear of the title bar and the ⋯ button
-                        .padding(.bottom, 20)
-                        .opacity(viewer == nil ? 1 : 0)
+                    if context != .search { // search results aren't by date: the system scroll bar instead
+                        Scrubber(bridge: bridge, assets: grid.assets, years: grid.years)
+                            .padding(.top, titleBar + 8) // clear of the title bar and the ⋯ button
+                            .padding(.bottom, 20)
+                            .opacity(viewer == nil ? 1 : 0)
+                    }
                 }
                 .overlay(alignment: .bottom) {
-                    BottomBar(level: $level, grouping: $grouping)
+                    BottomBar(level: $level, grouping: $grouping, groups: context != .search)
                         .padding(.bottom, 14)
                         .disabled(viewer != nil)
                 }
@@ -320,10 +326,12 @@ struct TimelineBrowser: View {
                                     Toggle(isOn: $filter.favorites) { Label("Favorites", systemImage: "heart") }
                                 }
                             }
-                            ToolbarItem(placement: .primaryAction) {
-                                SortMenu(selection: $newestFirst) {
-                                    Label("Newest First", systemImage: "arrow.down").tag(true)
-                                    Label("Oldest First", systemImage: "arrow.up").tag(false)
+                            if context != .search { // search results stay best match first
+                                ToolbarItem(placement: .primaryAction) {
+                                    SortMenu(selection: $newestFirst) {
+                                        Label("Newest First", systemImage: "arrow.down").tag(true)
+                                        Label("Oldest First", systemImage: "arrow.up").tag(false)
+                                    }
                                 }
                             }
                             ToolbarItem(placement: .primaryAction) {
@@ -391,8 +399,10 @@ struct TimelineBrowser: View {
     }
 
     private func regroup() {
-        let list = filter.apply(newestFirst ? assets : assets.reversed())
-        grid = GridData(assets: list, sections: makeSections(list, by: grouping), years: yearStarts(list), id: grid.id + 1)
+        let ranked = context == .search // best match first: no sorting, no date groups or year marks
+        let list = filter.apply(newestFirst || ranked ? assets : assets.reversed())
+        grid = GridData(assets: list, sections: makeSections(list, by: ranked ? .none : grouping), years: ranked ? [] : yearStarts(list),
+                        id: grid.id + 1)
     }
 }
 
@@ -401,6 +411,8 @@ struct TimelineBrowser: View {
 struct BottomBar: View {
     @Binding var level: Int
     @Binding var grouping: Grouping
+    /// False for search results, which have no date groups: zoom only.
+    var groups = true
     @Namespace private var glass
     /// The option the glass is on. Its own state, because a change to the stored setting doesn't carry the animation.
     @State private var selected = Grouping.day
@@ -418,30 +430,32 @@ struct BottomBar: View {
                         .help("Zoom In (⌘+)")
                 }
                 .modifier(GlassCapsule())
-                HStack(spacing: 0) {
-                    ForEach(Grouping.allCases, id: \.self) { option in
-                        Button { grouping = option } label: {
-                            Text(option.label)
-                                .padding(.horizontal, 14)
-                                .frame(height: 28)
-                                .foregroundStyle(selected == option ? .white : .primary)
-                                .contentShape(Capsule())
+                if groups {
+                    HStack(spacing: 0) {
+                        ForEach(Grouping.allCases, id: \.self) { option in
+                            Button { grouping = option } label: {
+                                Text(option.label)
+                                    .padding(.horizontal, 14)
+                                    .frame(height: 28)
+                                    .foregroundStyle(selected == option ? .white : .primary)
+                                    .contentShape(Capsule())
+                            }
+                            .matchedGeometryEffect(id: option, in: glass) // where the glass goes for this option
+                            .accessibilityAddTraits(selected == option ? .isSelected : [])
                         }
-                        .matchedGeometryEffect(id: option, in: glass) // where the glass goes for this option
-                        .accessibilityAddTraits(selected == option ? .isSelected : [])
                     }
-                }
-                .background {
-                    // one piece of glass that takes the chosen option's place, so a change slides it across
-                    Capsule()
-                        .fill(.clear)
-                        .glassEffect(.regular.tint(.accentColor).interactive(), in: .capsule)
-                        .matchedGeometryEffect(id: selected, in: glass, isSource: false)
-                }
-                .modifier(GlassCapsule())
-                .onChange(of: grouping, initial: true) { old, new in
-                    // also for ⌘1–⌘3 in the View menu
-                    withAnimation(old == new ? nil : .bouncy(duration: 0.4)) { selected = new }
+                    .background {
+                        // one piece of glass that takes the chosen option's place, so a change slides it across
+                        Capsule()
+                            .fill(.clear)
+                            .glassEffect(.regular.tint(.accentColor).interactive(), in: .capsule)
+                            .matchedGeometryEffect(id: selected, in: glass, isSource: false)
+                    }
+                    .modifier(GlassCapsule())
+                    .onChange(of: grouping, initial: true) { old, new in
+                        // also for ⌘1–⌘3 in the View menu
+                        withAnimation(old == new ? nil : .bouncy(duration: 0.4)) { selected = new }
+                    }
                 }
             }
         }
