@@ -395,6 +395,17 @@ final class Library {
 
     func detail(_ asset: Asset) async -> AssetDetail? { try? await api?.detail(asset.id) }
 
+    /// Every tag any of these photos has, by name.
+    /// ponytail: one request per photo, capped at 100; ask the server per tag if big selections need it exact.
+    func tags(on ids: [String]) async -> [Tag] {
+        guard let api else { return [] }
+        let found = await withTaskGroup(of: [Tag].self) { group in
+            for id in ids.prefix(100) { group.addTask { (try? await api.detail(id).tags) ?? [] } }
+            return await group.reduce(into: [String: Tag]()) { all, tags in for tag in tags { all[tag.id] = tag } }
+        }
+        return found.values.sorted { $0.value.localizedStandardCompare($1.value) == .orderedAscending }
+    }
+
     /// Whether the key has `asset.download`; nil until the first try.
     private(set) var canDownload: Bool?
 
@@ -623,10 +634,24 @@ final class Library {
         var tag: Tag?
         guard await change({ api in
             tag = try JSONDecoder().decode([Tag].self, from: await api.send("PUT", "tags", json: ["tags": [name]])).first
-            if let tag { try await api.send("PUT", "tags/assets", json: ["tagIds": [tag.id], "assetIds": ids]) }
+            guard let tag else { return }
+            struct Count: Decodable { let count: Int }
+            let added = try JSONDecoder().decode(Count.self, from: await api.send("PUT", "tags/assets",
+                                                                                  json: ["tagIds": [tag.id], "assetIds": ids])).count
+            // The server answers OK but skips photos it doesn't know or won't let this key change: say so,
+            // unless they simply had the tag already.
+            if added == 0, let first = ids.first, try await !(api.detail(first).tags ?? []).contains(where: { $0.id == tag.id }) {
+                throw TagNotAdded()
+            }
         }), let tag else { return }
         if let list = try? await api?.tags() { tags = list }
         register(undo, String(localized: "Add Tag")) { await $0.untag(ids, tag, undo: undo) }
+    }
+
+    private struct TagNotAdded: LocalizedError {
+        var errorDescription: String? {
+            String(localized: "The server made the tag but didn’t add it to the photos. Refresh the library, then try again.")
+        }
     }
 
     func untag(_ ids: [String], _ tag: Tag, undo: UndoManager?) async {

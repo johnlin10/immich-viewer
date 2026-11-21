@@ -70,13 +70,15 @@ struct TimelineBrowser: View {
             }
         }
         .toolbar {
-            // two items swapped inside an animation: the toolbar morphs the glass from "Select" into ✕ and back
+            // two items swapped inside an animation: the toolbar morphs the glass from "Select" into ✕ and back.
+            // Their ids differ (one id makes it swap the label without the morph); "select" matches the Tags page's, so the
+            // button stays put when one page opens the other.
             if selecting {
-                ToolbarItem(placement: .primaryAction) {
+                ToolbarItem(id: "cancel", placement: .primaryAction) {
                     Button("Cancel", systemImage: "xmark") { setSelecting(false) }
                 }
             } else {
-                ToolbarItem(placement: .primaryAction) {
+                ToolbarItem(id: "select", placement: .primaryAction) {
                     Button("Select") { setSelecting(true) }.disabled(list.isEmpty)
                 }
             }

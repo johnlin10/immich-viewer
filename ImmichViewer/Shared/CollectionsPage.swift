@@ -24,7 +24,7 @@ struct CollectionsPage: View {
         let face: CGFloat = wide ? 110 : 80, cover: CGFloat = wide ? 180 : 140
         ScrollView {
             VStack(alignment: .leading, spacing: 32) {
-                section("People", empty: library.people.isEmpty, destination: PeopleGrid()) {
+                section("People", empty: library.people.isEmpty, page: .people) {
                     ForEach(library.people.prefix(40)) { person in
                         NavigationLink(value: person) {
                             VStack(spacing: 8) {
@@ -44,7 +44,7 @@ struct CollectionsPage: View {
                         }
                     }
                 }
-                section("Albums", empty: library.albums.isEmpty, destination: AlbumGrid()) {
+                section("Albums", empty: library.albums.isEmpty, page: .albums) {
                     ForEach(albumSort.apply(library.albums).prefix(40)) { album in
                         NavigationLink(value: album) {
                             VStack(alignment: .leading, spacing: 4) {
@@ -63,7 +63,7 @@ struct CollectionsPage: View {
                         }
                     }
                 }
-                section("Tags", empty: library.tags.isEmpty, destination: TagList()) {
+                section("Tags", empty: library.tags.isEmpty, page: .tags) {
                     ForEach(library.tags.prefix(60)) { tag in
                         NavigationLink(value: tag) {
                             Label(tag.value, systemImage: "tag")
@@ -117,10 +117,10 @@ struct CollectionsPage: View {
     }
 
     /// A heading that opens the full page, over one row of items that scrolls sideways.
-    private func section<Destination: View, Items: View>(_ title: LocalizedStringKey, empty: Bool, destination: Destination,
+    private func section<Items: View>(_ title: LocalizedStringKey, empty: Bool, page: CollectionList,
                                                        @ViewBuilder items: () -> Items) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            NavigationLink { destination } label: {
+            NavigationLink(value: page) {
                 HStack(spacing: 6) {
                     Text(title).font(.title2.bold())
                     Image(systemName: "chevron.right").font(.title3.bold()).foregroundStyle(.secondary)
@@ -141,12 +141,23 @@ struct CollectionsPage: View {
     }
 }
 
+/// The full pages Collections' headings open. A value, like the rows' links: a view-destination link in the same
+/// stack gets pushed again when a row's value is pushed on top of it.
+enum CollectionList: Hashable { case people, albums, tags }
+
 extension View {
     /// A person, album or tag opens its photos; so do Archive and Trash.
     func collectionDestinations() -> some View {
         navigationDestination(for: Person.self) { CollectionTimeline(context: .person($0.id), fallbackTitle: $0.name) }
             .navigationDestination(for: Album.self) { CollectionTimeline(context: .album($0.id), fallbackTitle: $0.albumName) }
             .navigationDestination(for: Tag.self) { CollectionTimeline(context: .tag($0.id), fallbackTitle: $0.value) }
+            .navigationDestination(for: CollectionList.self) {
+                switch $0 {
+                case .people: PeopleGrid()
+                case .albums: AlbumGrid()
+                case .tags: TagList()
+                }
+            }
             .navigationDestination(for: BrowserContext.self) { context in
                 CollectionTimeline(context: context, fallbackTitle: context == .trash ? String(localized: "Trash") : String(localized: "Archive"))
             }

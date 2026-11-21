@@ -245,29 +245,56 @@ struct AlbumGrid: View {
 /// Every tag by its full path. Click one for its photos.
 struct TagList: View {
     @Environment(Library.self) private var library
-    @State private var deleting: Tag?
+    /// Tags to delete once confirmed: one from a row's menu, or the chosen ones.
+    @State private var deleting: [Tag] = []
     @AppStorage("tagsAscending") private var ascending = true
+    #if os(iOS)
+    // Select mode: the system's multi-select list, so a two-finger drag chooses a run of rows
+    @State private var editMode = EditMode.inactive
+    @State private var chosen = Set<Tag.ID>()
+    #endif
 
     var body: some View {
-        List(ascending ? library.tags : library.tags.reversed()) { tag in
-            NavigationLink(value: tag) { Label(tag.value, systemImage: "tag") }
-                .contextMenu { Button("Delete Tag…", systemImage: "trash", role: .destructive) { deleting = tag } }
-                #if os(iOS)
-                .swipeActions { Button("Delete", systemImage: "trash", role: .destructive) { deleting = tag } }
-                #endif
-        }
-        .alert("Delete This Tag?", isPresented: Binding { deleting != nil } set: { if !$0 { deleting = nil } }) {
+        list
+        .alert(deleting.count == 1 ? "Delete This Tag?" : "Delete \(deleting.count) Tags?",
+               isPresented: Binding { !deleting.isEmpty } set: { if !$0 { deleting = [] } }) {
             Button("Delete", role: .destructive) {
-                if let tag = deleting { Task { await library.delete(tag) } }
+                let tags = deleting
+                Task { for tag in tags { await library.delete(tag) } }
+                #if os(iOS)
+                chosen = []
+                editMode = .inactive
+                #endif
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("The photos with it stay in your library.")
+            Text(deleting.count == 1 ? "The photos with it stay in your library." : "The photos with them stay in your library.")
         }
         .overlay { if library.tags.isEmpty { ContentUnavailableView("No Tags", systemImage: "tag") } }
         .pageBar()
         .toolbar {
+            #if os(iOS)
+            // as on the photo pages, so Select stays put when going between them and morphs into ✕
+            if editMode.isEditing {
+                ToolbarItem(id: "cancel", placement: .primaryAction) {
+                    Button("Cancel", systemImage: "xmark") { withAnimation { editMode = .inactive; chosen = [] } }
+                }
+            } else {
+                ToolbarItem(id: "select", placement: .primaryAction) {
+                    Button("Select") { withAnimation { editMode = .active } }.disabled(library.tags.isEmpty)
+                }
+            }
+            ToolbarSpacer(.fixed, placement: .primaryAction)
+            #endif
             ListOptions {
+                #if os(iOS)
+                if editMode.isEditing { // the chosen tags' actions, in More like the sort
+                    Button("Delete", systemImage: "trash", role: .destructive) {
+                        deleting = library.tags.filter { chosen.contains($0.id) }
+                    }
+                    .disabled(chosen.isEmpty)
+                }
+                #endif
                 SortMenu(selection: $ascending) {
                     Label("Name, A to Z", systemImage: "a.square").tag(true)
                     Label("Name, Z to A", systemImage: "z.square").tag(false)
@@ -275,7 +302,34 @@ struct TagList: View {
             }
         }
         .navigationTitle("Tags")
-        .navigationSubtitle("\(library.tags.count) tags")
+        .navigationSubtitle(subtitle)
+    }
+
+    private var sorted: [Tag] { ascending ? library.tags : library.tags.reversed() }
+
+    private var subtitle: String {
+        #if os(iOS)
+        if editMode.isEditing { return chosen.isEmpty ? String(localized: "Select Tags") : String(localized: "\(chosen.count) selected") }
+        #endif
+        return String(localized: "\(library.tags.count) tags")
+    }
+
+    @ViewBuilder private var list: some View {
+        #if os(iOS)
+        List(sorted, selection: $chosen) { tag in row(tag) }
+            .environment(\.editMode, $editMode)
+            .onChange(of: library.tags) { chosen.formIntersection(library.tags.map(\.id)) }
+        #else
+        List(sorted) { tag in row(tag) }
+        #endif
+    }
+
+    private func row(_ tag: Tag) -> some View {
+        NavigationLink(value: tag) { Label(tag.value, systemImage: "tag") }
+            .contextMenu { Button("Delete Tag…", systemImage: "trash", role: .destructive) { deleting = [tag] } }
+            #if os(iOS)
+            .swipeActions { Button("Delete", systemImage: "trash", role: .destructive) { deleting = [tag] } }
+            #endif
     }
 }
 

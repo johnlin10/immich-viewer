@@ -83,13 +83,20 @@ struct PhoneRoot: View {
             }
         }
         .overlay { TransferPanel() }
-        .alert("Couldn’t Make the Change", isPresented: Binding { library.editError != nil } set: { if !$0 { library.editError = nil } }) {
-            Button("OK") {}
-        } message: {
-            Text(library.editError ?? "")
-        }
+        .onChange(of: library.editError) { showEditError() }
         .preferredColorScheme(appearance == "light" ? .light : appearance == "dark" ? .dark : nil)
         .task { await library.launch() }
+    }
+
+    /// Over whatever is on top (an open photo, its details, a sheet), which a SwiftUI alert here can't reach.
+    private func showEditError() {
+        guard let message = library.editError,
+              var top = UIApplication.shared.connectedScenes.compactMap({ ($0 as? UIWindowScene)?.keyWindow }).first?.rootViewController
+        else { return }
+        while let next = top.presentedViewController, !next.isBeingDismissed { top = next }
+        let alert = UIAlertController(title: String(localized: "Couldn’t Make the Change"), message: message, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: String(localized: "OK"), style: .default) { _ in library.editError = nil })
+        top.present(alert, animated: true)
     }
 }
 

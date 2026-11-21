@@ -838,6 +838,16 @@
         }
       }
     },
+    "Delete %lld Tags?" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要刪除 %lld 個標籤嗎？"
+          }
+        }
+      }
+    },
     "Delete Album…" : {
       "localizations" : {
         "zh-Hant" : {
@@ -939,7 +949,14 @@
       }
     },
     "Done" : {
-
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "完成"
+          }
+        }
+      }
     },
     "Download" : {
       "localizations" : {
@@ -1699,12 +1716,32 @@
         }
       }
     },
+    "On These Photos" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這些照片的標籤"
+          }
+        }
+      }
+    },
     "On this Mac: http://localhost:2283. On another computer in your network: its address and port, for example http://192.168.1.20:2283 or http://nas.local:2283. From outside your network: the https address of your reverse proxy, or the server’s Tailscale address." : {
       "localizations" : {
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "伺服器在這台 Mac 上：http://localhost:2283。在同一個網路的其他電腦上：填入那台電腦的位址和連接埠，例如 http://192.168.1.20:2283 或 http://nas.local:2283。從外部網路連線：填入反向代理的 https 位址，或伺服器的 Tailscale 位址。"
+          }
+        }
+      }
+    },
+    "On This Photo" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這張照片的標籤"
           }
         }
       }
@@ -2054,6 +2091,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "選擇項目"
+          }
+        }
+      }
+    },
+    "Select Tags" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選擇標籤"
           }
         }
       }
@@ -2449,7 +2496,14 @@
       }
     },
     "The key needs the person.read and album.read permissions." : {
-
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "金鑰需要 person.read 和 album.read 權限。"
+          }
+        }
+      }
     },
     "The person you choose becomes %@: their photos move over and they are gone. This can’t be undone." : {
       "localizations" : {
@@ -2481,6 +2535,16 @@
         }
       }
     },
+    "The photos with them stay in your library." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "有這些標籤的照片會保留在圖庫中。"
+          }
+        }
+      }
+    },
     "The server didn’t accept this API key." : {
       "localizations" : {
         "zh-Hant" : {
@@ -2497,6 +2561,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "伺服器在 3 分鐘內沒有回應"
+          }
+        }
+      }
+    },
+    "The server made the tag but didn’t add it to the photos. Refresh the library, then try again." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "伺服器建立了標籤，但沒有加到照片上。請重新整理圖庫後再試一次。"
           }
         }
       }

@@ -38,7 +38,7 @@ Changes go straight to the server and show in the app right away. Edit > Undo (�
 - Delete asks first. Deleted photos go to the server's trash (Immich keeps them 30 days by default), and Undo brings them back. If the server has the trash turned off, the alert says the deletion is permanent and there is no undo.
 - Archived photos leave the timeline, like in Immich, and show on the Archive page, where the menu has Unarchive.
 - Trash page: right-click for Restore and Delete Permanently…; the ⋯ menu has Restore All and Empty Trash…. Permanent deletion asks first and can't be undone.
-- Tags: Add Tag… takes a new or existing tag (a slash nests it, like "Trips/Japan"). The Tags page lists them; click one for its photos, right-click to delete it. The info panel shows a photo's tags, ✕ removes one.
+- Tags: Add Tag… takes a new or existing tag (a slash nests it, like "Trips/Japan"); on iPhone and iPad the existing ones are listed under the field to tap, narrowed as you type, and the tags the photos already have are listed apart, ✕ (or a swipe) removing one. The Tags page lists them; click one for its photos, right-click to delete it. On iPhone and iPad, Select picks several (tap, or drag with two fingers down the list) and ⋯ > Delete deletes them at once. The info panel shows a photo's tags, ✕ removes one. Immich writes tag changes into the photos' `.xmp` files; if it can only read the library's folder (an external library mounted read-only), a deleted tag comes back the next time it reads the photos.
 - Rotate: the server keeps the original file and stores the turn as an edit (newer Immich servers only), then makes new thumbnails, which the app fetches again after a few seconds.
 - Download saves the original files (a Live Photo's video beside its still, under the same name) to the Downloads folder (a name already there gets " 2") and shows them in Finder. A panel in the middle of the window shows which file is downloading and how far along it is, with Cancel.
 - File > Import… (⇧⌘I) uploads photos and videos. On an album's page they go into that album too. Files the server already has aren't uploaded twice.
@@ -193,7 +193,16 @@ Planned editing: cropping, dropping files on the window to upload, then stacks, 
 
 ## Version history
 
-### v0.10.0 (current)
+### v0.10.1 (current)
+
+- Add Tag lists the tags the photos already have on their own, ✕ (or a swipe on iPhone and iPad) removing one.
+- iPhone and iPad: Add Tag lists the existing tags under the field to tap, narrowed as you type.
+- iPhone and iPad: the Tags page has Select: tap tags or drag two fingers down the list to choose several, then ⋯ > Delete removes them at once.
+- iPhone and iPad: a failed edit shows its message over whatever is open (a photo, its details, a sheet), and tagging that the server silently skipped now says so.
+- iPhone and iPad: opening a tag, person or album from a page opened from Collections no longer opens a second copy of that page on top.
+- iPhone and iPad: Select stays in place when going between the Tags page and a tag's photos, and turns into ✕ the same way on both.
+
+### v0.10.0
 
 - iPhone and iPad: people, albums, tags, Archive and Trash share one Collections page, like Photos, in place of the People, Albums and Tags tabs. A long press on them edits, as on their own pages. Settings moved to a gear at the top right of Collections, opening as a sheet.
 - Mac: the same layout. The sidebar has Library, Collections, every album, and Archive and Trash; people and tags moved to Collections, whose gear opens Settings.

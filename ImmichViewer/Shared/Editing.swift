@@ -420,7 +420,7 @@ extension View {
                     Task { await library.update(new, was: person, undo: undo) }
                 }
             case let .tag(ids):
-                TagSheet(tags: library.tags) { name in
+                TagSheet(tags: library.tags, ids: ids, undo: undo) { name in
                     Task { await library.tag(ids, name, undo: undo) }
                 }
             case let .merge(person):
@@ -594,30 +594,75 @@ private struct PersonSheet: View {
     }
 }
 
-/// A tag name, new or one of the existing ones.
+/// A tag name, new or one of the existing ones, over the tags the photos have already (✕ takes one off them all).
 private struct TagSheet: View {
     let tags: [Tag]
+    let ids: [String]
+    let undo: UndoManager?
     let onSave: (String) -> Void
+    @Environment(Library.self) private var library
     @State private var name = ""
+    /// The photos' tags, nil until loaded.
+    @State private var added: [Tag]?
 
     var body: some View {
+        let have = Set((added ?? []).map(\.id))
+        let free = tags.filter { !have.contains($0.id) }
+        let query = free.contains { $0.value == name } ? "" : name // one picked: still show the others
+        let shown = free.filter { query.isEmpty || $0.value.localizedCaseInsensitiveContains(query) }
         Form {
-            TextField("Tag", text: $name, prompt: Text("Trips/Japan"))
-                #if os(macOS)
-                .textInputSuggestions {
-                    ForEach(tags.filter { name.isEmpty || $0.value.localizedCaseInsensitiveContains(name) }.prefix(12)) {
-                        Text($0.value).textInputCompletion($0.value)
+            SwiftUI.Section {
+                TextField("Tag", text: $name, prompt: Text("Trips/Japan"))
+                    #if os(macOS)
+                    .textInputSuggestions {
+                        ForEach(shown.prefix(12)) { Text($0.value).textInputCompletion($0.value) }
+                    }
+                    #endif
+                Text("A slash makes a tag inside another one.").font(.callout).foregroundStyle(.secondary)
+            }
+            if let added, !added.isEmpty {
+                SwiftUI.Section(ids.count == 1 ? "On This Photo" : "On These Photos") {
+                    ForEach(added) { tag in
+                        HStack {
+                            Label(tag.value, systemImage: "tag.fill")
+                            Spacer()
+                            Button("Remove Tag", systemImage: "xmark.circle.fill") { remove(tag) }
+                                .labelStyle(.iconOnly).buttonStyle(.plain).foregroundStyle(.secondary)
+                        }
+                        #if os(iOS)
+                        .swipeActions { Button("Remove Tag", systemImage: "tag.slash", role: .destructive) { remove(tag) } }
+                        #endif
                     }
                 }
-                #endif
-            Text("A slash makes a tag inside another one.").font(.callout).foregroundStyle(.secondary)
+            }
+            #if os(iOS)
+            if !shown.isEmpty { // no completion menu on iOS: the other tags to pick from, narrowed as you type
+                SwiftUI.Section("Tags") {
+                    ForEach(shown.sorted { $0.value.localizedStandardCompare($1.value) == .orderedAscending }) { tag in
+                        Button { name = tag.value } label: {
+                            HStack {
+                                Label(tag.value, systemImage: "tag").foregroundStyle(.primary)
+                                Spacer()
+                                if tag.value == name { Image(systemName: "checkmark").foregroundStyle(.tint) }
+                            }
+                        }
+                    }
+                }
+            }
+            #endif
         }
         #if os(macOS)
         .frame(width: 360)
         #endif
+        .task { added = await library.tags(on: ids) }
         .sheetButtons(title: "Add Tag", canSave: !name.trimmingCharacters(in: .whitespaces).isEmpty) {
             onSave(name.trimmingCharacters(in: .whitespaces))
         }
+    }
+
+    private func remove(_ tag: Tag) {
+        withAnimation { added?.removeAll { $0.id == tag.id } }
+        Task { await library.untag(ids, tag, undo: undo) }
     }
 }
 
