@@ -157,7 +157,7 @@ extension View {
             .navigationDestination(for: Album.self) { CollectionTimeline(context: .album($0.id), fallbackTitle: $0.albumName) }
             .navigationDestination(for: Tag.self) { CollectionTimeline(context: .tag($0.id), fallbackTitle: $0.value) }
             #if os(macOS)
-            .navigationDestination(for: Memory.self) { MemoryPlayer(memory: $0) } // on iOS a card opens it full screen
+            .navigationDestination(for: MemoryOpen.self) { MemoryPlayer(memory: $0.memory, source: $0.source) } // on iOS a card opens it full screen
             #endif
             .navigationDestination(for: MemoryPhotos.self) {
                 let photos = $0

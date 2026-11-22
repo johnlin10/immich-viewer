@@ -59,6 +59,7 @@ struct PlayerLayer: NSViewRepresentable {
 
     func updateNSView(_ view: NSView, context: Context) {
         (view.layer as? AVPlayerLayer)?.player = player
+        (view.layer as? AVPlayerLayer)?.videoGravity = gravity
     }
 }
 #else
@@ -77,6 +78,9 @@ struct PlayerLayer: UIViewRepresentable {
         return view
     }
 
-    func updateUIView(_ view: View, context: Context) { view.playerLayer.player = player }
+    func updateUIView(_ view: View, context: Context) {
+        view.playerLayer.player = player
+        view.playerLayer.videoGravity = gravity
+    }
 }
 #endif
