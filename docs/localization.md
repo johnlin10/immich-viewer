@@ -1,6 +1,6 @@
 # Localization plan
 
-Status: step 1 done in v0.2.0 (English source, `zh-Hant` translation). Simplified Chinese is next.
+Status: steps 1 and 2 done (English source, `zh-Hant` and `zh-Hans` translations).
 
 ## Languages
 
@@ -101,7 +101,7 @@ Use the same word everywhere in a language. Taiwan and mainland terms differ, so
 ## Steps
 
 1. **v0.2.0: English source (done).** Switch the development language to English, move the existing Chinese into `zh-Hant`, make the code changes above. The app looks the same in Traditional Chinese and is complete in English.
-2. **Next: Simplified Chinese.** Add `zh-Hans` using the glossary, then check layout.
+2. **Simplified Chinese (done).** Add `zh-Hans` using the glossary, then check layout.
 3. **README:** remove the "planned" note and say the interface follows the macOS language.
 
 From then on, every new UI string is written in English in the code, and its `zh-Hant` and `zh-Hans` translations go in the same commit.

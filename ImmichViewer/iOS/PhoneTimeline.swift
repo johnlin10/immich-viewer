@@ -40,6 +40,9 @@ struct TimelineBrowser: View {
     @State private var picked: [PhotosPickerItem] = []
     /// Uploads from here go into the album too.
     private var album: String? { if case .album(let id) = context { id } else { nil } }
+    @State private var dropTargeted = false
+    /// Dropped files upload only on Library and album pages (where Upload from Photos… is), one transfer at a time, not while selecting.
+    private var canDrop: Bool { (context == .library || album != nil) && library.transfer == nil && !selecting }
 
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -159,6 +162,16 @@ struct TimelineBrowser: View {
         .onChange(of: newestFirst) { regroup() }
         .onChange(of: filter) { regroup() }
         .onChange(of: selecting) { if !selecting { chosen = [] } }
+        .dropDestination(for: PickedFile.self) { files, _ in
+            guard canDrop, !files.isEmpty else {
+                for file in files { try? FileManager.default.removeItem(at: file.url) }
+                return false
+            }
+            Task { await library.upload(count: files.count, album: album) { [UploadFile(url: files[$0].url, name: files[$0].name, temporary: true)] } }
+            return true
+        } isTargeted: { dropTargeted = $0 }
+        .overlay { if dropTargeted, canDrop { DropHighlight(album: album) } }
+        .animation(.smooth, value: dropTargeted)
     }
 
     private static let capsuleStyle: Date.FormatStyle = {

@@ -300,6 +300,32 @@ struct TransferPanel: View {
     }
 }
 
+/// Over a page while files are dragged onto it: an outline, and what dropping will do (into `album`, an id, if given).
+struct DropHighlight: View {
+    @Environment(Library.self) private var library
+    let album: String?
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 12).strokeBorder(.tint, lineWidth: 4).padding(4)
+            Group {
+                if let album {
+                    let name = library.albums.first { $0.id == album }?.albumName ?? ""
+                    Text("Drop to Add to “\(name)”")
+                } else {
+                    Text("Drop to Upload")
+                }
+            }
+            .font(.headline)
+            .padding(.horizontal, 18)
+            .frame(height: 44)
+            .glassEffect(.regular, in: .capsule)
+        }
+        .allowsHitTesting(false)
+        .transition(.opacity)
+    }
+}
+
 #if os(iOS)
 /// The share sheet for downloaded files, over whatever is showing. Their folder goes once the sheet closes.
 func share(_ files: [URL]) {

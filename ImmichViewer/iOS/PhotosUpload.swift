@@ -49,7 +49,8 @@ private func files(of asset: PHAsset) async throws -> [UploadFile] {
 }
 
 /// What the picker hands over without library access: a copy of the file, kept until uploaded.
-private struct PickedFile: Transferable {
+// ponytail: dropped files are all copied before uploading, so many big videos take temporary space first.
+struct PickedFile: Transferable {
     let url: URL
     let name: String
 

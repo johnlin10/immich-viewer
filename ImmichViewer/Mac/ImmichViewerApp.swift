@@ -270,7 +270,11 @@ struct TimelineBrowser: View {
     @State private var bridge = GridBridge()
     @State private var askingDate = false
     @State private var editor = PhotoEditor()
+    @State private var dropTargeted = false
     @Environment(\.undoManager) private var undo
+
+    /// Files dropped here upload, like File > Import…, but only on Library and album pages, one transfer at a time, not over a photo.
+    private var canDrop: Bool { (context == .library || album != nil) && library.transfer == nil && viewer == nil }
 
     var body: some View {
         GeometryReader { geo in
@@ -378,6 +382,17 @@ struct TimelineBrowser: View {
             JumpToDate(assets: grid.assets, current: bridge.top) { if let i = index(of: $0, in: grid.assets) { bridge.jump(to: i) } }
         }
         .photoEditor(editor, library: library, undo: undo)
+        .dropDestination(for: URL.self) { urls, _ in
+            let files = urls.filter {
+                guard $0.isFileURL, let type = try? $0.resourceValues(forKeys: [.contentTypeKey]).contentType else { return false }
+                return type.conforms(to: .image) || type.conforms(to: .movie)
+            }
+            guard canDrop, !files.isEmpty else { return false }
+            Task { await library.upload(count: files.count, album: album?.id) { [UploadFile(url: files[$0])] } }
+            return true
+        } isTargeted: { dropTargeted = $0 }
+        .overlay { if dropTargeted, canDrop { DropHighlight(album: album?.id) } }
+        .animation(.smooth, value: dropTargeted)
     }
 
     /// Nothing over an open photo; how many are chosen; else the page's subtitle, with how many a filter leaves.
