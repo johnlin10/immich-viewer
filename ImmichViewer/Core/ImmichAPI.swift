@@ -239,10 +239,13 @@ struct ImmichAPI: Sendable {
     }
 
     /// One search for `query`: photos whose file name, description or text in the picture contains it first, newest first;
-    /// then what smart search finds, best match first.
-    func search(_ query: String) async throws -> [Asset] {
-        async let text = textSearch(query)
-        async let smart = try? smartSearch(query) // a server without machine learning: the text matches alone
+    /// then what smart search finds, best match first. `filter` narrows every request; with no `query`, the filter alone is
+    /// the search, newest first.
+    func search(_ query: String, filter: SearchFilter = .init()) async throws -> [Asset] {
+        let narrow = filter.fields()
+        guard !query.isEmpty else { return try await metadataPages(narrow).sorted { $0.date > $1.date } }
+        async let text = textSearch(query, narrow)
+        async let smart = try? smartSearch(query, narrow) // a server without machine learning: the text matches alone
         let found = try await text
         let ids = Set(found.map(\.id))
         return found + (await smart ?? []).filter { !ids.contains($0.id) }
@@ -250,27 +253,39 @@ struct ImmichAPI: Sendable {
 
     /// Smart search: photos showing what `query` describes, best match first, as Immich's machine learning ranks them.
     /// It ranks every photo, so only the best `size` come back.
-    private func smartSearch(_ query: String, size: Int = 500) async throws -> [Asset] {
-        try await searchPage("smart", ["query": query, "size": size]).assets
+    private func smartSearch(_ query: String, _ narrow: [String: Any], size: Int = 500) async throws -> [Asset] {
+        try await searchPage("smart", narrow.merging(["query": query, "size": size]) { $1 }).assets
     }
 
     /// Photos whose file name, description or text in the picture contains `query`, newest first.
-    private func textSearch(_ query: String) async throws -> [Asset] {
+    private func textSearch(_ query: String, _ narrow: [String: Any]) async throws -> [Asset] {
         try await withThrowingTaskGroup(of: [Asset].self) { group in
             for field in ["originalFileName", "description", "ocr"] {
-                group.addTask {
-                    var all: [Asset] = []
-                    for page in 1...10 { // ponytail: 10,000 per field at most
-                        let p = try await searchPage("metadata", [field: query, "size": 1000, "page": page])
-                        all += p.assets
-                        if !p.more { break }
-                    }
-                    return all
-                }
+                group.addTask { try await metadataPages(narrow.merging([field: query]) { $1 }) }
             }
             var seen = Set<String>()
             return try await group.reduce(into: []) { $0 += $1 }.filter { seen.insert($0.id).inserted }.sorted { $0.date > $1.date }
         }
+    }
+
+    /// Every page of a metadata search for `body`.
+    private func metadataPages(_ body: [String: Any]) async throws -> [Asset] {
+        var all: [Asset] = []
+        for page in 1...10 { // ponytail: 10,000 per search at most
+            let p = try await searchPage("metadata", body.merging(["size": 1000, "page": page]) { $1 })
+            all += p.assets
+            if !p.more { break }
+        }
+        return all
+    }
+
+    /// The places the server knows of (`type` is country, state or city), narrowed by the country and state chosen above them.
+    func places(_ type: String, country: String? = nil, state: String? = nil) async throws -> [String] {
+        var query = ["type": type]
+        if let country { query["country"] = country }
+        if let state { query["state"] = state }
+        let names = try JSONDecoder().decode([String].self, from: await get("search/suggestions", query))
+        return names.filter { !$0.isEmpty }.sorted { $0.localizedStandardCompare($1) == .orderedAscending }
     }
 
     private func searchPage(_ kind: String, _ body: [String: Any]) async throws -> (assets: [Asset], more: Bool) {
@@ -325,6 +340,36 @@ struct ImmichAPI: Sendable {
     func albums() async throws -> [Album] {
         let albums = try JSONDecoder().decode([Album].self, from: await get("albums"))
         return albums.sorted { ($0.endDate ?? "") > ($1.endDate ?? "") }
+    }
+}
+
+/// What a search is narrowed to, besides its text: people (all of them in the photo), a place, a date range.
+struct SearchFilter: Hashable, Sendable {
+    var people: [String] = [] // ids, in the order chosen
+    var country: String?
+    var state: String?
+    var city: String?
+    var from: Date? // a day, as picked
+    var to: Date? // a day, as picked: through its end
+
+    var isActive: Bool { !people.isEmpty || country != nil || state != nil || city != nil || from != nil || to != nil }
+
+    /// The request fields, for /search/metadata and /search/smart. A range picked backwards is swapped, not refused.
+    func fields(calendar: Calendar = .current) -> [String: Any] {
+        var fields: [String: Any] = [:]
+        if !people.isEmpty { fields["personIds"] = people }
+        if let country { fields["country"] = country }
+        if let state { fields["state"] = state }
+        if let city { fields["city"] = city }
+        let formatter = ISO8601DateFormatter()
+        formatter.timeZone = calendar.timeZone
+        var (first, last) = (from, to)
+        if let a = first, let b = last, a > b { (first, last) = (b, a) }
+        if let first { fields["takenAfter"] = formatter.string(from: calendar.startOfDay(for: first)) }
+        if let last, let next = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: last)) {
+            fields["takenBefore"] = formatter.string(from: next)
+        }
+        return fields
     }
 }
 

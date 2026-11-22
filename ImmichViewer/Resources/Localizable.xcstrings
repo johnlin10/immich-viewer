@@ -290,6 +290,22 @@
         }
       }
     },
+    "Add Person" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "加入人物"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "添加人物"
+          }
+        }
+      }
+    },
     "Add Server" : {
       "localizations" : {
         "zh-Hant" : {
@@ -526,6 +542,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "所有相册"
+          }
+        }
+      }
+    },
+    "Any" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "不限"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "不限"
           }
         }
       }
@@ -850,6 +882,22 @@
         }
       }
     },
+    "City" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "城市"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "城市"
+          }
+        }
+      }
+    },
     "Clear" : {
       "localizations" : {
         "zh-Hant" : {
@@ -1140,6 +1188,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "无法连接到 %1$@：%2$@ 请检查地址和端口，以及服务器是否正在运行。如果服务器在其他电脑上，还请前往“系统设置”>“隐私与安全性”>“本地网络”，确认 Immich Viewer 已开启。"
+          }
+        }
+      }
+    },
+    "Country" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "國家"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "国家"
           }
         }
       }
@@ -1847,6 +1911,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "按照片内容搜索，例如“日落时的海滩”，也可以搜索文件名、说明或照片中的文字。"
+          }
+        }
+      }
+    },
+    "From" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "開始"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "开始"
           }
         }
       }
@@ -2667,6 +2747,22 @@
         }
       }
     },
+    "No Results" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "沒有結果"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "没有结果"
+          }
+        }
+      }
+    },
     "No Tags" : {
       "localizations" : {
         "zh-Hant" : {
@@ -2919,6 +3015,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "服务器上的照片不受影响。"
+          }
+        }
+      }
+    },
+    "Photos with all of them." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "同時有這些人的照片。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "同时包含这些人的照片。"
+          }
+        }
+      }
+    },
+    "Place" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "地點"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "地点"
           }
         }
       }
@@ -3255,6 +3383,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "搜索"
+          }
+        }
+      }
+    },
+    "Search Filters" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "搜尋篩選"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "搜索筛选"
           }
         }
       }
@@ -3736,6 +3880,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "打开 Immich Viewer 或切换到此服务器时，如果服务器没有运行就启动它。退出时只会停止由 Immich Viewer 启动的服务器。"
+          }
+        }
+      }
+    },
+    "State" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "州／省"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "州／省"
           }
         }
       }
@@ -4236,6 +4396,22 @@
         }
       }
     },
+    "To" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "結束"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "结束"
+          }
+        }
+      }
+    },
     "Trash" : {
       "localizations" : {
         "zh-Hant" : {
@@ -4264,6 +4440,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "旅行/日本"
+          }
+        }
+      }
+    },
+    "Try other filters." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "試試其他篩選。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "试试其他筛选。"
           }
         }
       }

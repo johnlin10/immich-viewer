@@ -134,6 +134,20 @@ let shelf = [Album(id: "a", albumName: "trip 10", assetCount: 5), Album(id: "b",
 precondition(AlbumSort.recent.apply(shelf).map(\.id) == ["a", "b"] && AlbumSort.name.apply(shelf).map(\.id) == ["b", "a"])
 precondition(AlbumSort.count.apply(shelf).map(\.id) == ["b", "a"])
 
+// search filters: the request fields, days in the calendar's time zone
+var taipei = Calendar(identifier: .gregorian)
+taipei.timeZone = TimeZone(identifier: "Asia/Taipei")!
+func day(_ text: String) -> Date { ISO8601DateFormatter().date(from: text + "T00:00:00+08:00")! }
+func instant(_ value: Any?) -> Date? { (value as? String).flatMap { ISO8601DateFormatter().date(from: $0) } }
+precondition(!SearchFilter().isActive && SearchFilter().fields(calendar: taipei).isEmpty)
+let who = SearchFilter(people: ["a", "b"], country: "Taiwan").fields(calendar: taipei)
+precondition(who["personIds"] as? [String] == ["a", "b"] && who["country"] as? String == "Taiwan" && who["state"] == nil && who["takenAfter"] == nil)
+let year = SearchFilter(from: day("2023-01-01"), to: day("2023-12-31")).fields(calendar: taipei)
+precondition(instant(year["takenAfter"]) == day("2023-01-01") && instant(year["takenBefore"]) == day("2024-01-01"))
+precondition((year["takenAfter"] as? String)?.hasSuffix("+08:00") == true)
+let backwards = SearchFilter(from: day("2023-12-31"), to: day("2023-01-01")).fields(calendar: taipei)
+precondition(instant(backwards["takenAfter"]) == day("2023-01-01") && instant(backwards["takenBefore"]) == day("2024-01-01"))
+
 // live events: socket.io packets, and what they mean for the lists
 func event(_ text: String) -> ServerEvent? {
     guard case .event(let name, let json) = SocketPacket(text) else { return nil }
