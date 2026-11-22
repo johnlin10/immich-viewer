@@ -63,7 +63,11 @@ struct PhoneRoot: View {
                     Tab("Collections", systemImage: "square.stack") {
                         NavigationStack { CollectionsPage { settingsShown = true }.collectionDestinations() }
                     }
-                    if sizeClass == .regular { // iPad: the albums and utilities in the sidebar too
+                    if sizeClass == .regular { // iPad: memories, the albums and utilities in the sidebar too
+                        Tab("Memories", systemImage: "memories") {
+                            NavigationStack { MemoryGrid().collectionDestinations() }
+                        }
+                        .tabPlacement(.sidebarOnly)
                         TabSection("Albums") {
                             Tab("All Albums", systemImage: "rectangle.stack") {
                                 NavigationStack { AlbumGrid().collectionDestinations() }

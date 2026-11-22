@@ -8,9 +8,10 @@ It keeps every small thumbnail (about 15 KB each) on the device, so scrolling re
 
 ## What it does
 
-- A sidebar like Photos: Library, Collections, every album, and Archive and Trash. People and tags are on Collections; its gear opens Settings.
+- A sidebar like Photos: Library, Collections, Memories, every album, and Archive and Trash. People and tags are on Collections; its gear opens Settings.
 - People: everyone Immich recognised (hidden people left out) as round faces, with their birthday and age when one is set; click one for their photos. A person's page shows the birthday and age next to the item count.
 - Albums: own and shared albums as covers with name and count, newest first; click one for its photos.
+- Memories: the top row of Collections is today's memories (photos from this day in earlier years, or a person's birthday), each a cover with its title. Click one to play it full screen like a story: a bar per photo, 5 seconds a photo, a video to its end, then it stays on the last photo. ← → (or a click on the left or right third) move between photos, Space (or a click in the middle) pauses, Esc goes back; Show All Photos opens them as the usual grid. The heading opens every memory the server has due. Memories is in the Mac and iPad sidebars too. Read only: no saving, no marking as seen. A key without `memory.read` just leaves the row out.
 - Filter and sort at the top right of every page. Filters can be combined, and with none on everything shows; choices in the same group (Photos and Videos, Named and Unnamed, Mine and Shared) add up, the others narrow. Photo pages (Library, Archive, Trash, a person, an album, a tag): Photos, Videos, Live Photos, Favorites, and Newest or Oldest First; the filter starts empty on every page, the order is kept. People: Named, Unnamed, Has Birthday; Default (Immich's order: favorites, then named, then most photographed), Name, Age either way. Albums: Mine, Shared (on servers that can tell); Recent, Name, Item Count. Tags: Name, A to Z or Z to A. The page's subtitle says how many a filter leaves.
 - Person and album photos use the same grid, zoom, grouping and single photo view as the library, with a back button. A person opened from a photo opens on top of the page you were on, so back returns to the same place in the Library, an album or another person. While a photo is open only ✕ shows, which closes the photo.
 - One square grid of the whole timeline (archived, hidden and locked items are left out, like Immich's own timeline). The grid fills the window; under the title bar the photos blur progressively, strongest at the top.
@@ -69,8 +70,9 @@ Changes go straight to the server and show in the app right away. Edit > Undo (�
 The same project also builds an iPhone and iPad app (iOS 26 or later). It isn't in the Releases: build it from Xcode onto your own device.
 
 - Like Photos, Library and Collections. Collections is one page with a row each of people, albums and tags (each heading opens the full page, and a long press edits) and Archive and Trash.
-- iPhone: tabs for Library and Collections. iPad: Library and Collections at the top, and a sidebar that adds every album and the utilities.
+- iPhone: tabs for Library and Collections. iPad: Library and Collections at the top, and a sidebar that adds Memories, every album and the utilities.
 - Settings opens as a sheet from the gear at the top right of Collections.
+- A memory opens full screen: tap the left or right third to go back or forward, the middle to pause, swipe down (or ✕) to close; the screen stays on while it plays.
 - The same grid and grouping. Pinch the grid to change the column count (2 to 8 on iPhone, more on iPad, which keeps its own count): like the Mac, it follows the fingers and fades into the next count, keeping the photo under them in place. Pull down to refresh. The tab bar tucks away while scrolling down.
 - Every page has its options in a ⋯ menu at the top right: filter, sort and (on photo pages) grouping, plus the page's own actions (Edit Album…, Merge With…, Empty Trash… and so on). Albums keeps + for a new album next to it. Once a page's large title shrinks it sits on the left, over a progressive blur.
 - By day, each day's date sticks just under the title over the system's blur while its photos scroll past; by month, the date capsule shows instead.
@@ -97,7 +99,7 @@ The same project also builds an iPhone and iPad app (iOS 26 or later). It isn't 
 
 ## Setup
 
-1. In the Immich web UI, open Account Settings > API Keys and create a new key. Browsing needs `asset.read`, `asset.view`, `person.read` and `album.read`; add `asset.download` if you want zooming, copying and dragging out to use the originals. Editing needs `asset.update`, `asset.delete`, `asset.upload`, `asset.download`, `tag.*`, `person.update`, `person.merge`, `face.update`, `album.create`, `album.update`, `album.delete`, `albumAsset.create` and `albumAsset.delete`. Leave out the ones you don't want: those changes then fail with the server's message. A key with all permissions works too.
+1. In the Immich web UI, open Account Settings > API Keys and create a new key. Browsing needs `asset.read`, `asset.view`, `person.read`, `album.read` and `memory.read`; add `asset.download` if you want zooming, copying and dragging out to use the originals. Editing needs `asset.update`, `asset.delete`, `asset.upload`, `asset.download`, `tag.*`, `person.update`, `person.merge`, `face.update`, `album.create`, `album.update`, `album.delete`, `albumAsset.create` and `albumAsset.delete`. Leave out the ones you don't want: those changes then fail with the server's message. A key with all permissions works too.
 2. Download the DMG from the [Releases page](https://github.com/johnlin10/immich-viewer/releases) and drag the app to Applications, or open `ImmichViewer.xcodeproj` in Xcode and run it (⌘R). The app is signed with a development certificate only, so the first time macOS blocks it: open System Settings > Privacy & Security and click Open Anyway.
 3. Enter the server address and the key. The key is saved in the login keychain. Change it later in Settings (⌘,).
 
@@ -178,6 +180,7 @@ Sources are grouped by where they run. Every file is compiled for both platforms
 | `InfoPanel.swift` | A photo's details (⌘I on the Mac, swipe up on iOS) and its row of faces |
 | `LivePhoto.swift` | A Live Photo's moving part and the LIVE badge |
 | `Statistics.swift` | Statistics page: totals, heat maps, charts |
+| `Memories.swift` | Memory cards, the page of all memories, and the full-screen player |
 | **`Mac/`** | The Mac app |
 | `ImmichViewerApp.swift` | App window and sidebar, View menu, timeline page, bottom bar, title bar blur |
 | `PhotoGrid.swift` | NSCollectionView grid, zoom, clicks, pinch, keyboard selection, cells, headers |
@@ -196,9 +199,9 @@ Sources are grouped by where they run. Every file is compiled for both platforms
 
 ## Not in this version
 
-Map and memories.
+Map.
 
-Planned editing: cropping, then stacks, sharing, duplicates and memories.
+Planned editing: cropping, then stacks, sharing and duplicates.
 
 ## Version history
 

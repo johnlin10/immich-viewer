@@ -28,6 +28,10 @@ final class Library {
     private(set) var ownedAlbums: Set<String>?
     /// Why people or albums couldn't be loaded (for example a key without `person.read`).
     private(set) var collectionsError: String?
+    /// Today's memories. Loaded with each sync; not kept on disk.
+    private(set) var memories: [Memory] = []
+    /// Why they couldn't be loaded (for example a key without `memory.read`); the Collections row then stays out.
+    private(set) var memoriesError: String?
     private(set) var thumbs: ThumbnailStore
     /// Face crops for the people page.
     private(set) var faces: ThumbnailStore
@@ -195,6 +199,7 @@ final class Library {
             (thumbs, faces, listFile) = Self.stores(base, server)
             (people, albums, tags, collectionsError, canDownload, trashEnabled) = ([], [], [], nil, nil, true)
             ownedAlbums = nil
+            (memories, memoriesError) = ([], nil)
             loadList()
         }
         api = candidate
@@ -335,15 +340,18 @@ final class Library {
         let (thumbs, pages) = (thumbs, pagesDir) // this server's, whatever is switched to meanwhile
         status = String(localized: "Syncing the list…")
         async let collections: Void = loadCollections() // alongside, not after: people and albums are much quicker
+        async let memories: Void = loadMemories()
         let list: [Asset]
         do {
             list = try await api.timeline()
         } catch {
             status = String(localized: "Sync failed: \(error.localizedDescription)")
             await collections
+            await memories
             return
         }
         await collections
+        await memories
         guard !Task.isCancelled else { return }
         assets = list
         revision += 1
@@ -402,6 +410,20 @@ final class Library {
             Self.write(SavedCollections(people: newPeople, albums: newAlbums, tags: newTags, ownedAlbums: owned), collectionsFile)
         } catch {
             collectionsError = error.localizedDescription
+        }
+    }
+
+    /// Today's memories; a failure only hides the row on Collections, no alert.
+    func loadMemories() async {
+        guard let api else { return }
+        do {
+            let found = try await api.memories(for: .now)
+            guard !Task.isCancelled, self.api?.server == api.server else { return }
+            if found != memories { memories = found }
+            memoriesError = nil
+        } catch {
+            guard !Task.isCancelled, self.api?.server == api.server else { return }
+            (memories, memoriesError) = ([], error.localizedDescription)
         }
     }
 

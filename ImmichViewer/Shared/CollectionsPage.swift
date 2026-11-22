@@ -24,6 +24,11 @@ struct CollectionsPage: View {
         let face: CGFloat = wide ? 110 : 80, cover: CGFloat = wide ? 180 : 140
         ScrollView {
             VStack(alignment: .leading, spacing: 32) {
+                if library.memoriesError == nil { // a key without memory.read: no row
+                    section("Memories", empty: library.memories.isEmpty, page: .memories) {
+                        ForEach(library.memories) { MemoryCard(memory: $0).frame(width: cover * 1.4) }
+                    }
+                }
                 section("People", empty: library.people.isEmpty, page: .people) {
                     ForEach(library.people.prefix(40)) { person in
                         NavigationLink(value: person) {
@@ -143,7 +148,7 @@ struct CollectionsPage: View {
 
 /// The full pages Collections' headings open. A value, like the rows' links: a view-destination link in the same
 /// stack gets pushed again when a row's value is pushed on top of it.
-enum CollectionList: Hashable { case people, albums, tags }
+enum CollectionList: Hashable { case people, albums, tags, memories }
 
 extension View {
     /// A person, album or tag opens its photos; so do Archive and Trash.
@@ -151,11 +156,22 @@ extension View {
         navigationDestination(for: Person.self) { CollectionTimeline(context: .person($0.id), fallbackTitle: $0.name) }
             .navigationDestination(for: Album.self) { CollectionTimeline(context: .album($0.id), fallbackTitle: $0.albumName) }
             .navigationDestination(for: Tag.self) { CollectionTimeline(context: .tag($0.id), fallbackTitle: $0.value) }
+            #if os(macOS)
+            .navigationDestination(for: Memory.self) { MemoryPlayer(memory: $0) } // on iOS a card opens it full screen
+            #endif
+            .navigationDestination(for: MemoryPhotos.self) {
+                let photos = $0
+                TimelineBrowser(title: photos.memory.title, subtitle: photos.memory.subtitle, assets: photos.memory.assets,
+                                revision: 0, context: .search)
+                    .onAppear { photos.covered.value = true }
+                    .onDisappear { photos.covered.value = false }
+            }
             .navigationDestination(for: CollectionList.self) {
                 switch $0 {
                 case .people: PeopleGrid()
                 case .albums: AlbumGrid()
                 case .tags: TagList()
+                case .memories: MemoryGrid()
                 }
             }
             .navigationDestination(for: BrowserContext.self) { context in

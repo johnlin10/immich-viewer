@@ -315,6 +315,28 @@ struct ImmichAPI: Sendable {
         return all
     }
 
+    /// Today's memories (`day`), or all of them that are due, newest first. Needs `memory.read`.
+    func memories(for day: Date? = nil) async throws -> [Memory] {
+        struct Item: Decodable {
+            struct Data: Decodable { let year: Int; let personName: String? }
+            let id, memoryAt: String
+            let showAt: String?
+            let data: Data
+            let assets: [AssetItem]
+        }
+        var query: [String: String] = [:]
+        if let day { query["for"] = day.formatted(Date.ISO8601FormatStyle(timeZone: .current).year().month().day()) } // local calendar
+        let items = try JSONDecoder().decode([Item].self, from: await get("memories", query))
+        let parser = UTCDateParser()
+        let now = Date()
+        return items.compactMap { item in
+            let assets = item.assets.compactMap { $0.asset(using: parser) }
+            guard !assets.isEmpty, let date = parser.date(item.memoryAt),
+                  day != nil || item.showAt.flatMap(parser.date).map({ $0 <= now }) ?? true else { return nil }
+            return Memory(id: item.id, year: item.data.year, personName: item.data.personName, date: date, assets: assets)
+        }.sorted { $0.date > $1.date }
+    }
+
     /// Whether deleting moves to the trash. With the trash turned off on the server, deleting is permanent.
     func trashEnabled() async throws -> Bool {
         struct Features: Decodable { let trash: Bool }
@@ -392,6 +414,26 @@ struct AssetItem: Decodable, Sendable {
             Asset(id: id, date: $0, isVideo: type == "VIDEO", isFavorite: isFavorite == true, isLive: livePhotoVideoId != nil)
         }
     }
+}
+
+/// One of Immich's memories: photos from this day in an earlier year (or a person's birthday).
+struct Memory: Identifiable, Hashable, Sendable {
+    let id: String
+    let year: Int
+    let personName: String?
+    let date: Date        // memoryAt
+    let assets: [Asset]   // in the server's order (oldest first)
+
+    static func == (a: Memory, b: Memory) -> Bool { a.id == b.id }
+    func hash(into hasher: inout Hasher) { hasher.combine(id) }
+
+    var title: String {
+        if let personName, !personName.isEmpty { return String(localized: "\(personName)’s Birthday") }
+        let years = Calendar.current.component(.year, from: .now) - year
+        return years < 1 ? String(year) : String(localized: "\(years) years ago")
+    }
+
+    var subtitle: String { date.formatted(.dateTime.month().day().year()) }
 }
 
 /// A file to upload, with what the server should keep that the file itself may not say.

@@ -166,7 +166,7 @@ private struct StartStopItems: View {
 
 /// The sidebar's pages.
 enum Page: Hashable {
-    case library, collections, albums, album(String), archive, trash, search
+    case library, collections, memories, albums, album(String), archive, trash, search
 }
 
 struct ContentView: View {
@@ -217,6 +217,7 @@ struct ContentView: View {
             Label("Search", systemImage: "magnifyingglass").tag(Page.search)
             Label("Library", systemImage: "photo.on.rectangle").tag(Page.library)
             Label("Collections", systemImage: "square.stack").tag(Page.collections)
+            Label("Memories", systemImage: "memories").tag(Page.memories)
             SwiftUI.Section("Albums", isExpanded: $albumsShown) {
                 Label("All Albums", systemImage: "rectangle.stack").tag(Page.albums)
                 ForEach(library.albums) { album in
@@ -236,6 +237,7 @@ struct ContentView: View {
             TimelineBrowser(title: String(localized: "Library"), subtitle: library.status, assets: library.assets,
                             revision: library.revision, context: .library)
         case .collections: CollectionsPage { openSettings() }
+        case .memories: MemoryGrid()
         case .albums: AlbumGrid()
         case .album(let id):
             CollectionTimeline(context: .album(id), fallbackTitle: library.albums.first { $0.id == id }?.albumName ?? "")
