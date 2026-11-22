@@ -246,8 +246,13 @@ struct MemoryPlayer: View {
         .buttonStyle(.plain)
         .foregroundStyle(.white)
         .padding(.horizontal, 12)
+        #if os(macOS) // just the bars, along the window's top edge; the fade still covers the title bar under them
+        .padding(.top, 6)
+        .padding(.bottom, top + 12)
+        #else
         .padding(.top, top + 8)
         .padding(.bottom, 24)
+        #endif
         .background { // the white title stays readable on a bright photo
             LinearGradient(colors: [.black.opacity(0.5), .clear], startPoint: .top, endPoint: .bottom)
                 .allowsHitTesting(false)
