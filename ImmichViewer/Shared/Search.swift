@@ -145,11 +145,15 @@ struct SearchFilterForm: View {
 
     var body: some View {
         Form {
-            SwiftUI.Section("Show") {
-                Toggle(isOn: $kinds.photos) { Label("Photos", systemImage: "photo") }
-                Toggle(isOn: $kinds.videos) { Label("Videos", systemImage: "video") }
-                Toggle(isOn: $kinds.live) { Label("Live Photos", systemImage: "livephoto") }
-                Toggle(isOn: $kinds.favorites) { Label("Favorites", systemImage: "heart") }
+            SwiftUI.Section {
+                check("Photos", "photo", $kinds.photos)
+                check("Videos", "video", $kinds.videos)
+                check("Live Photos", "livephoto", $kinds.live)
+                check("Favorites", "heart", $kinds.favorites)
+            } header: {
+                Text("Show")
+            } footer: {
+                Text("None checked shows everything.")
             }
             SwiftUI.Section {
                 ForEach(chosen) { person in
@@ -182,6 +186,20 @@ struct SearchFilterForm: View {
         .task { countries = await names("country") }
         .task(id: filter.country) { states = filter.country == nil ? [] : await names("state", filter.country) }
         .task(id: [filter.country, filter.state]) { cities = filter.country == nil ? [] : await names("city", filter.country, filter.state) }
+    }
+
+    /// A row that checks or unchecks, the check on the right: several can be on.
+    private func check(_ title: LocalizedStringKey, _ symbol: String, _ on: Binding<Bool>) -> some View {
+        Button { on.wrappedValue.toggle() } label: {
+            HStack {
+                Label(title, systemImage: symbol)
+                Spacer()
+                if on.wrappedValue { Image(systemName: "checkmark").fontWeight(.semibold).foregroundStyle(.tint) }
+            }
+            .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(on.wrappedValue ? .isSelected : [])
     }
 
     /// A failed load leaves just "Any", with no alert.

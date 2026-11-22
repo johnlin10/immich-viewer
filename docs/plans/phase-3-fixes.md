@@ -189,3 +189,7 @@ Sonnet 用 `PrimitiveButtonStyle` 包 `.glass` / `.glassProminent`，在 iPad �
 - iOS 的篩選按鈕不再由 `SearchResults` 的 `.toolbar` 放（外層的項目會排在 Select 前面），改用環境值 `searchFilters: SearchFiltersButton?`（`on`、`open`）傳給 iOS 的 `TimelineBrowser`，由它放在 spacer 之後、⋯ 之前。sheet 仍在 `SearchResults`。
 - 跟 ⋯ 同一組時不能用 `.glassProminent`（會在 ⋯ 那組的玻璃裡再疊一層），工具列項目也沒有 `.badge`：開著時在圖示右上角加一個 tint 色小圓點。
 - Mac 不變：自己一組，開著用 `.glassProminent`。
+
+### 「顯示」改成打勾的多選
+
+照片、影片、原況照片、喜好項目不用開關（開關是設定，不是從清單挑）：每列是按鈕，選上時右側出現 tint 色 `checkmark`，可多選；footer「都不勾就全部顯示。」
