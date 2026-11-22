@@ -246,8 +246,8 @@ struct MemoryPlayer: View {
         .buttonStyle(.plain)
         .foregroundStyle(.white)
         .padding(.horizontal, 12)
-        #if os(macOS) // just the bars, along the window's top edge; the fade still covers the title bar under them
-        .padding(.top, 6)
+        #if os(macOS) // just the bars, on the window's very top edge, above the title bar's buttons and title
+        .padding(.top, 2)
         .padding(.bottom, top + 12)
         #else
         .padding(.top, top + 8)
