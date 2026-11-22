@@ -866,6 +866,22 @@
         }
       }
     },
+    "Choose People…" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選擇人物…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择人物…"
+          }
+        }
+      }
+    },
     "City" : {
       "localizations" : {
         "zh-Hant" : {

@@ -63,14 +63,16 @@ struct SearchResults: View {
             .help("Search Filters")
             #if os(macOS)
             .popover(isPresented: $filtersShown) {
-                VStack(spacing: 0) {
-                    SearchFilterForm(filter: $filter)
-                    Divider()
-                    HStack {
-                        Spacer()
-                        Button("Clear Filters") { filter = SearchFilter() }.disabled(!filter.isActive)
+                NavigationStack {
+                    VStack(spacing: 0) {
+                        SearchFilterForm(filter: $filter)
+                        Divider()
+                        HStack {
+                            Spacer()
+                            Button("Clear Filters") { filter = SearchFilter() }.disabled(!filter.isActive)
+                        }
+                        .padding(10)
                     }
-                    .padding(10)
                 }
                 .frame(width: 340, height: 480)
             }
@@ -114,25 +116,11 @@ struct SearchFilterForm: View {
     @State private var countries: [String] = []
     @State private var states: [String] = []
     @State private var cities: [String] = []
-    @State private var personQuery = ""
 
     private var chosen: [Person] { filter.people.compactMap { id in library.people.first { $0.id == id } } }
-    private var addable: [Person] {
-        let open = library.people.filter { !filter.people.contains($0.id) } // the server's order: most photographed first
-        return personQuery.isEmpty ? open : open.filter { $0.name.localizedCaseInsensitiveContains(personQuery) }
-    }
 
     var body: some View {
         Form {
-            SwiftUI.Section("Place") {
-                place("Country", $filter.country.onSet { _ in filter.state = nil; filter.city = nil }, countries)
-                place("State", $filter.state.onSet { _ in filter.city = nil }, states).disabled(filter.country == nil)
-                place("City", $filter.city, cities).disabled(filter.country == nil)
-            }
-            SwiftUI.Section("Date") {
-                day("From", $filter.from)
-                day("To", $filter.to)
-            }
             SwiftUI.Section {
                 ForEach(chosen) { person in
                     HStack(spacing: 8) {
@@ -144,28 +132,20 @@ struct SearchFilterForm: View {
                             .labelStyle(.iconOnly).buttonStyle(.plain).foregroundStyle(.secondary)
                     }
                 }
-                TextField("Search People", text: $personQuery)
-                ForEach(addable) { person in
-                    Button {
-                        filter.people.append(person.id)
-                        personQuery = ""
-                    } label: {
-                        HStack(spacing: 10) {
-                            Thumb(id: person.id, store: library.faces).frame(width: 36, height: 36).clipShape(Circle())
-                            Text(person.name.isEmpty ? String(localized: "Unnamed") : person.name)
-                                .foregroundStyle(person.name.isEmpty ? .secondary : .primary)
-                            Spacer()
-                            Image(systemName: "plus.circle").foregroundStyle(.secondary)
-                        }
-                        .contentShape(.rect)
-                    }
-                    .buttonStyle(.plain)
-                }
-                if addable.isEmpty { Text("No Matches").foregroundStyle(.secondary) }
+                NavigationLink { PeopleChooser(people: $filter.people) } label: { Text("Choose People…") }
             } header: {
                 Text("People")
             } footer: {
                 Text("Photos with all of them.")
+            }
+            SwiftUI.Section("Place") {
+                place("Country", $filter.country.onSet { _ in filter.state = nil; filter.city = nil }, countries)
+                place("State", $filter.state.onSet { _ in filter.city = nil }, states).disabled(filter.country == nil)
+                place("City", $filter.city, cities).disabled(filter.country == nil)
+            }
+            SwiftUI.Section("Date") {
+                day("From", $filter.from)
+                day("To", $filter.to)
             }
         }
         .formStyle(.grouped)
@@ -194,6 +174,67 @@ struct SearchFilterForm: View {
             DatePicker(title, selection: Binding(get: { value }, set: { date.wrappedValue = $0 }), displayedComponents: .date)
                 .labelsHidden()
         }
+    }
+}
+
+/// Everyone as a grid of faces, named or not; tap to choose or drop. `people` keeps the order chosen.
+private struct PeopleChooser: View {
+    @Environment(Library.self) private var library
+    #if os(macOS)
+    @Environment(\.dismiss) private var dismiss
+    #endif
+    @Binding var people: [String]
+    @State private var query = ""
+
+    private var shown: [Person] {
+        query.isEmpty ? library.people : library.people.filter { $0.name.localizedCaseInsensitiveContains(query) }
+    }
+
+    var body: some View {
+        ScrollView {
+            if shown.isEmpty {
+                ContentUnavailableView.search(text: query)
+            } else {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 84), spacing: 12)], spacing: 16) {
+                    ForEach(shown) { person in
+                        let on = people.contains(person.id)
+                        Button {
+                            if on { people.removeAll { $0 == person.id } } else { people.append(person.id) }
+                        } label: {
+                            VStack(spacing: 4) {
+                                Thumb(id: person.id, store: library.faces).frame(width: 72, height: 72).clipShape(Circle())
+                                    .overlay { if on { Circle().strokeBorder(.tint, lineWidth: 3) } }
+                                    .overlay(alignment: .bottomTrailing) {
+                                        if on {
+                                            Image(systemName: "checkmark.circle.fill").foregroundStyle(.tint)
+                                                .background(.white, in: .circle)
+                                        }
+                                    }
+                                Text(person.name.isEmpty ? String(localized: "Unnamed") : person.name)
+                                    .font(.caption).lineLimit(1)
+                                    .foregroundStyle(person.name.isEmpty ? .secondary : .primary)
+                            }
+                            .contentShape(.rect)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding()
+            }
+        }
+        .navigationTitle("People")
+        #if os(iOS)
+        .navigationBarTitleDisplayMode(.inline)
+        .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search People")
+        #else
+        .safeAreaInset(edge: .top) { // a popover has no toolbar, so no back button
+            HStack {
+                Button("Done") { dismiss() }
+                TextField("Search People", text: $query).textFieldStyle(.roundedBorder)
+            }
+            .padding(10)
+        }
+        #endif
     }
 }
 

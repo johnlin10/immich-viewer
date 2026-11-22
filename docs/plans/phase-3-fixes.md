@@ -96,3 +96,49 @@
 ### README
 
 - 如果 README 寫到人物只能用名字搜尋，改成：可以捲動看所有人的頭像挑選，也可以用名字搜尋。
+
+## 追加 3：選人改成第二層頁面，用頭像網格
+
+使用者提議：表單裡只放摘要，點進第二層再用完整的畫面挑人。這比把幾百列塞進表單好：表單保持簡短，第二層可以用頭像網格，一個畫面看得到更多張臉。
+
+### 表單（`SearchFilterForm`）
+
+- 區塊順序回到 **People → Place → Date**（表單已經很短，人物最常用，放最前面）。
+- People 區塊：
+  - 已選的人照舊（28 pt 頭像、名字或灰字 "Unnamed"、✕）。
+  - 一列 `NavigationLink { PeopleChooser(people: $filter.people) } label: { Text("Choose People…") }`。
+  - 拿掉表單裡的搜尋欄、可加入的人的清單和 "No Matches"，`personQuery` 和 `addable` 一起刪掉。
+  - footer 照舊 "Photos with all of them."。
+- Clear Filters 照舊在外層（iOS 導覽列左邊、Mac 面板底部）。
+
+### 新的 `PeopleChooser`（同一個檔案，private 或 internal 都可）
+
+- `@Binding var people: [String]`（`filter.people`，依選取順序）。`@State private var query = ""`。
+- 內容：`ScrollView { LazyVGrid(columns: [GridItem(.adaptive(minimum: 84), spacing: 12)], spacing: 16) { … } .padding() }`。
+  - 每格：`Thumb(id:store: library.faces)`，72 pt 圓形；下方名字 `.caption`、`.lineLimit(1)`，沒名字顯示 "Unnamed"（`.secondary`）。
+  - 已選：頭像外加 3 pt tint 色圓框，右下角疊 `checkmark.circle.fill`（tint 色，白底圓）。
+  - 點一下切換選取（已選就移除，沒選就 append）。整格 `.contentShape(.rect)`，`.buttonStyle(.plain)`。
+  - 顯示**所有人**（含沒名字的），`library.people` 的順序；`query` 不空時只留名字包含它的人（`localizedCaseInsensitiveContains`）。
+  - 沒有符合時：`ContentUnavailableView.search(text: query)`。
+- 標題：`.navigationTitle("People")`。
+- 搜尋：
+  - **iOS**：`.searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search People")`，`.navigationBarTitleDisplayMode(.inline)`。返回用系統的返回鍵。
+  - **macOS**：popover 沒有視窗工具列，NavigationStack 的返回鍵不會出現，所以自己放：`.safeAreaInset(edge: .top) { HStack { Button("Done") { dismiss() }; TextField("Search People", text: $query).textFieldStyle(.roundedBorder) }.padding(10) }`，`@Environment(\.dismiss)` 在 push 進來的頁面裡會 pop 回表單。`.navigationBarBackButtonHidden` 不需要（Mac 本來就沒有）。
+
+### 呈現方式
+
+- **iOS sheet**：本來就有 NavigationStack，不用改。
+- **Mac popover**：把現在的 `VStack { Form; Divider; Clear Filters }` 包進 `NavigationStack { … }`，`.frame(width: 340, height: 480)` 放在 NavigationStack 外面，這樣 push 進來的 PeopleChooser 也是同樣大小。
+
+### 字串
+
+- 新增 "Choose People…"（結尾是 U+2026 省略號）：zh-Hant「選擇人物…」、zh-Hans「选择人物…」。
+- 同步目錄後，代碼不再用到的 key（例如 "No Matches"，如果別處也沒用到）刪掉。
+
+### README
+
+- Mac 的 Search 那一條：people 的描述改成 "choose them by face from everyone, named or not, in a grid you can narrow by typing a name"（或同義、通順的寫法）。
+
+### 模擬器上發現：iPad 的搜尋欄延遲啟用會弄壞 sheet 的 push
+
+`iOS/PhoneApp.swift` 的 Search 頁有個 `.task`：等 300 ms 後設 `searchShown = true`，想讓 iPad 一進 Search 就打開搜尋欄。iPadOS 27 上這個請求在進頁面時被忽略，直到篩選 sheet 出現時才生效：搜尋欄在 sheet 底下被打開，接著第一次點擊會先把它收起來，而 sheet 裡的「Choose People…」push 就卡住（列反白、不換頁）。拿掉這個 task 之後問題消失；iPhone 的 Search 分頁本來就由系統自動打開搜尋欄，不受影響。`searchShown` 沒有其他用途，一起拿掉。README 的 iPad 說明照實改。
