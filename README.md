@@ -205,7 +205,11 @@ Planned editing: cropping, then stacks, sharing and duplicates.
 
 ## Version history
 
-### v0.13.0 (current)
+### v0.14.0 (current)
+
+- Memories: today's are the top row of Collections (photos from this day in earlier years, or a person's birthday). One plays like a story, grown out of its card to fill the screen and shrunk back into it on close: a bar per photo, 5 seconds a photo, a video to its end. Move between photos, pause, or open them all as the usual grid. The heading, and Memories in the Mac and iPad sidebars, lists every memory due. Needs `memory.read`; without it the row is left out.
+
+### v0.13.0
 
 - Changes made in the web UI or on another device (deleting, trashing, archiving, favoriting, uploading) show up on their own, without ⌘R. Each sync also deletes cached thumbnails no longer needed.
 - Drag files onto the Library or an album's page to upload them (on iPhone and iPad, from other apps).
