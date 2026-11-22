@@ -2,12 +2,14 @@ import AVFoundation
 import ImageIO
 import SwiftUI
 
-/// A memory's first photo with its title over a fade, like Photos'. Opens the player: full screen on iOS, pushed on the Mac.
+/// A memory's first photo with its title over a fade, like Photos'. Opens the player: on iOS it grows out of the card to
+/// full screen and shrinks back into it (also following a swipe down); on the Mac it is pushed.
 struct MemoryCard: View {
     @Environment(Library.self) private var library
     let memory: Memory
     #if os(iOS)
     @State private var playing = false
+    @Namespace private var zoom
     #endif
 
     var body: some View {
@@ -16,7 +18,11 @@ struct MemoryCard: View {
         #else
         Button { playing = true } label: { cover }
             .buttonStyle(.plain)
-            .fullScreenCover(isPresented: $playing) { NavigationStack { MemoryPlayer(memory: memory).collectionDestinations() } }
+            .matchedTransitionSource(id: memory.id, in: zoom) { $0.clipShape(.rect(cornerRadius: 14)) }
+            .fullScreenCover(isPresented: $playing) {
+                NavigationStack { MemoryPlayer(memory: memory).collectionDestinations() }
+                    .navigationTransition(.zoom(sourceID: memory.id, in: zoom))
+            }
         #endif
     }
 
@@ -123,11 +129,6 @@ struct MemoryPlayer: View {
             }
             .contentShape(Rectangle())
             .gesture(SpatialTapGesture().onEnded { tap(at: $0.location.x, width: geo.size.width) })
-            #if os(iOS)
-            .simultaneousGesture(DragGesture(minimumDistance: 30).onEnded {
-                if $0.translation.height > 100, abs($0.translation.width) < $0.translation.height { dismiss() }
-            })
-            #endif
         }
         .background(Color.black.ignoresSafeArea())
         .navigationTitle(memory.title)

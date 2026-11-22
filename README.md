@@ -72,7 +72,7 @@ The same project also builds an iPhone and iPad app (iOS 26 or later). It isn't 
 - Like Photos, Library and Collections. Collections is one page with a row each of people, albums and tags (each heading opens the full page, and a long press edits) and Archive and Trash.
 - iPhone: tabs for Library and Collections. iPad: Library and Collections at the top, and a sidebar that adds Memories, every album and the utilities.
 - Settings opens as a sheet from the gear at the top right of Collections.
-- A memory opens full screen: tap the left or right third to go back or forward, the middle to pause, swipe down (or ✕) to close; the screen stays on while it plays.
+- A memory grows out of its card to full screen and shrinks back into it when closed: tap the left or right third to go back or forward, the middle to pause, swipe down (it follows the finger) or ✕ to close; the screen stays on while it plays.
 - The same grid and grouping. Pinch the grid to change the column count (2 to 8 on iPhone, more on iPad, which keeps its own count): like the Mac, it follows the fingers and fades into the next count, keeping the photo under them in place. Pull down to refresh. The tab bar tucks away while scrolling down.
 - Every page has its options in a ⋯ menu at the top right: filter, sort and (on photo pages) grouping, plus the page's own actions (Edit Album…, Merge With…, Empty Trash… and so on). Albums keeps + for a new album next to it. Once a page's large title shrinks it sits on the left, over a progressive blur.
 - By day, each day's date sticks just under the title over the system's blur while its photos scroll past; by month, the date capsule shows instead.
