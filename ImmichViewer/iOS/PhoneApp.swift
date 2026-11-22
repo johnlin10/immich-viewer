@@ -41,6 +41,7 @@ struct PhoneRoot: View {
             SearchResults(query: searchQuery)
                 .collectionDestinations()
                 .searchable(text: $searchText, isPresented: $searchShown, prompt: Text("Search your library")) // here, not on the tabs: only this page has the field
+                .searchPresentationToolbarBehavior(.avoidHidingContent) // the toolbar buttons stay while searching
                 .onSubmit(of: .search) { searchQuery = searchText.trimmingCharacters(in: .whitespaces) }
                 .onChange(of: searchText) { if searchText.isEmpty { searchQuery = "" } }
                 .task { // iPad: the field open and typing, not folded into a button (once the page is up, or it's ignored)

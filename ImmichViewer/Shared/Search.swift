@@ -32,16 +32,34 @@ struct SearchResults: View {
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     // not the ⋯ menu's Filter: that one narrows the results shown, this one what the server is asked for
-                    Button { filtersShown = true } label: {
-                        Label("Search Filters", systemImage: "slider.horizontal.3")
-                            .symbolVariant(filter.isActive ? .fill : .none)
-                            .foregroundStyle(filter.isActive ? AnyShapeStyle(.tint) : AnyShapeStyle(.primary))
+                    // tinted glass when on: the glass toolbar ignores symbol fill and tint
+                    if filter.isActive {
+                        filtersButton.buttonStyle(.glassProminent)
+                    } else {
+                        filtersButton
                     }
-                    .help("Search Filters")
-                    .popover(isPresented: $filtersShown) { SearchFilterForm(filter: $filter) }
                 }
             }
+            #if os(iOS)
+            .sheet(isPresented: $filtersShown) { // a popover's Form has no size of its own and collapses on iPad
+                NavigationStack {
+                    SearchFilterForm(filter: $filter)
+                        .navigationTitle("Search Filters")
+                        .navigationBarTitleDisplayMode(.inline)
+                        .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { filtersShown = false } } }
+                }
+                .presentationDetents([.medium, .large])
+            }
+            #endif
             .task(id: SearchKey(query: query, filter: filter, edits: library.edits)) { await search() }
+    }
+
+    private var filtersButton: some View {
+        Button { filtersShown = true } label: { Label("Search Filters", systemImage: "slider.horizontal.3") }
+            .help("Search Filters")
+            #if os(macOS)
+            .popover(isPresented: $filtersShown) { SearchFilterForm(filter: $filter) }
+            #endif
     }
 
     private func search() async {
@@ -74,19 +92,20 @@ private struct SearchKey: Hashable {
     let edits: Int
 }
 
-/// The Search Filters popover (a sheet on iPhone). Changes apply at once.
-// ponytail: people are a Menu of everyone named, long for a big library; a searchable list when that bites.
+/// The Search Filters popover (a sheet on iPhone and iPad). Changes apply at once.
+// ponytail: people lists only the first 6, or up to 30 matches of the name typed; name search is enough.
 struct SearchFilterForm: View {
     @Environment(Library.self) private var library
     @Binding var filter: SearchFilter
     @State private var countries: [String] = []
     @State private var states: [String] = []
     @State private var cities: [String] = []
+    @State private var personQuery = ""
 
     private var chosen: [Person] { filter.people.compactMap { id in library.people.first { $0.id == id } } }
     private var addable: [Person] {
-        library.people.filter { !$0.name.isEmpty && !filter.people.contains($0.id) }
-            .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+        let open = library.people.filter { !$0.name.isEmpty && !filter.people.contains($0.id) } // the server's order: most photographed first
+        return personQuery.isEmpty ? Array(open.prefix(6)) : Array(open.filter { $0.name.localizedCaseInsensitiveContains(personQuery) }.prefix(30))
     }
 
     var body: some View {
@@ -101,10 +120,23 @@ struct SearchFilterForm: View {
                             .labelStyle(.iconOnly).buttonStyle(.plain).foregroundStyle(.secondary)
                     }
                 }
-                Menu("Add Person") {
-                    ForEach(addable) { person in Button(person.name) { filter.people.append(person.id) } }
+                TextField("Search People", text: $personQuery)
+                ForEach(addable) { person in
+                    Button {
+                        filter.people.append(person.id)
+                        personQuery = ""
+                    } label: {
+                        HStack(spacing: 10) {
+                            Thumb(id: person.id, store: library.faces).frame(width: 36, height: 36).clipShape(Circle())
+                            Text(person.name)
+                            Spacer()
+                            Image(systemName: "plus.circle").foregroundStyle(.secondary)
+                        }
+                        .contentShape(.rect)
+                    }
+                    .buttonStyle(.plain)
                 }
-                .disabled(addable.isEmpty)
+                if addable.isEmpty { Text("No Matches").foregroundStyle(.secondary) }
             } header: {
                 Text("People")
             } footer: {

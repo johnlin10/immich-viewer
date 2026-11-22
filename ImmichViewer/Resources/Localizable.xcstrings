@@ -290,22 +290,6 @@
         }
       }
     },
-    "Add Person" : {
-      "localizations" : {
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "加入人物"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "添加人物"
-          }
-        }
-      }
-    },
     "Add Server" : {
       "localizations" : {
         "zh-Hant" : {
@@ -3431,6 +3415,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "搜索地点"
+          }
+        }
+      }
+    },
+    "Search People" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "搜尋人物"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "搜索人物"
           }
         }
       }

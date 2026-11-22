@@ -89,6 +89,7 @@ final class PhoneGridController: UIViewController, UICollectionViewDataSource, U
         collection.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         collection.backgroundColor = .systemBackground
         collection.contentInsetAdjustmentBehavior = .always // also beside an iPad's sidebar and a phone's notch
+        collection.keyboardDismissMode = .onDrag // dragging the results down puts the keyboard away
         collection.dataSource = self
         collection.delegate = self
         collection.topEdgeEffect.style = .soft // a progressive blur under the title, not the solid backdrop iOS picks here
