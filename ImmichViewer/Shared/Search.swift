@@ -46,9 +46,13 @@ struct SearchResults: View {
                     SearchFilterForm(filter: $filter)
                         .navigationTitle("Search Filters")
                         .navigationBarTitleDisplayMode(.inline)
-                        .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { filtersShown = false } } }
+                        .toolbar {
+                            ToolbarItem(placement: .cancellationAction) {
+                                Button("Clear Filters") { filter = SearchFilter() }.disabled(!filter.isActive)
+                            }
+                            ToolbarItem(placement: .confirmationAction) { Button("Done") { filtersShown = false } }
+                        }
                 }
-                .presentationDetents([.medium, .large])
             }
             #endif
             .task(id: SearchKey(query: query, filter: filter, edits: library.edits)) { await search() }
@@ -58,7 +62,18 @@ struct SearchResults: View {
         Button { filtersShown = true } label: { Label("Search Filters", systemImage: "slider.horizontal.3") }
             .help("Search Filters")
             #if os(macOS)
-            .popover(isPresented: $filtersShown) { SearchFilterForm(filter: $filter) }
+            .popover(isPresented: $filtersShown) {
+                VStack(spacing: 0) {
+                    SearchFilterForm(filter: $filter)
+                    Divider()
+                    HStack {
+                        Spacer()
+                        Button("Clear Filters") { filter = SearchFilter() }.disabled(!filter.isActive)
+                    }
+                    .padding(10)
+                }
+                .frame(width: 340, height: 480)
+            }
             #endif
     }
 
@@ -93,7 +108,6 @@ private struct SearchKey: Hashable {
 }
 
 /// The Search Filters popover (a sheet on iPhone and iPad). Changes apply at once.
-// ponytail: people lists only the first 6, or up to 30 matches of the name typed; name search is enough.
 struct SearchFilterForm: View {
     @Environment(Library.self) private var library
     @Binding var filter: SearchFilter
@@ -104,17 +118,27 @@ struct SearchFilterForm: View {
 
     private var chosen: [Person] { filter.people.compactMap { id in library.people.first { $0.id == id } } }
     private var addable: [Person] {
-        let open = library.people.filter { !$0.name.isEmpty && !filter.people.contains($0.id) } // the server's order: most photographed first
-        return personQuery.isEmpty ? Array(open.prefix(6)) : Array(open.filter { $0.name.localizedCaseInsensitiveContains(personQuery) }.prefix(30))
+        let open = library.people.filter { !filter.people.contains($0.id) } // the server's order: most photographed first
+        return personQuery.isEmpty ? open : open.filter { $0.name.localizedCaseInsensitiveContains(personQuery) }
     }
 
     var body: some View {
         Form {
+            SwiftUI.Section("Place") {
+                place("Country", $filter.country.onSet { _ in filter.state = nil; filter.city = nil }, countries)
+                place("State", $filter.state.onSet { _ in filter.city = nil }, states).disabled(filter.country == nil)
+                place("City", $filter.city, cities).disabled(filter.country == nil)
+            }
+            SwiftUI.Section("Date") {
+                day("From", $filter.from)
+                day("To", $filter.to)
+            }
             SwiftUI.Section {
                 ForEach(chosen) { person in
                     HStack(spacing: 8) {
                         Thumb(id: person.id, store: library.faces).frame(width: 28, height: 28).clipShape(Circle())
                         Text(person.name.isEmpty ? String(localized: "Unnamed") : person.name)
+                            .foregroundStyle(person.name.isEmpty ? .secondary : .primary)
                         Spacer()
                         Button("Remove", systemImage: "xmark.circle.fill") { filter.people.removeAll { $0 == person.id } }
                             .labelStyle(.iconOnly).buttonStyle(.plain).foregroundStyle(.secondary)
@@ -128,7 +152,8 @@ struct SearchFilterForm: View {
                     } label: {
                         HStack(spacing: 10) {
                             Thumb(id: person.id, store: library.faces).frame(width: 36, height: 36).clipShape(Circle())
-                            Text(person.name)
+                            Text(person.name.isEmpty ? String(localized: "Unnamed") : person.name)
+                                .foregroundStyle(person.name.isEmpty ? .secondary : .primary)
                             Spacer()
                             Image(systemName: "plus.circle").foregroundStyle(.secondary)
                         }
@@ -142,23 +167,8 @@ struct SearchFilterForm: View {
             } footer: {
                 Text("Photos with all of them.")
             }
-            SwiftUI.Section("Place") {
-                place("Country", $filter.country.onSet { _ in filter.state = nil; filter.city = nil }, countries)
-                place("State", $filter.state.onSet { _ in filter.city = nil }, states).disabled(filter.country == nil)
-                place("City", $filter.city, cities).disabled(filter.country == nil)
-            }
-            SwiftUI.Section("Date") {
-                day("From", $filter.from)
-                day("To", $filter.to)
-            }
-            SwiftUI.Section {
-                Button("Clear Filters", systemImage: "xmark.circle") { filter = SearchFilter() }.disabled(!filter.isActive)
-            }
         }
         .formStyle(.grouped)
-        #if os(macOS)
-        .frame(width: 340, height: 480)
-        #endif
         .task { countries = await names("country") }
         .task(id: filter.country) { states = filter.country == nil ? [] : await names("state", filter.country) }
         .task(id: [filter.country, filter.state]) { cities = filter.country == nil ? [] : await names("city", filter.country, filter.state) }

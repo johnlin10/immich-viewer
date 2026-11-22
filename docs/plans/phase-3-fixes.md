@@ -32,7 +32,7 @@
 ### 3. iPad 和 iPhone：改用 sheet，不用 popover
 
 - `SearchResults` 的工具列按鈕：
-  - **iOS**：用 `.sheet(isPresented: $filtersShown)`，內容是 `NavigationStack { SearchFilterForm(filter: $filter).navigationTitle("Search Filters").navigationBarTitleDisplayMode(.inline).toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { filtersShown = false } } } }`，再加上 `.presentationDetents([.medium, .large])`。
+  - **iOS**：用 `.sheet(isPresented: $filtersShown)`，內容是 `NavigationStack { SearchFilterForm(filter: $filter).navigationTitle("Search Filters").navigationBarTitleDisplayMode(.inline).toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { filtersShown = false } } } }`，（原本加了 `.presentationDetents([.medium, .large])`，追加 2 把人物移到最後後拿掉了，sheet 直接全高打開，人物區塊才看得到）。
     - iPad 的 popover 裡放 Form 沒有內在尺寸，在 iPadOS 26 的玻璃按鈕變形動畫裡會塌成一個圓。改成 sheet 就沒有這個問題，App 其他的表單也都是 sheet。
     - 字串 "Done" 目錄裡已經有了。
   - **Mac**：維持 popover。Mac 上沒有問題，`.frame(width: 340, height: 480)` 照舊。
@@ -64,3 +64,35 @@
 ## 追加：篩選中的按鈕要看得出來
 
 模擬器上發現，iOS/macOS 26 起的玻璃工具列會蓋掉 `.symbolVariant(.fill)` 和 `.foregroundStyle(.tint)`，有沒有篩選看起來一樣。改成有篩選時套用 `.buttonStyle(.glassProminent)`（著色的玻璃按鈕），沒篩選時用預設樣式。兩種 style 型別不同，所以在 `ToolbarItem` 裡用 if/else 切換。
+
+## 追加 2：人物要能看臉挑，不能只靠名字
+
+使用者指出：忘了名字的時候要能從清單裡用臉找人；沒取名的人也看得出是誰，因為本來就是看臉認人。前面「只列 6 位、只列有名字的人」是錯的。App 裡 `Editing.swift` 的 `PersonPicker` 本來就是列出所有人（含 Unnamed），這裡要和它一致。
+
+### `Shared/Search.swift` 的 `SearchFilterForm`
+
+- 區塊順序改成 **Place → Date → People**。人物清單可能很長，放最後才不會把地點和日期擠到看不到。
+- People 區塊：
+  - 已選的人照舊放在最上面（28 pt 頭像、名字、✕）。沒名字的顯示 "Unnamed"（灰字）。
+  - 接著 `TextField("Search People", text: $personQuery)`。
+  - 下面列出**所有**還沒選的人，**包含沒名字的**，保留 `library.people` 的順序，**不設上限**。
+    - 每列：36 pt 圓形頭像、名字（沒名字顯示 "Unnamed"，`.secondary`，跟 `PersonPicker` 一樣）、`plus.circle`。點一下加入並清空搜尋欄。
+    - 有輸入文字時，只留名字包含該文字的人（`localizedCaseInsensitiveContains`），沒名字的自然不會符合。
+    - 一個都沒有時照舊顯示 "No Matches"。
+  - footer 照舊 "Photos with all of them."。
+- 刪掉 `// ponytail:` 那行（已經沒有上限）。Form 在 iOS 和 macOS 都是 lazy 的 List，幾百列沒問題。
+- 拿掉 Form 裡的「Clear Filters」區塊，改放到外層（見下面），免得被長長的人物清單推到最底下。
+
+### `SearchResults` 的呈現方式
+
+- **iOS sheet**：NavigationStack 的 toolbar 加 `ToolbarItem(placement: .cancellationAction) { Button("Clear Filters") { filter = SearchFilter() }.disabled(!filter.isActive) }`，Done 照舊。
+- **Mac popover**：`VStack(spacing: 0) { SearchFilterForm(...); Divider(); HStack { Spacer(); Button("Clear Filters") {...}.disabled(!filter.isActive) }.padding(10) }`，大小照舊 340×480（把 `.frame` 移到外層 VStack，Form 自己不設 frame）。
+- `SearchFilterForm` 仍然不知道自己在 sheet 還是 popover 裡。
+
+### 字串
+
+- 不需要新字串（"Unnamed"、"Clear Filters" 都已經有）。建置後同步目錄，確認沒有 stale 項目。
+
+### README
+
+- 如果 README 寫到人物只能用名字搜尋，改成：可以捲動看所有人的頭像挑選，也可以用名字搜尋。
