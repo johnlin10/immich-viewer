@@ -193,3 +193,7 @@ Sonnet 用 `PrimitiveButtonStyle` 包 `.glass` / `.glassProminent`，在 iPad �
 ### 「顯示」改成打勾的多選
 
 照片、影片、原況照片、喜好項目不用開關（開關是設定，不是從清單挑）：每列是按鈕，選上時右側出現 tint 色 `checkmark`，可多選；footer「都不勾就全部顯示。」
+
+### Mac 的篩選按鈕：不換樣式
+
+開著時換成 `.glassProminent` 會在工具列的玻璃裡再畫一層藍色膠囊（兩層），寬度也跟著變，工具列重建項目，popover 就關掉（第一次選人、或清掉最後一個條件時）。改成同一顆按鈕，開著時只把圖示染成 tint 色。用另一個 bundle id 的測試版連假伺服器實際點過：選人、移除、勾照片，popover 都不關，一次點擊就打開。

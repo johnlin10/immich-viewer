@@ -39,7 +39,7 @@ struct SearchResults: View {
             #if os(macOS)
             .toolbar {
                 ToolbarItem(placement: .primaryAction) { filtersButton }
-                ToolbarSpacer(.fixed, placement: .primaryAction) // a group of its own: on, its tinted glass isn't drawn inside another's
+                ToolbarSpacer(.fixed, placement: .primaryAction) // a group of its own, apart from ⋯
             }
             #else
             .sheet(isPresented: $filtersShown) { // a popover's Form has no size of its own and collapses on iPad
@@ -61,33 +61,28 @@ struct SearchResults: View {
     }
 
     #if os(macOS)
+    /// On: the same button, its icon tinted. Restyling it (e.g. .glassProminent) drew a capsule in the toolbar's glass
+    /// and changed its width, which rebuilt the toolbar item and closed the popover.
     private var filtersButton: some View {
-        styledFiltersButton
-            .help("Filter")
-            .popover(isPresented: $filtersShown) {
-                NavigationStack {
-                    VStack(spacing: 0) {
-                        SearchFilterForm(filter: $filter, kinds: $kinds)
-                        Divider()
-                        HStack {
-                            Spacer()
-                            Button("Clear Filters") { filter = SearchFilter(); kinds = PhotoFilter() }.disabled(!active)
-                        }
-                        .padding(10)
+        Button { filtersShown = true } label: {
+            Image(systemName: "line.3.horizontal.decrease")
+                .foregroundStyle(active ? AnyShapeStyle(.tint) : AnyShapeStyle(.primary))
+        }
+        .accessibilityLabel("Filter")
+        .help("Filter")
+        .popover(isPresented: $filtersShown) {
+            NavigationStack {
+                VStack(spacing: 0) {
+                    SearchFilterForm(filter: $filter, kinds: $kinds)
+                    Divider()
+                    HStack {
+                        Spacer()
+                        Button("Clear Filters") { filter = SearchFilter(); kinds = PhotoFilter() }.disabled(!active)
                     }
+                    .padding(10)
                 }
-                .frame(width: 340, height: 480)
             }
-    }
-
-    /// Tinted glass when on: the glass toolbar ignores symbol fill and tint.
-    /// The popover sits outside this branch, so turning filters on doesn't close it.
-    @ViewBuilder private var styledFiltersButton: some View {
-        let button = Button { filtersShown = true } label: { Label("Filter", systemImage: "line.3.horizontal.decrease") }
-        if active {
-            button.buttonStyle(.glassProminent)
-        } else {
-            button
+            .frame(width: 340, height: 480)
         }
     }
     #endif
