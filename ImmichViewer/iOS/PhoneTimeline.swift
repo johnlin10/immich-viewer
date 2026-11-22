@@ -91,7 +91,6 @@ struct TimelineBrowser: View {
                     Button("Select") { setSelecting(true) }.disabled(list.isEmpty)
                 }
             }
-            ToolbarSpacer(.fixed, placement: .primaryAction)
             ToolbarItem(placement: .primaryAction) {
                 Menu {
                     if selecting, !chosen.isEmpty {
@@ -108,17 +107,19 @@ struct TimelineBrowser: View {
                         }
                     }
                     SwiftUI.Section {
-                        Menu {
-                            Toggle(isOn: $filter.photos) { Label("Photos", systemImage: "photo") }
-                            Toggle(isOn: $filter.videos) { Label("Videos", systemImage: "video") }
-                            Toggle(isOn: $filter.live) { Label("Live Photos", systemImage: "livephoto") }
-                            Divider()
-                            Toggle(isOn: $filter.favorites) { Label("Favorites", systemImage: "heart") }
-                            Divider()
-                            Button("Clear Filters", systemImage: "xmark.circle") { filter = PhotoFilter() }.disabled(!filter.isActive)
-                        } label: {
-                            Label("Filter", systemImage: filter.isActive ? "line.3.horizontal.decrease.circle.fill"
-                                                                         : "line.3.horizontal.decrease.circle")
+                        if context != .search { // Search has its own Filter, with these in it
+                            Menu {
+                                Toggle(isOn: $filter.photos) { Label("Photos", systemImage: "photo") }
+                                Toggle(isOn: $filter.videos) { Label("Videos", systemImage: "video") }
+                                Toggle(isOn: $filter.live) { Label("Live Photos", systemImage: "livephoto") }
+                                Divider()
+                                Toggle(isOn: $filter.favorites) { Label("Favorites", systemImage: "heart") }
+                                Divider()
+                                Button("Clear Filters", systemImage: "xmark.circle") { filter = PhotoFilter() }.disabled(!filter.isActive)
+                            } label: {
+                                Label("Filter", systemImage: filter.isActive ? "line.3.horizontal.decrease.circle.fill"
+                                                                             : "line.3.horizontal.decrease.circle")
+                            }
                         }
                         if context != .search { // search results stay best match first
                             Picker(selection: $newestFirst) {

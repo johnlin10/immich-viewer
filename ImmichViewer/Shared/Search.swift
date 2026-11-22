@@ -5,14 +5,18 @@ struct SearchResults: View {
     @Environment(Library.self) private var library
     let query: String
     @State private var filter = SearchFilter()
+    @State private var kinds = PhotoFilter()
     @State private var filtersShown = false
     @State private var assets: [Asset]?
     @State private var loads = 0
     @State private var error: String?
 
+    private var active: Bool { filter.isActive || kinds.isActive }
+    private var shown: [Asset] { kinds.apply(assets ?? []) }
+
     var body: some View {
-        TimelineBrowser(title: String(localized: "Search"), subtitle: assets.map { String(localized: "\($0.count) items") } ?? "",
-                        assets: assets ?? [], revision: loads, context: .search)
+        TimelineBrowser(title: String(localized: "Search"), subtitle: assets == nil ? "" : String(localized: "\(shown.count) items"),
+                        assets: shown, revision: loads, context: .search)
             .overlay {
                 if query.isEmpty, !filter.isActive {
                     ContentUnavailableView("Search Your Library", systemImage: "magnifyingglass",
@@ -21,7 +25,7 @@ struct SearchResults: View {
                     ContentUnavailableView("Can’t Search", systemImage: "exclamationmark.triangle", description: Text(error))
                 } else if assets == nil {
                     ProgressView()
-                } else if assets?.isEmpty == true {
+                } else if assets != nil, shown.isEmpty {
                     if query.isEmpty {
                         ContentUnavailableView("No Results", systemImage: "magnifyingglass", description: Text("Try other filters."))
                     } else {
@@ -31,45 +35,41 @@ struct SearchResults: View {
             }
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
-                    // not the ⋯ menu's Filter: that one narrows the results shown, this one what the server is asked for
-                    // tinted glass when on: the glass toolbar ignores symbol fill and tint
-                    if filter.isActive {
-                        filtersButton.buttonStyle(.glassProminent)
-                    } else {
-                        filtersButton
-                    }
+                    filtersButton
                 }
+                ToolbarSpacer(.fixed, placement: .primaryAction) // a group of its own: on, its tinted glass isn't drawn inside another's
             }
             #if os(iOS)
             .sheet(isPresented: $filtersShown) { // a popover's Form has no size of its own and collapses on iPad
                 NavigationStack {
-                    SearchFilterForm(filter: $filter)
+                    SearchFilterForm(filter: $filter, kinds: $kinds)
                         .navigationTitle("Search Filters")
                         .navigationBarTitleDisplayMode(.inline)
                         .toolbar {
                             ToolbarItem(placement: .cancellationAction) {
-                                Button("Clear Filters") { filter = SearchFilter() }.disabled(!filter.isActive)
+                                Button("Clear Filters") { filter = SearchFilter(); kinds = PhotoFilter() }.disabled(!active)
                             }
                             ToolbarItem(placement: .confirmationAction) { Button("Done") { filtersShown = false } }
                         }
                 }
             }
             #endif
+            .onChange(of: kinds) { loads += 1 } // regroup the grid
             .task(id: SearchKey(query: query, filter: filter, edits: library.edits)) { await search() }
     }
 
     private var filtersButton: some View {
-        Button { filtersShown = true } label: { Label("Search Filters", systemImage: "slider.horizontal.3") }
-            .help("Search Filters")
+        styledFiltersButton
+            .help("Filter")
             #if os(macOS)
             .popover(isPresented: $filtersShown) {
                 NavigationStack {
                     VStack(spacing: 0) {
-                        SearchFilterForm(filter: $filter)
+                        SearchFilterForm(filter: $filter, kinds: $kinds)
                         Divider()
                         HStack {
                             Spacer()
-                            Button("Clear Filters") { filter = SearchFilter() }.disabled(!filter.isActive)
+                            Button("Clear Filters") { filter = SearchFilter(); kinds = PhotoFilter() }.disabled(!active)
                         }
                         .padding(10)
                     }
@@ -77,6 +77,17 @@ struct SearchResults: View {
                 .frame(width: 340, height: 480)
             }
             #endif
+    }
+
+    /// Tinted glass when on: the glass toolbar ignores symbol fill and tint.
+    /// The popover sits outside this branch, so turning filters on doesn't close it.
+    @ViewBuilder private var styledFiltersButton: some View {
+        let button = Button { filtersShown = true } label: { Label("Filter", systemImage: "line.3.horizontal.decrease") }
+        if active {
+            button.buttonStyle(.glassProminent)
+        } else {
+            button
+        }
     }
 
     private func search() async {
@@ -113,6 +124,7 @@ private struct SearchKey: Hashable {
 struct SearchFilterForm: View {
     @Environment(Library.self) private var library
     @Binding var filter: SearchFilter
+    @Binding var kinds: PhotoFilter
     @State private var countries: [String] = []
     @State private var states: [String] = []
     @State private var cities: [String] = []
@@ -121,6 +133,12 @@ struct SearchFilterForm: View {
 
     var body: some View {
         Form {
+            SwiftUI.Section("Show") {
+                Toggle(isOn: $kinds.photos) { Label("Photos", systemImage: "photo") }
+                Toggle(isOn: $kinds.videos) { Label("Videos", systemImage: "video") }
+                Toggle(isOn: $kinds.live) { Label("Live Photos", systemImage: "livephoto") }
+                Toggle(isOn: $kinds.favorites) { Label("Favorites", systemImage: "heart") }
+            }
             SwiftUI.Section {
                 ForEach(chosen) { person in
                     HStack(spacing: 8) {
@@ -180,9 +198,6 @@ struct SearchFilterForm: View {
 /// Everyone as a grid of faces, named or not; tap to choose or drop. `people` keeps the order chosen.
 private struct PeopleChooser: View {
     @Environment(Library.self) private var library
-    #if os(macOS)
-    @Environment(\.dismiss) private var dismiss
-    #endif
     @Binding var people: [String]
     @State private var query = ""
 
@@ -227,11 +242,17 @@ private struct PeopleChooser: View {
         .navigationBarTitleDisplayMode(.inline)
         .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search People")
         #else
-        .safeAreaInset(edge: .top) { // a popover has no toolbar, so no back button
+        .safeAreaInset(edge: .top) { // the popover's stack brings its own back button and title; the field goes under them
             HStack {
-                Button("Done") { dismiss() }
-                TextField("Search People", text: $query).textFieldStyle(.roundedBorder)
+                Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
+                TextField("Search People", text: $query).textFieldStyle(.plain)
+                if !query.isEmpty {
+                    Button { query = "" } label: { Image(systemName: "xmark.circle.fill") }
+                        .buttonStyle(.plain).foregroundStyle(.secondary)
+                }
             }
+            .padding(.horizontal, 10).padding(.vertical, 6)
+            .background(.quaternary, in: .capsule)
             .padding(10)
         }
         #endif

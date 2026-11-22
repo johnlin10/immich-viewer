@@ -321,13 +321,15 @@ struct TimelineBrowser: View {
                     // The photo viewer brings its own items, so this one comes and goes with it.
                     if viewer == nil {
                         Color.clear.toolbar {
-                            ToolbarItem(placement: .primaryAction) {
-                                FilterMenu(active: filter.isActive) { filter = PhotoFilter() } items: {
-                                    Toggle(isOn: $filter.photos) { Label("Photos", systemImage: "photo") }
-                                    Toggle(isOn: $filter.videos) { Label("Videos", systemImage: "video") }
-                                    Toggle(isOn: $filter.live) { Label("Live Photos", systemImage: "livephoto") }
-                                    Divider()
-                                    Toggle(isOn: $filter.favorites) { Label("Favorites", systemImage: "heart") }
+                            if context != .search { // Search has its own Filter, with these in it
+                                ToolbarItem(placement: .primaryAction) {
+                                    FilterMenu(active: filter.isActive) { filter = PhotoFilter() } items: {
+                                        Toggle(isOn: $filter.photos) { Label("Photos", systemImage: "photo") }
+                                        Toggle(isOn: $filter.videos) { Label("Videos", systemImage: "video") }
+                                        Toggle(isOn: $filter.live) { Label("Live Photos", systemImage: "livephoto") }
+                                        Divider()
+                                        Toggle(isOn: $filter.favorites) { Label("Favorites", systemImage: "heart") }
+                                    }
                                 }
                             }
                             if context != .search { // search results stay best match first

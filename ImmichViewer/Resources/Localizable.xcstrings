@@ -3660,6 +3660,22 @@
         }
       }
     },
+    "Show" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "顯示"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "显示"
+          }
+        }
+      }
+    },
     "Show Their Photos" : {
       "localizations" : {
         "zh-Hant" : {
