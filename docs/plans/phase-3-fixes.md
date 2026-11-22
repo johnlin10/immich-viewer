@@ -181,3 +181,11 @@ Sonnet 用 `PrimitiveButtonStyle` 包 `.glass` / `.glassProminent`，在 iPad �
 
 - `sharedBackgroundVisibility(.hidden)` 會讓 `.glassProminent` 在工具列裡完全沒有底（iPad 上只剩圖示）。拿掉它，改成篩選按鈕後面一律放 `ToolbarSpacer(.fixed)`（Mac 和 iOS 都放）：自己一組時，開著就是單獨一顆藍色玻璃，不會畫在別組的玻璃裡。
 - Mac 的 popover 裡 NavigationStack 其實有自己的返回鍵和標題，追加 4 自己做的那排變成重複。拿掉，只留膠囊搜尋欄；"Back" 字串和 `dismiss` 也一起拿掉。
+
+### 追加 5 更正：iOS 是「篩選 + ⋯」一組，「選擇」獨立
+
+使用者的意思是篩選跟 ⋯ 一組、「選擇」自己一組；之前讀反了。改法：
+- Library、Tags 頁 Select 和 ⋯ 之間的 `ToolbarSpacer` 加回來（跟原本一樣）。
+- iOS 的篩選按鈕不再由 `SearchResults` 的 `.toolbar` 放（外層的項目會排在 Select 前面），改用環境值 `searchFilters: SearchFiltersButton?`（`on`、`open`）傳給 iOS 的 `TimelineBrowser`，由它放在 spacer 之後、⋯ 之前。sheet 仍在 `SearchResults`。
+- 跟 ⋯ 同一組時不能用 `.glassProminent`（會在 ⋯ 那組的玻璃裡再疊一層），工具列項目也沒有 `.badge`：開著時在圖示右上角加一個 tint 色小圓點。
+- Mac 不變：自己一組，開著用 `.glassProminent`。

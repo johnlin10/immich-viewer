@@ -34,6 +34,7 @@ struct TimelineBrowser: View {
     @State private var person: Person?
     /// Select mode: a tap checks or unchecks a photo instead of opening it.
     @State private var selecting = false
+    @Environment(\.searchFilters) private var searchFilters
     @State private var chosen: Set<String> = []
     @State private var editor = PhotoEditor()
     @State private var uploadShown = false
@@ -43,6 +44,21 @@ struct TimelineBrowser: View {
     @State private var dropTargeted = false
     /// Dropped files upload only on Library and album pages (where Upload from Photos… is), one transfer at a time, not while selecting.
     private var canDrop: Bool { (context == .library || album != nil) && library.transfer == nil && !selecting }
+
+    /// Search's Filter, with ⋯: both about what's shown. A dot when on (tinted glass would sit inside ⋯'s).
+    @ToolbarContentBuilder private var searchFiltersItem: some ToolbarContent {
+        if let searchFilters {
+            ToolbarItem(placement: .primaryAction) {
+                Button(action: searchFilters.open) {
+                    Image(systemName: "line.3.horizontal.decrease")
+                        .overlay(alignment: .topTrailing) {
+                            if searchFilters.on { Circle().fill(.tint).frame(width: 8, height: 8).offset(x: 5, y: -4) }
+                        }
+                }
+                .accessibilityLabel("Filter")
+            }
+        }
+    }
 
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -91,6 +107,8 @@ struct TimelineBrowser: View {
                     Button("Select") { setSelecting(true) }.disabled(list.isEmpty)
                 }
             }
+            ToolbarSpacer(.fixed, placement: .primaryAction)
+            searchFiltersItem
             ToolbarItem(placement: .primaryAction) {
                 Menu {
                     if selecting, !chosen.isEmpty {

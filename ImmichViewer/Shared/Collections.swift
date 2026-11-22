@@ -284,6 +284,7 @@ struct TagList: View {
                     Button("Select") { withAnimation { editMode = .active } }.disabled(library.tags.isEmpty)
                 }
             }
+            ToolbarSpacer(.fixed, placement: .primaryAction)
             #endif
             ListOptions {
                 #if os(iOS)

@@ -17,6 +17,9 @@ struct SearchResults: View {
     var body: some View {
         TimelineBrowser(title: String(localized: "Search"), subtitle: assets == nil ? "" : String(localized: "\(shown.count) items"),
                         assets: shown, revision: loads, context: .search)
+            #if os(iOS)
+            .environment(\.searchFilters, SearchFiltersButton(on: active) { filtersShown = true }) // in the ⋯ group
+            #endif
             .overlay {
                 if query.isEmpty, !filter.isActive {
                     ContentUnavailableView("Search Your Library", systemImage: "magnifyingglass",
@@ -33,13 +36,12 @@ struct SearchResults: View {
                     }
                 }
             }
+            #if os(macOS)
             .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    filtersButton
-                }
+                ToolbarItem(placement: .primaryAction) { filtersButton }
                 ToolbarSpacer(.fixed, placement: .primaryAction) // a group of its own: on, its tinted glass isn't drawn inside another's
             }
-            #if os(iOS)
+            #else
             .sheet(isPresented: $filtersShown) { // a popover's Form has no size of its own and collapses on iPad
                 NavigationStack {
                     SearchFilterForm(filter: $filter, kinds: $kinds)
@@ -58,10 +60,10 @@ struct SearchResults: View {
             .task(id: SearchKey(query: query, filter: filter, edits: library.edits)) { await search() }
     }
 
+    #if os(macOS)
     private var filtersButton: some View {
         styledFiltersButton
             .help("Filter")
-            #if os(macOS)
             .popover(isPresented: $filtersShown) {
                 NavigationStack {
                     VStack(spacing: 0) {
@@ -76,7 +78,6 @@ struct SearchResults: View {
                 }
                 .frame(width: 340, height: 480)
             }
-            #endif
     }
 
     /// Tinted glass when on: the glass toolbar ignores symbol fill and tint.
@@ -89,6 +90,7 @@ struct SearchResults: View {
             button
         }
     }
+    #endif
 
     private func search() async {
         guard let api = library.api, !query.isEmpty || filter.isActive else { // cleared: the grid empties too (it regroups on `loads`)
@@ -111,6 +113,16 @@ struct SearchResults: View {
             self.error = error.localizedDescription
         }
     }
+}
+
+/// The Search page's Filter button, which the iOS photo page puts in its ⋯ group (Select stands apart).
+struct SearchFiltersButton {
+    let on: Bool
+    let open: () -> Void
+}
+
+extension EnvironmentValues {
+    @Entry var searchFilters: SearchFiltersButton?
 }
 
 /// What a search depends on: it runs again when any of it changes.
