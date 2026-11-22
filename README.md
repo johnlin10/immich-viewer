@@ -202,7 +202,15 @@ Planned editing: cropping, then stacks, sharing, duplicates and memories.
 
 ## Version history
 
-### v0.12.0 (current)
+### v0.13.0 (current)
+
+- Changes made in the web UI or on another device (deleting, trashing, archiving, favoriting, uploading) show up on their own, without ⌘R. Each sync also deletes cached thumbnails no longer needed.
+- Drag files onto the Library or an album's page to upload them (on iPhone and iPad, from other apps).
+- Simplified Chinese interface.
+- Search filters: people (chosen by face from everyone), place, a date range, and Photos, Videos, Live Photos and Favorites, all in one Filter button; with filters alone, it lists what matches, newest first.
+- iPhone and iPad: Select stands apart at the top right, with Filter next to ⋯ on Search.
+
+### v0.12.0
 
 - Search on iPhone, iPad and Mac: one field finds photos whose file name, description or text in the picture matches, newest first, then what the server's machine learning sees in the picture, like "beach at sunset", best match first.
 - iPhone: the round 🔍 apart from the tabs turns into the search field with the keyboard up, like Photos. iPad: Search opens with the field ready to type in. Mac: Search at the top of the sidebar.
