@@ -153,8 +153,8 @@ Mac 不必處理，一直連著。
 
 1. `swiftc ImmichViewer/Core/TimelineModel.swift ImmichViewer/Core/ThumbnailStore.swift ImmichViewer/Core/ImmichAPI.swift ImmichViewer/Core/ServerEvents.swift Tests/main.swift -o /tmp/immichviewer-check && /tmp/immichviewer-check`
 2. 兩個平台都要建置成功，而且沒有新增警告：
-   - `xcodebuild -project ImmichViewer.xcodeproj -scheme ImmichViewer -destination 'platform=macOS' -derivedDataPath build/dd build`
-   - `xcodebuild -project ImmichViewer.xcodeproj -scheme ImmichViewer -destination 'generic/platform=iOS Simulator' -derivedDataPath build/dd build`
+   - `xcodebuild -project ImmichViewer.xcodeproj -scheme ImmichViewer -destination 'platform=macOS' -derivedDataPath build build`
+   - `xcodebuild -project ImmichViewer.xcodeproj -scheme ImmichViewer -destination 'generic/platform=iOS Simulator' -derivedDataPath build build`
 3. 不帶 key 的協定檢查（只用本機伺服器）：用小腳本（Python `websockets`，或 `swift` 腳本直接用 `ServerEvents.swift` 的連線碼）連 `ws://localhost:2283/api/socket.io/?EIO=4&transport=websocket`。確認先收到 `0{...}`，送 `40` 之後被斷線或收到 `44`/`41`，證明 path、EIO 正確，而且沒有 key 會被拒。**不要讀 keychain 裡的 API key。**
 4. 對照本文件逐項檢查 diff：
    - 合併邏輯：1 秒窗口、只有真的改變才 `patch`

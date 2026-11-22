@@ -66,7 +66,7 @@ README 裡對應的兩項：
 ### 步驟
 
 1. **先同步字串目錄**（2A 加了新字串，而且命令列建置不會更新目錄）：
-   - 建置 macOS 和 iOS Simulator 兩個平台（`-derivedDataPath build/dd`）。
+   - 建置 macOS 和 iOS Simulator 兩個平台（`-derivedDataPath build`）。
    - 執行 `xcrun xcstringstool sync ImmichViewer/Resources/Localizable.xcstrings --stringsdata <每個 .stringsdata>`。兩個平台的 `.stringsdata` 都要帶上，因為有些字串只在其中一個平台出現。用 `find build/dd -name '*.stringsdata'` 找出來。
    - 同步後，`extractionState == "stale"` 的字串（程式碼已經不用的）直接刪掉。
 2. **補 zh-Hant**：凡是有 `en` 但沒有 `zh-Hant` 的字串（2A 的新字串），補上台灣用語的翻譯，風格和既有翻譯一致。空字串 key `""` 不用管。
