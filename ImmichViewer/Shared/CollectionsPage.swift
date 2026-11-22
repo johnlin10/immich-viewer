@@ -14,6 +14,8 @@ struct CollectionsPage: View {
     @State private var sheet: EditSheet?
     @State private var deletingAlbum: Album?
     @State private var deletingTag: Tag?
+    /// The memory playing over the page (the Mac's).
+    @State private var memory: MemoryOpen?
 
     var body: some View {
         #if os(iOS)
@@ -116,9 +118,11 @@ struct CollectionsPage: View {
         }
         .pageBar()
         .toolbar {
-            ToolbarItem(placement: .primaryAction) { Button("Settings", systemImage: "gearshape", action: onSettings) }
+            if memory == nil { // the memory's own meanwhile
+                ToolbarItem(placement: .primaryAction) { Button("Settings", systemImage: "gearshape", action: onSettings) }
+            }
         }
-        .navigationTitle("Collections")
+        .memoryHost($memory, title: "Collections")
     }
 
     /// A heading that opens the full page, over one row of items that scrolls sideways.
@@ -156,9 +160,6 @@ extension View {
         navigationDestination(for: Person.self) { CollectionTimeline(context: .person($0.id), fallbackTitle: $0.name) }
             .navigationDestination(for: Album.self) { CollectionTimeline(context: .album($0.id), fallbackTitle: $0.albumName) }
             .navigationDestination(for: Tag.self) { CollectionTimeline(context: .tag($0.id), fallbackTitle: $0.value) }
-            #if os(macOS)
-            .navigationDestination(for: MemoryOpen.self) { MemoryPlayer(memory: $0.memory, source: $0.source) } // on iOS a card opens it full screen
-            #endif
             .navigationDestination(for: MemoryPhotos.self) {
                 let photos = $0
                 TimelineBrowser(title: photos.memory.title, subtitle: photos.memory.subtitle, assets: photos.memory.assets,

@@ -162,3 +162,9 @@ struct Memory: Identifiable, Hashable, Sendable {
   - 改成 `MemoryPhotos` 帶一個 `Covered`（`@Observable`，以物件身分比較），網格出現時設為 true，播放器就暫停。返回後顯示 ▶，點一下繼續。
 - 暫停時畫面中間顯示 ▶。標題和進度條後面加上由黑到透明的漸層，亮的照片上也看得清楚。
 - Mac 的標題和日期放在視窗標題列（`navigationTitle` / `navigationSubtitle`），畫面上只留進度條，不重複顯示。
+- Mac 的回憶原本用 NavigationStack 推入：一推，整頁瞬間換掉，只剩灰底上的小框在長大；關閉時框停在卡片上，頁面才跳回來，完全不連貫。
+  - 改成跟單張照片一樣，疊在原頁面上（`memoryHost`）：頁面留在後面、慢慢變暗，照片從卡片原位放大到整個內容區（側邊欄保留）。
+  - 所有尺寸都在同一個 GeometryReader 算好再傳下去，照片、圓角和裁切一起動。影片的 layer 不能動畫，等展開完才顯示。
+  - 關閉時同步淡回第一張照片，卡片的標題和漸層也淡入，落地時跟卡片一模一樣，再換回卡片本身。
+- 播放畫面現在延伸到整個螢幕（Mac 是標題列），標題列和漸層從最上緣開始，進度條用外層 GeometryReader 量到的安全區域往下推。
+  - 忽略安全區域的 GeometryReader 量到的 inset 是 0，所以要在外層量。

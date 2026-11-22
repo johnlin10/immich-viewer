@@ -3,7 +3,7 @@ import ImageIO
 import SwiftUI
 
 /// A memory's first photo with its title over a fade, like Photos'. Opens the player: on iOS it grows out of the card to
-/// full screen and shrinks back into it (also following a swipe down); on the Mac it is pushed, and grows from the card's place.
+/// full screen and shrinks back into it (also following a swipe down); on the Mac it grows the same way over the page.
 struct MemoryCard: View {
     @Environment(Library.self) private var library
     let memory: Memory
@@ -11,14 +11,17 @@ struct MemoryCard: View {
     @State private var playing = false
     @Namespace private var zoom
     #else
+    @Environment(\.openMemory) private var openMemory
+    @Environment(\.memoryShowing) private var showing
     /// Where the card is in the window, for the player to grow from.
     @State private var frame = CGRect.zero
     #endif
 
     var body: some View {
         #if os(macOS)
-        NavigationLink(value: MemoryOpen(memory: memory, source: frame)) { cover }
+        Button { openMemory?(MemoryOpen(memory: memory, source: frame)) } label: { cover }
             .buttonStyle(.plain)
+            .opacity(showing == memory.id ? 0 : 1) // the player stands in for it, grown out of this place
             .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { frame = $0 }
         #else
         Button { playing = true } label: { cover }
@@ -34,19 +37,26 @@ struct MemoryCard: View {
     private var cover: some View {
         Thumb(id: memory.assets[0].id, store: library.thumbs)
             .aspectRatio(1.4, contentMode: .fit)
-            .overlay(alignment: .bottomLeading) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(memory.title).font(.headline)
-                    Text(memory.subtitle).font(.caption)
-                }
-                .foregroundStyle(.white)
-                .padding(12)
-                .padding(.top, 36)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(LinearGradient(colors: [.clear, .black.opacity(0.65)], startPoint: .top, endPoint: .bottom))
-            }
+            .overlay(alignment: .bottomLeading) { MemoryCaption(memory: memory) }
             .clipShape(RoundedRectangle(cornerRadius: 14))
             .contentShape(Rectangle())
+    }
+}
+
+/// The card's title and date over a fade; the Mac's player wears it too while on the card, so it lands as the card.
+private struct MemoryCaption: View {
+    let memory: Memory
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(memory.title).font(.headline)
+            Text(memory.subtitle).font(.caption)
+        }
+        .foregroundStyle(.white)
+        .padding(12)
+        .padding(.top, 36)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(LinearGradient(colors: [.clear, .black.opacity(0.65)], startPoint: .top, endPoint: .bottom))
     }
 }
 
@@ -55,6 +65,7 @@ struct MemoryGrid: View {
     @Environment(Library.self) private var library
     @State private var memories: [Memory]?
     @State private var failed = false
+    @State private var open: MemoryOpen?
 
     var body: some View {
         ScrollView {
@@ -74,7 +85,7 @@ struct MemoryGrid: View {
                 ProgressView()
             }
         }
-        .navigationTitle("Memories")
+        .memoryHost($open, title: "Memories")
         .task(id: library.serverURL) {
             guard let api = library.api else { return }
             do {
@@ -99,8 +110,12 @@ struct MemoryPlayer: View {
     let memory: Memory
     /// The card's place in the window (the Mac's): the player grows out of it and shrinks back into it.
     var source: CGRect?
+    /// Closes it, on the Mac, once it has shrunk into the card.
+    var onClose: (() -> Void)?
     /// Grown to fill the page; until then it sits on the card.
     @State private var expanded = false
+    /// The growing is over: a video's layer, which can't animate its size, shows only then.
+    @State private var settled = false
     @State private var index = 0
     /// Bumped to play the same photo again.
     @State private var round = 0
@@ -119,28 +134,36 @@ struct MemoryPlayer: View {
     private static let photoSeconds = 5.0
 
     var body: some View {
-        GeometryReader { page in
-            // on the card's place until grown: the photo's size and corners animate from it
-            let full = page.frame(in: .global)
-            let rect = open ? CGRect(origin: .zero, size: page.size)
-                            : source!.offsetBy(dx: -full.minX, dy: -full.minY)
-            stage
-                .frame(width: rect.width, height: rect.height)
-                .clipShape(.rect(cornerRadius: open ? 0 : 14))
-                .position(x: rect.midX, y: rect.midY)
+        GeometryReader { safe in // inside the safe area: how far down the status or title bar reaches
+            GeometryReader { page in
+                // on the card's place until grown: every size below is worked out here, so all of them animate together
+                let full = page.frame(in: .global)
+                let rect = open ? CGRect(origin: .zero, size: page.size)
+                                : source!.offsetBy(dx: -full.minX, dy: -full.minY)
+                ZStack {
+                    Color.black.opacity(open ? 1 : 0)
+                    stage(size: rect.size, top: safe.safeAreaInsets.top)
+                        .frame(width: rect.width, height: rect.height)
+                        .clipShape(.rect(cornerRadius: open ? 0 : 14))
+                        .position(x: rect.midX, y: rect.midY)
+                }
+            }
+            #if os(macOS)
+            .ignoresSafeArea(edges: .vertical) // up into the title bar, like the single photo view; the sidebar stays
+            #else
+            .ignoresSafeArea() // the whole screen: the fade behind the bars starts at its top edge
+            #endif
         }
-        .background(Color.black.opacity(open ? 1 : 0).ignoresSafeArea())
+        #if os(iOS)
+        .background(Color.black)
         .navigationTitle(memory.title)
-        #if os(macOS)
-        .navigationSubtitle(memory.subtitle)
         #endif
         .task(id: [index, round]) { await play() }
         .onChange(of: paused) { if paused { player?.pause() } else { player?.play() } }
         .onDisappear { player?.pause() }
         .onChange(of: covered.value) { if covered.value { paused = true } }
         #if os(macOS)
-        .navigationBarBackButtonHidden() // its own, which shrinks it back first
-        .toolbar {
+        .toolbar { // the page's own are hidden meanwhile
             ToolbarItem(placement: .navigation) { Button("Back", systemImage: "chevron.backward", action: close) }
             ToolbarItemGroup {
                 Button("Pause / Play", systemImage: paused ? "play.fill" : "pause.fill", action: togglePause)
@@ -154,7 +177,7 @@ struct MemoryPlayer: View {
         .focusEffectDisabled()
         .onAppear {
             focused = true
-            withAnimation(reduceMotion ? nil : Self.grow) { expanded = true }
+            withAnimation(reduceMotion ? nil : Self.grow) { expanded = true } completion: { settled = true }
         }
         .onKeyPress(.leftArrow) { go(index - 1); return .handled }
         .onKeyPress(.rightArrow) { go(index + 1); return .handled }
@@ -168,33 +191,36 @@ struct MemoryPlayer: View {
         #endif
     }
 
-    /// The memory's view: photos, bars and title.
-    private var stage: some View {
+    /// The memory's view at `size`: photos, bars and title (`top` down, clear of the title bar).
+    private func stage(size: CGSize, top: CGFloat) -> some View {
         let asset = memory.assets[index]
-        return GeometryReader { geo in
-            ZStack {
-                MemorySlide(asset: asset, player: asset.isVideo ? player : nil, fill: !open)
-                    .id(index)
-                    .transition(.opacity)
-            }
-            .animation(reduceMotion ? nil : .easeInOut(duration: 0.3), value: index)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .overlay(alignment: .top) { header.opacity(open ? 1 : 0) }
-            .overlay { // paused: say so, and that a tap plays on
-                if paused, open {
-                    Image(systemName: "play.fill").font(.largeTitle).foregroundStyle(.white)
-                        .frame(width: 80, height: 80)
-                        .background(.black.opacity(0.4), in: .circle)
-                        .allowsHitTesting(false)
-                }
-            }
-            .contentShape(Rectangle())
-            .gesture(SpatialTapGesture().onEnded { tap(at: $0.location.x, width: geo.size.width) })
+        let video = asset.isVideo && (source == nil || settled) ? player : nil
+        return ZStack {
+            MemorySlide(asset: asset, player: video, size: size, fill: !open,
+                        first: index == 0 ? library.thumbs.anyCached(asset.id) : nil) // the card's picture, at once
+                .id(index)
+                .transition(.opacity)
         }
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.3), value: index)
+        .frame(width: size.width, height: size.height)
+        .overlay(alignment: .bottomLeading) { if source != nil { MemoryCaption(memory: memory).opacity(open ? 0 : 1) } }
+        .overlay(alignment: .top) { header(top: top).opacity(open ? 1 : 0) }
+        .overlay { // paused: say so, and that a tap plays on
+            if paused, open {
+                Image(systemName: "play.fill").font(.largeTitle).foregroundStyle(.white)
+                    .frame(width: 80, height: 80)
+                    .background(.black.opacity(0.4), in: .circle)
+                    .allowsHitTesting(false)
+                    .transition(.identity) // gone at once when it starts shrinking
+            }
+        }
+        .contentShape(Rectangle())
+        .gesture(SpatialTapGesture().onEnded { tap(at: $0.location.x, width: size.width) })
     }
 
-    /// The progress bars, with the title under them.
-    private var header: some View {
+    /// The progress bars, with the title under them, `top` down from the stage's top edge (clear of the status or
+    /// title bar); the fade behind them starts at the edge.
+    private func header(top: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 4) {
                 ForEach(memory.assets.indices, id: \.self) { i in
@@ -220,22 +246,26 @@ struct MemoryPlayer: View {
         .buttonStyle(.plain)
         .foregroundStyle(.white)
         .padding(.horizontal, 12)
-        .padding(.top, 8)
+        .padding(.top, top + 8)
         .padding(.bottom, 24)
         .background { // the white title stays readable on a bright photo
             LinearGradient(colors: [.black.opacity(0.5), .clear], startPoint: .top, endPoint: .bottom)
-                .ignoresSafeArea(edges: .top)
                 .allowsHitTesting(false)
         }
     }
 
     private static let grow = Animation.smooth(duration: 0.4)
 
-    /// Back into the card it came from, then off the stack.
+    /// Back into the card it came from, then gone.
     private func close() {
-        guard source != nil, !reduceMotion else { return dismiss() }
+        guard let onClose else { return dismiss() }
         player?.pause()
-        withAnimation(Self.grow) { expanded = false } completion: { dismiss() }
+        paused = true // nothing moves on meanwhile
+        settled = false
+        withAnimation(reduceMotion ? nil : Self.grow) {
+            expanded = false
+            index = 0 // fades back to the card's own picture on the way, so the card takes over seamlessly
+        } completion: { onClose() }
     }
 
     private func tap(at x: CGFloat, width: CGFloat) {
@@ -317,12 +347,38 @@ struct MemoryPhotos: Hashable {
     }
 }
 
-/// A memory opened from its card on the Mac, with the card's place in the window. The place counts in ==, or the
-/// link keeps the place it had when first drawn (none, in a grid that loads after it).
-struct MemoryOpen: Hashable {
+/// A memory opened from its card, with the card's place in the window.
+struct MemoryOpen {
     let memory: Memory
     let source: CGRect
-    func hash(into hasher: inout Hasher) { hasher.combine(memory) }
+}
+
+extension EnvironmentValues {
+    /// Opens a memory over the page its card is on (the Mac's).
+    @Entry var openMemory: ((MemoryOpen) -> Void)?
+    /// The memory open over the page, whose card the player stands in for.
+    @Entry var memoryShowing: String?
+}
+
+extension View {
+    /// A page with memory cards and this title. On the Mac a card's memory plays over it (`open`), growing out of the
+    /// card with the page still underneath, and the title bar is the memory's meanwhile.
+    func memoryHost(_ open: Binding<MemoryOpen?>, title: LocalizedStringKey) -> some View {
+        #if os(macOS)
+        environment(\.openMemory) { open.wrappedValue = $0 }
+            .environment(\.memoryShowing, open.wrappedValue?.memory.id)
+            .overlay {
+                if let shown = open.wrappedValue {
+                    MemoryPlayer(memory: shown.memory, source: shown.source) { open.wrappedValue = nil }
+                }
+            }
+            .navigationTitle(open.wrappedValue.map { Text($0.memory.title) } ?? Text(title))
+            .navigationSubtitle(open.wrappedValue?.memory.subtitle ?? "")
+            .navigationBarBackButtonHidden(open.wrappedValue != nil) // its own Back shrinks it first
+        #else
+        navigationTitle(title)
+        #endif
+    }
 }
 
 /// One photo fitted to the screen (or filling it, like its card, while growing), the small picture at once and the
@@ -331,29 +387,34 @@ private struct MemorySlide: View {
     @Environment(Library.self) private var library
     let asset: Asset
     let player: AVPlayer?
+    /// Given, not read from a GeometryReader, so the picture's size animates with the frame around it.
+    let size: CGSize
     var fill = false
     @State private var image: CGImage?
 
+    init(asset: Asset, player: AVPlayer?, size: CGSize, fill: Bool, first: CGImage?) {
+        (self.asset, self.player, self.size, self.fill) = (asset, player, size, fill)
+        _image = State(initialValue: first)
+    }
+
     var body: some View {
-        GeometryReader { geo in
-            ZStack {
-                if let image {
-                    // sized by hand, not by content mode, so fill to fit animates
-                    let ratio = CGFloat(image.width) / CGFloat(max(image.height, 1))
-                    let wider = geo.size.width / max(geo.size.height, 1) > ratio
-                    let byHeight = wider != fill
-                    Image(decorative: image, scale: 1).resizable()
-                        .frame(width: byHeight ? geo.size.height * ratio : geo.size.width,
-                               height: byHeight ? geo.size.height : geo.size.width / ratio)
-                }
-                if let player { PlayerLayer(player: player, gravity: fill ? .resizeAspectFill : .resizeAspect) }
+        ZStack {
+            if let image {
+                // sized by hand, not by content mode, so filling the card turns smoothly into fitting the page
+                let ratio = CGFloat(image.width) / CGFloat(max(image.height, 1))
+                let wider = size.width / max(size.height, 1) > ratio
+                let byHeight = wider != fill
+                Image(decorative: image, scale: 1).resizable()
+                    .frame(width: byHeight ? size.height * ratio : size.width,
+                           height: byHeight ? size.height : size.width / ratio)
             }
-            .frame(width: geo.size.width, height: geo.size.height)
+            if let player { PlayerLayer(player: player, gravity: .resizeAspect) }
         }
+        .frame(width: size.width, height: size.height)
         .clipped()
         .task(id: asset.id) {
             guard let api = library.api else { return }
-            image = await library.thumbs.image(asset.id, pixels: 0, api: api)
+            if image == nil { image = await library.thumbs.image(asset.id, pixels: 0, api: api) }
             if let data = try? await api.thumbnail(asset.id, size: "preview"),
                let source = CGImageSourceCreateWithData(data as CFData, nil),
                let full = CGImageSourceCreateImageAtIndex(source, 0, nil) {
