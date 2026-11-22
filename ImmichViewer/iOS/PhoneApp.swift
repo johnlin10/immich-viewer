@@ -27,6 +27,9 @@ struct PhoneRoot: View {
     @Environment(Library.self) private var library
     @AppStorage("appearance") private var appearance = "system"
     @Environment(\.horizontalSizeClass) private var sizeClass
+    @Environment(\.scenePhase) private var scenePhase
+    /// The app was in the background, so the live connection is down and events were missed.
+    @State private var wasBackground = false
     @State private var settingsShown = false
     /// The search field (in the tab bar's place on the Search tab, like Photos), and what Return last searched for.
     @State private var searchText = ""
@@ -107,6 +110,16 @@ struct PhoneRoot: View {
         .onChange(of: library.editError) { showEditError() }
         .preferredColorScheme(appearance == "light" ? .light : appearance == "dark" ? .dark : nil)
         .task { await library.launch() }
+        .onChange(of: scenePhase) {
+            if scenePhase == .background {
+                wasBackground = true
+                library.stopListening()
+            } else if scenePhase == .active, wasBackground { // not the first activation: launch() did it
+                wasBackground = false
+                library.listen()
+                Task { await library.refresh() }
+            }
+        }
     }
 
     /// Over whatever is on top (an open photo, its details, a sheet), which a SwiftUI alert here can't reach.

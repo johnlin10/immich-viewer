@@ -39,6 +39,8 @@ final class Library {
     private let base: String
     /// The running sync, so switching servers can stop it.
     private var syncTask: Task<Void, Never>?
+    /// The live connection to the server, see `listen()`.
+    private var listenTask: Task<Void, Never>?
 
     init() {
         let env = ProcessInfo.processInfo.environment
@@ -129,10 +131,12 @@ final class Library {
     /// A person's, album's or tag's photos as last loaded: "pages/albumId=….json".
     private func pageFile(_ filter: [String: String]) -> URL {
         let name = filter.sorted { $0.key < $1.key }.map { "\($0.key)=\($0.value)" }.joined(separator: "&")
-        return listFile.deletingLastPathComponent().appending(path: "pages/\(name.replacingOccurrences(of: "/", with: "_")).json")
+        return pagesDir.appending(path: "\(name.replacingOccurrences(of: "/", with: "_")).json")
     }
 
-    private static func read<T: Decodable>(_ type: T.Type, _ file: URL) -> T? {
+    private var pagesDir: URL { listFile.deletingLastPathComponent().appending(path: "pages", directoryHint: .isDirectory) }
+
+    nonisolated private static func read<T: Decodable>(_ type: T.Type, _ file: URL) -> T? {
         (try? Data(contentsOf: file)).flatMap { try? JSONDecoder().decode(type, from: $0) }
     }
 
@@ -198,12 +202,19 @@ final class Library {
     }
 
     private func stopSync() async {
+        stopListening()
+        settleTask?.cancel()
+        settleTask = nil
+        pendingRemoved = []
+        pendingChanged = [:]
+        (pendingRefresh, sawChange) = (false, false)
         syncTask?.cancel()
         await syncTask?.value
     }
 
     /// At launch and after switching servers: start the server first if Settings > Server says so and it isn't answering, then sync.
     func launch() async {
+        listen()
         if !serverBusy, UserDefaults.standard.bool(forKey: Self.setting("serverStartAtLaunch", serverURL)), api != nil,
            !command("serverStart").isEmpty, let url = URL(string: serverURL), !(await ImmichAPI.ping(url)) {
             await startServer()
@@ -321,6 +332,7 @@ final class Library {
     }
 
     private func sync(_ api: ImmichAPI) async {
+        let (thumbs, pages) = (thumbs, pagesDir) // this server's, whatever is switched to meanwhile
         status = String(localized: "Syncing the list…")
         async let collections: Void = loadCollections() // alongside, not after: people and albums are much quicker
         let list: [Asset]
@@ -336,6 +348,8 @@ final class Library {
         assets = list
         revision += 1
         saveList()
+        await pruneCaches(thumbs, pages: pages)
+        guard !Task.isCancelled else { return }
 
         #if os(macOS)
         await thumbs.downloadMissing(list.map(\.id), api: api) { done, total, failed in
@@ -353,9 +367,23 @@ final class Library {
 
     private func saveList() { Self.write(assets, listFile) }
 
+    /// Deletes thumbnails of photos that are gone: keeps the timeline's, the saved person, album, tag, archive and trash lists',
+    /// and album covers (which may not be on the timeline). Off the main actor: it reads every saved list.
+    private func pruneCaches(_ thumbs: ThumbnailStore, pages: URL) async {
+        let keep = Set(assets.map(\.id) + albums.compactMap(\.albumThumbnailAssetId))
+        await Task.detached(priority: .utility) {
+            var keep = keep
+            for file in (try? FileManager.default.contentsOfDirectory(at: pages, includingPropertiesForKeys: nil)) ?? [] {
+                keep.formUnion(Self.read([Asset].self, file)?.map(\.id) ?? [])
+            }
+            thumbs.prune(keeping: keep)
+        }.value
+    }
+
     /// People and albums; a failure only shows on those pages, the timeline keeps working.
     func loadCollections() async {
         guard let api else { return }
+        let faces = faces // this server's, whatever is switched to meanwhile
         trashEnabled = (try? await api.trashEnabled()) ?? true
         do {
             async let people = api.people()
@@ -370,6 +398,7 @@ final class Library {
             if owned != ownedAlbums { ownedAlbums = owned }
             if newTags != tags { tags = newTags }
             collectionsError = nil
+            faces.prune(keeping: Set(newPeople.map(\.id))) // hidden people come back when shown
             Self.write(SavedCollections(people: newPeople, albums: newAlbums, tags: newTags, ownedAlbums: owned), collectionsFile)
         } catch {
             collectionsError = error.localizedDescription
@@ -445,6 +474,111 @@ final class Library {
         #else
         UIApplication.shared.open(api.server.appending(path: "photos/\(asset.id)"))
         #endif
+    }
+
+    // MARK: Live changes from the server (web UI, other devices)
+
+    private var pendingRemoved: Set<String> = []
+    private var pendingChanged: [String: AssetItem] = [:]
+    private var pendingRefresh = false
+    /// An update or removal came in, even if the timeline shows nothing new: open Trash, Archive and album pages, a description or a rating may differ.
+    private var sawChange = false
+    private var settleTask: Task<Void, Never>?
+
+    /// Follows the server's live events until `stopListening()`, reconnecting when the connection drops.
+    func listen() {
+        listenTask?.cancel()
+        guard let api else { return }
+        listenTask = Task {
+            var connected = false
+            while !Task.isCancelled {
+                do {
+                    for try await event in api.events() where !Task.isCancelled {
+                        if case .connected = event {
+                            if connected { pendingRefresh = true; scheduleSettle() } // events may have been missed meanwhile
+                            connected = true
+                        } else {
+                            receive(event)
+                        }
+                    }
+                } catch {}
+                // ponytail: fixed 5 s retry, no backoff
+                try? await Task.sleep(for: .seconds(5))
+            }
+        }
+    }
+
+    func stopListening() {
+        listenTask?.cancel()
+        listenTask = nil
+    }
+
+    private func receive(_ event: ServerEvent) {
+        switch event {
+        case .connected: return
+        case .removed(let ids):
+            sawChange = true
+            pendingRemoved.formUnion(ids)
+        case .deleted(let ids):
+            sawChange = true
+            pendingRemoved.formUnion(ids)
+            for id in ids { thumbs.forget(id) }
+        case .changed(let item):
+            sawChange = true
+            if !item.onTimeline {
+                pendingRemoved.insert(item.id)
+            } else if assets.contains(where: { $0.id == item.id }) { // ponytail: a scan per event; an id index if bulk edits feel slow
+                pendingChanged[item.id] = item
+            } else {
+                pendingRefresh = true // just unarchived or restored
+            }
+        case .added: pendingRefresh = true
+        }
+        scheduleSettle()
+    }
+
+    /// Handles what came in during the next second together: a bulk edit sends one event per photo.
+    private func scheduleSettle() {
+        guard settleTask == nil else { return }
+        settleTask = Task {
+            try? await Task.sleep(for: .seconds(1))
+            guard !Task.isCancelled else { return }
+            await settle()
+        }
+    }
+
+    private func settle() async {
+        let (removed, changed, refreshing, saw) = (pendingRemoved, pendingChanged, pendingRefresh, sawChange)
+        pendingRemoved = []
+        pendingChanged = [:]
+        (pendingRefresh, sawChange) = (false, false)
+        settleTask = nil // events from here on start the next window
+
+        let parser = UTCDateParser()
+        var updates: [String: Asset] = [:]
+        for old in assets {
+            guard let new = changed[old.id]?.asset(using: parser),
+                  new.date != old.date || new.isFavorite != (old.isFavorite == true) || new.isLive != (old.isLive == true) else { continue }
+            updates[old.id] = new
+        }
+        let patched = !updates.isEmpty || assets.contains { removed.contains($0.id) }
+        // ponytail: a sync already running can bring a just-removed photo back until the next refresh
+        if patched { // our own edits come back as events: nothing to do when the list already shows them
+            patch { list in
+                list.removeAll { removed.contains($0.id) }
+                for i in list.indices {
+                    guard let new = updates[list[i].id] else { continue }
+                    (list[i].date, list[i].isFavorite, list[i].isLive) = (new.date, new.isFavorite, new.isLive)
+                }
+                if !updates.isEmpty { list.sort { $0.date > $1.date } }
+            }
+        }
+        if refreshing {
+            while syncing { try? await Task.sleep(for: .seconds(0.5)) }
+            guard !Task.isCancelled else { return }
+            await refresh()
+        }
+        if patched || refreshing || saw { edits += 1 } // open people, album, trash and info pages load again
     }
 
     // MARK: Editing. Each change goes to the server first; the local list follows only if it worked.

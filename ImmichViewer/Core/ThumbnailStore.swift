@@ -57,6 +57,16 @@ final class ThumbnailStore: @unchecked Sendable {
         for pixels in [0, 128, 256] { memory.removeObject(forKey: key(id, pixels)) }
     }
 
+    /// Deletes the files for pictures not in `ids` (photos gone from the server). Returns how many.
+    @discardableResult
+    func prune(keeping ids: Set<String>) -> Int {
+        var removed = 0
+        for name in (try? FileManager.default.contentsOfDirectory(atPath: dir.path)) ?? [] where !ids.contains(name) {
+            if (try? FileManager.default.removeItem(at: file(name))) != nil { removed += 1 }
+        }
+        return removed
+    }
+
     /// Bytes on disk.
     func diskSize() -> Int {
         let files = FileManager.default.enumerator(at: dir, includingPropertiesForKeys: [.totalFileAllocatedSizeKey])

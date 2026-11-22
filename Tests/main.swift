@@ -1,5 +1,5 @@
 // Checks for the grid math and grouping. Run from the project folder:
-//   swiftc ImmichViewer/Core/TimelineModel.swift ImmichViewer/Core/ThumbnailStore.swift ImmichViewer/Core/ImmichAPI.swift Tests/main.swift -o /tmp/immichviewer-check && /tmp/immichviewer-check
+//   swiftc ImmichViewer/Core/TimelineModel.swift ImmichViewer/Core/ThumbnailStore.swift ImmichViewer/Core/ImmichAPI.swift ImmichViewer/Core/ServerEvents.swift Tests/main.swift -o /tmp/immichviewer-check && /tmp/immichviewer-check
 import Foundation
 
 // 3 columns: (100 + 2) / (30 + 2) = 3.18, side = (100 - 2*2) / 3 = 32, row = 34
@@ -133,5 +133,36 @@ precondition(ids(PeopleSort.youngest.apply(crowd)) == "15423" && ids(PeopleSort.
 let shelf = [Album(id: "a", albumName: "trip 10", assetCount: 5), Album(id: "b", albumName: "Trip 9", assetCount: 50)]
 precondition(AlbumSort.recent.apply(shelf).map(\.id) == ["a", "b"] && AlbumSort.name.apply(shelf).map(\.id) == ["b", "a"])
 precondition(AlbumSort.count.apply(shelf).map(\.id) == ["b", "a"])
+
+// live events: socket.io packets, and what they mean for the lists
+func event(_ text: String) -> ServerEvent? {
+    guard case .event(let name, let json) = SocketPacket(text) else { return nil }
+    return ServerEvent.from(name: name, json: json)
+}
+precondition(SocketPacket("0{\"sid\":\"x\",\"pingInterval\":25000}") == .open && SocketPacket("40{\"sid\":\"y\"}") == .connected)
+precondition(SocketPacket("2") == .ping && SocketPacket("41") == .closed && SocketPacket("44{\"message\":\"x\"}") == .closed && SocketPacket("1") == .closed)
+precondition(SocketPacket("3") == .other && SocketPacket("") == .other)
+if case .removed(let gone)? = event("42[\"on_asset_trash\",[\"a\",\"b\"]]") { precondition(gone == ["a", "b"]) } else { preconditionFailure() }
+if case .deleted(let gone)? = event("42[\"on_asset_delete\",\"a\"]") { precondition(gone == ["a"]) } else { preconditionFailure() }
+if case .added? = event("42[\"on_upload_success\",{\"id\":\"u\"}]") {} else { preconditionFailure() }
+if case .connected? = event("42[\"on_server_version\",{}]") {} else { preconditionFailure() }
+precondition(SocketPacket("42[\"error\",\"unauthorized\"]") == .closed && event("42[\"on_album_update\",{}]") == nil)
+func update(_ extra: String) -> AssetItem {
+    let json = "{\"id\":\"u\",\"type\":\"IMAGE\",\"localDateTime\":\"2026-11-10T21:45:03.000Z\",\"isFavorite\":true\(extra)}"
+    guard case .changed(let item)? = event("42[\"on_asset_update\",\(json)]") else { preconditionFailure() }
+    return item
+}
+precondition(!update(",\"visibility\":\"archive\"").onTimeline && !update(",\"visibility\":\"timeline\",\"isTrashed\":true").onTimeline)
+let onTimeline = update(",\"visibility\":\"timeline\",\"isTrashed\":false")
+precondition(onTimeline.onTimeline && onTimeline.asset?.id == "u" && onTimeline.asset?.isFavorite == true && onTimeline.asset?.isLive == false)
+precondition(onTimeline.asset?.date == ISO8601DateFormatter().date(from: "2026-11-10T21:45:03Z"))
+
+// thumbnails of photos that are gone
+let cache = FileManager.default.temporaryDirectory.appending(path: "immichviewer-prune-\(UUID().uuidString)")
+let store = ThumbnailStore(dir: cache)
+for name in ["a", "b", "c"] { FileManager.default.createFile(atPath: cache.appending(path: name).path, contents: Data()) }
+precondition(store.prune(keeping: ["a"]) == 2)
+precondition(((try? FileManager.default.contentsOfDirectory(atPath: cache.path)) ?? []) == ["a"])
+try? FileManager.default.removeItem(at: cache)
 
 print("all checks passed")

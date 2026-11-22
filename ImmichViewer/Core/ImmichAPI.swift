@@ -274,24 +274,13 @@ struct ImmichAPI: Sendable {
     }
 
     private func searchPage(_ kind: String, _ body: [String: Any]) async throws -> (assets: [Asset], more: Bool) {
-        struct Item: Decodable {
-            let id, type, localDateTime: String
-            let isFavorite: Bool?
-            let livePhotoVideoId: String?
-        }
         struct Response: Decodable {
-            struct Page: Decodable { let items: [Item]; let nextPage: String? }
+            struct Page: Decodable { let items: [AssetItem]; let nextPage: String? }
             let assets: Page
         }
         let page = try JSONDecoder().decode(Response.self, from: await send("POST", "search/\(kind)", json: body)).assets
         let parser = UTCDateParser()
-        let assets = page.items.compactMap { item in
-            // localDateTime: the local wall-clock time kept in UTC, like the timeline's
-            parser.date(item.localDateTime).map {
-                Asset(id: item.id, date: $0, isVideo: item.type == "VIDEO", isFavorite: item.isFavorite == true,
-                      isLive: item.livePhotoVideoId != nil)
-            }
-        }
+        let assets = page.items.compactMap { $0.asset(using: parser) }
         return (assets, page.nextPage != nil)
     }
 
@@ -336,6 +325,27 @@ struct ImmichAPI: Sendable {
     func albums() async throws -> [Album] {
         let albums = try JSONDecoder().decode([Album].self, from: await get("albums"))
         return albums.sorted { ($0.endDate ?? "") > ($1.endDate ?? "") }
+    }
+}
+
+/// An asset as search results and live events carry it (`AssetResponseDto`).
+struct AssetItem: Decodable, Sendable {
+    let id, type, localDateTime: String
+    let isFavorite: Bool?
+    let livePhotoVideoId: String?
+    let visibility: String?
+    let isTrashed: Bool?
+
+    /// Whether the main timeline shows it (not archived, hidden, locked or in the trash).
+    var onTimeline: Bool { visibility == "timeline" && isTrashed != true }
+
+    var asset: Asset? { asset(using: UTCDateParser()) }
+
+    func asset(using parser: UTCDateParser) -> Asset? {
+        // localDateTime: the local wall-clock time kept in UTC, like the timeline's
+        parser.date(localDateTime).map {
+            Asset(id: id, date: $0, isVideo: type == "VIDEO", isFavorite: isFavorite == true, isLive: livePhotoVideoId != nil)
+        }
     }
 }
 

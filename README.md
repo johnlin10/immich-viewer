@@ -26,6 +26,7 @@ It keeps every small thumbnail (about 15 KB each) on the device, so scrolling re
 - Sync progress and the item count show under the window title (hidden in the single photo view).
 - The bottom controls are two glass capsules: zoom, and grouping. The chosen grouping sits on a tinted piece of glass that slides over to the next choice, like an iOS tab bar.
 - Refresh (⌘R) reloads the list and downloads any new thumbnails. This also runs at launch.
+- Changes made in the web UI or on another device (deleting, trashing, archiving, favoriting, uploading) show up on their own, through the server's live events, so ⌘R isn't needed. On iPhone and iPad, coming back to the app refreshes once.
 - Zoom, grouping and the whole-photo setting are remembered.
 
 ### Editing
@@ -140,6 +141,8 @@ Each server has its own folder, named after its address (`http://nas.local:2283`
 - API keys: the login keychain, one per server address
 - Server addresses, start and stop commands (per server), and view settings: the app’s preferences (`local.ImmichViewer`)
 
+Each sync also deletes cached thumbnails the lists no longer need (photos deleted on the server, for example); any still needed download again when shown.
+
 Removing a server in Settings > Connection deletes its key and both folders. Updating from v0.6 moves the single server's key, thumbnails and list into its new folder, so nothing downloads again.
 
 ## Development
@@ -150,7 +153,7 @@ Removing a server in Settings > Connection deletes its key and both folders. Upd
 - Grid and grouping checks, no Xcode needed:
 
 ```bash
-swiftc ImmichViewer/Core/TimelineModel.swift ImmichViewer/Core/ThumbnailStore.swift ImmichViewer/Core/ImmichAPI.swift Tests/main.swift -o /tmp/immichviewer-check && /tmp/immichviewer-check
+swiftc ImmichViewer/Core/TimelineModel.swift ImmichViewer/Core/ThumbnailStore.swift ImmichViewer/Core/ImmichAPI.swift ImmichViewer/Core/ServerEvents.swift Tests/main.swift -o /tmp/immichviewer-check && /tmp/immichviewer-check
 ```
 
 - Installer: `scripts/make-dmg.sh` builds Release and makes `build/ImmichViewer-<version>.dmg`, a window with the app, an Applications shortcut and a background (`scripts/dmg-background.tiff`) that says to drag it across. It needs [uv](https://docs.astral.sh/uv/) (`brew install uv`), which runs dmgbuild; the layout is in `scripts/dmg-settings.py`. The app is signed with a development certificate only, so on another Mac it has to be allowed once in System Settings > Privacy & Security.
@@ -163,6 +166,7 @@ Sources are grouped by where they run. Every file is compiled for both platforms
 |---|---|
 | **`Core/`** | Data and network, no interface (the command-line checks build these) |
 | `ImmichAPI.swift` | Immich API calls, keychain |
+| `ServerEvents.swift` | Live changes from the server (socket.io over a WebSocket) |
 | `Library.swift` | Connection, starting and stopping the server, asset list, sync |
 | `ThumbnailStore.swift` | Disk and memory thumbnail cache |
 | `TimelineModel.swift` | Asset, filters, grouping, grid geometry, row moves, date lookup, year marks |
@@ -192,7 +196,7 @@ Sources are grouped by where they run. Every file is compiled for both platforms
 
 ## Not in this version
 
-Search filters (people, places, dates), map, memories, Simplified Chinese interface, and noticing deletions made in the browser until the next refresh. Thumbnails of deleted photos stay in the cache.
+Search filters (people, places, dates), map, memories and a Simplified Chinese interface.
 
 Planned editing: cropping, dropping files on the window to upload, then stacks, sharing, duplicates and memories.
 
