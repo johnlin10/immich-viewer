@@ -22,6 +22,37 @@ struct ImmichViewerPhoneApp: App {
     var on = false
 }
 
+/// Beside the collapsed tab bar, like the Years / Months / All Photos in Photos: how the photos are grouped.
+private struct GroupingAccessory: View {
+    @AppStorage("grouping") private var grouping = Grouping.day
+
+    var body: some View {
+        Picker("Group By", selection: $grouping) {
+            ForEach(Grouping.allCases, id: \.self) { Text($0.label).tag($0) }
+        }
+        .pickerStyle(.segmented)
+    }
+
+    struct Shown: ViewModifier {
+        let enabled: Bool
+
+        func body(content: Content) -> some View {
+            if #available(iOS 26.1, *) {
+                content.tabViewBottomAccessory(isEnabled: enabled) { GroupingAccessory() }
+            } else { // ponytail: no picker on 26.0, which can't turn the accessory off
+                content
+            }
+        }
+    }
+}
+
+/// Library scrolled down from the top, so the grouping picker shows: beside the collapsed tab bar, or above it once expanded.
+/// ponytail: the system has no "tab bar collapsed" to read, and how far up it takes to expand is its own call, so only the top turns it off
+@Observable final class GroupingPicker {
+    static let shared = GroupingPicker()
+    var shown = false
+}
+
 /// Tabs on iPhone; on iPad they can become a sidebar.
 struct PhoneRoot: View {
     @Environment(Library.self) private var library
@@ -97,6 +128,8 @@ struct PhoneRoot: View {
                 .tabViewStyle(.sidebarAdaptable)
                 .tabViewSearchActivation(.searchTabSelection) // the Search tab opens with the field and keyboard up
                 .tabBarMinimizeBehavior(.onScrollDown)
+                // on iPhone, only once Library leaves the top: there the tabs stand alone, as in Photos
+                .modifier(GroupingAccessory.Shown(enabled: sizeClass == .compact && GroupingPicker.shared.shown))
                 .id(library.serverURL) // another server: every tab starts over
             }
         }

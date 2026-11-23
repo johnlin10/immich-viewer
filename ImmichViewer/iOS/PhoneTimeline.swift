@@ -67,7 +67,8 @@ struct TimelineBrowser: View {
                       selecting: selecting, chosen: chosen,
                       handlers: PhoneGrid.Handlers(
                         refresh: context == .library ? { await library.refresh() } : nil,
-                        onColumns: { if sizeClass == .regular { padColumns = $0 } else { phoneColumns = $0 } }, onTop: { top = $0 }, onPerson: { person = $0 },
+                        onColumns: { if sizeClass == .regular { padColumns = $0 } else { phoneColumns = $0 } }, onTop: { top = $0 },
+                        onScrollDown: { if context == .library, GroupingPicker.shared.shown != $0 { GroupingPicker.shared.shown = $0 } }, onPerson: { person = $0 },
                         onToggle: { id in
                             if chosen.remove(id) == nil { chosen.insert(id) }
                         },
@@ -166,6 +167,7 @@ struct TimelineBrowser: View {
         .navigationSubtitle(selecting ? (chosen.isEmpty ? String(localized: "Select Items") : String(localized: "\(chosen.count) selected"))
                             : countSubtitle(subtitle, shown: list.count, filtered: filter.isActive))
         .navigationDestination(item: $person) { CollectionTimeline(context: .person($0.id), fallbackTitle: $0.name) }
+        .onDisappear { if context == .library { GroupingPicker.shared.shown = false } } // another tab, or a page pushed over it
         .photoEditor(editor, library: library, undo: undo)
         // the current version (an edited photo as edited); the library's own copy when it can be read, see uploadFromPhotos
         .photosPicker(isPresented: $uploadShown, selection: $picked, matching: .any(of: [.images, .videos]),
