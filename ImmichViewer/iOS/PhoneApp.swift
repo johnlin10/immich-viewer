@@ -22,8 +22,8 @@ struct ImmichViewerPhoneApp: App {
     var on = false
 }
 
-/// Days / Months / All beside the collapsed tab bar, like Photos' Years / Months / All Photos: a glass capsule as tall as
-/// the round buttons beside it, whose darker piece of glass slides to the chosen option. It sits inside the tab bar,
+/// Days / Months / All beside the collapsed tab bar, like Photos' Years / Months / All Photos: the system's segmented
+/// control on a glass capsule as tall as the round buttons beside it. It sits inside the tab bar,
 /// behind its buttons, so it grows out from under the collapsed button and the bar covers it again as it expands.
 /// ponytail: tabViewBottomAccessory brings its own platter and stays above the bar once it expands, so not that;
 /// the collapsed button is a private view found by class name: no picker if a later iOS renames it
@@ -78,6 +78,12 @@ private struct TabBarGrouping: UIViewRepresentable {
                 holder.addSubview(host.view)
                 holder.host = host
                 bar.insertSubview(holder, at: 0) // behind the buttons
+                // the tab bar's own drag (sliding across its tabs) would take a drag on the capsule away: it waits
+                // for this one, which only ever sees touches on the capsule and cancels nothing
+                let claim = UIPanGestureRecognizer()
+                claim.cancelsTouchesInView = false
+                holder.addGestureRecognizer(claim)
+                bar.gestureRecognizers?.forEach { $0.require(toFail: claim) }
             }
             guard let button = Self.subview(of: bar, named: "_UITabBarPlatterView"), button !== self.button,
                   let tabs = Self.subview(of: bar, named: "_UITabBarItemPlatterView") else { return }
@@ -127,11 +133,6 @@ private struct TabBarGrouping: UIViewRepresentable {
     private struct Capsule: View {
         let model: Model
         @AppStorage("grouping") private var grouping = Grouping.day
-        @State private var selected = Grouping.day
-        /// The piece of glass swells as it slides, like the tab bar's.
-        @State private var moving = false
-        @Namespace private var glass
-        @Environment(\.colorScheme) private var scheme
 
         var body: some View {
             ZStack(alignment: .topLeading) {
@@ -139,47 +140,38 @@ private struct TabBarGrouping: UIViewRepresentable {
                     picker
                         .frame(width: model.slot.width, height: model.slot.height)
                         .offset(x: model.slot.minX, y: model.slot.minY)
-                        .transition(.scale(scale: 0.2, anchor: .leading).combined(with: .opacity))
+                        .transition(.scale(scale: 0.2).combined(with: .opacity))
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .ignoresSafeArea()
-            .onChange(of: grouping, initial: true) { old, new in
-                guard old != new else { selected = new; return }
-                withAnimation(.bouncy(duration: 0.4)) { selected = new; moving = true }
-                withAnimation(.smooth(duration: 0.3).delay(0.2)) { moving = false }
-            }
         }
 
         private var picker: some View {
-            GlassEffectContainer {
-                HStack(spacing: 0) {
-                    ForEach(Grouping.allCases, id: \.self) { option in
-                        Button { grouping = option } label: {
-                            Text(option.label)
-                                .font(.subheadline)
-                                .foregroundStyle(.primary)
-                                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                                .contentShape(.capsule)
-                        }
-                        .buttonStyle(.plain)
-                        .matchedGeometryEffect(id: option, in: glass) // where the darker glass goes for this option
-                        .accessibilityAddTraits(selected == option ? .isSelected : [])
-                    }
-                }
-                .background {
-                    // a plain darker fill at rest, a clear lens while it slides
-                    SwiftUI.Capsule()
-                        .fill(.black.opacity(moving ? 0 : scheme == .dark ? 0.35 : 0.1))
-                        .glassEffect(moving ? .clear.interactive() : .identity, in: .capsule)
-                        .scaleEffect(moving ? 1.15 : 1)
-                        .matchedGeometryEffect(id: selected, in: glass, isSource: false)
-                }
+            Segments(grouping: $grouping)
                 .padding(4)
-                .glassEffect(.regular.interactive(), in: .capsule)
-            }
-            .accessibilityElement(children: .contain)
-            .accessibilityLabel(Text("Group By"))
+                .glassEffect(.regular, in: .capsule)
+        }
+    }
+
+    /// The system's segmented control, for its own press, drag and lens: on glass, without its track, the chosen
+    /// option darker, as in Photos.
+    private struct Segments: UIViewRepresentable {
+        @Binding var grouping: Grouping
+
+        func makeUIView(context: Context) -> UISegmentedControl {
+            let control = UISegmentedControl(items: Grouping.allCases.map { String(localized: $0.label) })
+            control.backgroundColor = .clear
+            control.selectedSegmentTintColor = UIColor { $0.userInterfaceStyle == .dark ? .black.withAlphaComponent(0.35) : .black.withAlphaComponent(0.1) }
+            control.accessibilityLabel = String(localized: "Group By")
+            control.addAction(UIAction { [binding = $grouping] action in
+                binding.wrappedValue = Grouping.allCases[(action.sender as! UISegmentedControl).selectedSegmentIndex]
+            }, for: .valueChanged)
+            return control
+        }
+
+        func updateUIView(_ control: UISegmentedControl, context: Context) {
+            control.selectedSegmentIndex = Grouping.allCases.firstIndex(of: grouping) ?? 0
         }
     }
 }
