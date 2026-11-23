@@ -152,7 +152,7 @@ private struct TabBarGrouping: UIViewRepresentable {
             Segments(grouping: $grouping)
                 .padding(2)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .glassEffect(.regular, in: .capsule)
+                .glassEffect(.regular.interactive(), in: .capsule) // stretches with the finger, as the system's glass does
         }
     }
 
