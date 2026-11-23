@@ -246,6 +246,8 @@ struct PhotoPager: View {
     @State private var window: Range<Int>
     @State private var chromeHidden = false
     @State private var showInfo = false
+    /// The bottom bar's Delete was tapped: its confirmation shows.
+    @State private var confirmDelete = false
     @State private var detail: AssetDetail?
     /// The shown photo's moving part, when it's a Live Photo. Long-press the photo or tap LIVE to play it.
     @State private var livePlayer: AVPlayer?
@@ -470,7 +472,18 @@ struct PhotoPager: View {
             }
             .glassEffect(.regular.interactive(), in: .capsule)
             Spacer()
-            Button { run(.trash) } label: { Label(trash ? "Delete Permanently…" : "Delete…", systemImage: "trash").circleGlass(48) }
+            // Like Photos: the confirmation grows out of the button rather than an alert in the middle.
+            Button { confirmDelete = true } label: { Label(trash ? "Delete Permanently…" : "Delete…", systemImage: "trash").circleGlass(48) }
+                .confirmationDialog(trash ? "Delete This Photo Permanently?" : "Delete This Photo?", isPresented: $confirmDelete,
+                                    titleVisibility: .hidden) {
+                    Button(trash ? "Delete Permanently" : "Delete Photo", role: .destructive) {
+                        Task { trash ? await library.deleteForever([asset.id]) : await library.trash([asset.id], undo: undo) }
+                    }
+                } message: {
+                    Text(trash ? "This can’t be undone."
+                         : library.trashEnabled ? "This photo goes to the server’s trash, which keeps it for 30 days unless the server is set otherwise."
+                         : "The server’s trash is turned off, so this photo is deleted for good.")
+                }
         }
         .buttonStyle(.plain)
         .padding(.horizontal, 28) // Photos' sizes and margins

@@ -1400,6 +1400,22 @@
         }
       }
     },
+    "Delete Photo" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "刪除照片"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "删除照片"
+          }
+        }
+      }
+    },
     "Delete Permanently" : {
       "localizations" : {
         "zh-Hant" : {
@@ -4204,6 +4220,22 @@
         }
       }
     },
+    "The server’s trash is turned off, so this photo is deleted for good." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "伺服器的垃圾桶已關閉，所以這張照片會永久刪除。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "服务器的废纸篓已关闭，所以这张照片会永久删除。"
+          }
+        }
+      }
+    },
     "The person you choose becomes %@: their photos move over and they are gone. This can’t be undone." : {
       "localizations" : {
         "zh-Hant" : {
@@ -4328,6 +4360,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "服务器的废纸篓已关闭，因此会被永久删除。"
+          }
+        }
+      }
+    },
+    "This photo goes to the server’s trash, which keeps it for 30 days unless the server is set otherwise." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "照片會移到伺服器的垃圾桶，除非伺服器另有設定，否則會保留 30 天。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "照片会移到服务器的废纸篓，除非服务器另有设置，否则会保留 30 天。"
           }
         }
       }
