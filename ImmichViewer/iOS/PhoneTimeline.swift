@@ -115,7 +115,7 @@ struct TimelineBrowser: View {
                         let picked = list.filter { chosen.contains($0.id) }
                         SwiftUI.Section {
                             PhotoMenu(library: library, count: picked.count, allFavorite: picked.allSatisfy { $0.isFavorite == true },
-                                      context: context) { act($0, on: picked) }
+                                      context: context, canCrop: picked.count == 1 && picked[0].canCrop) { act($0, on: picked) }
                         }
                     }
                     if !selecting, context == .library || album != nil {
@@ -354,7 +354,7 @@ struct PhotoPager: View {
                     Spacer()
                     if let asset {
                         Menu {
-                            PhotoMenu(library: library, count: 1, allFavorite: asset.isFavorite == true, context: context) {
+                            PhotoMenu(library: library, count: 1, allFavorite: asset.isFavorite == true, context: context, canCrop: asset.canCrop) {
                                 editor.perform($0, on: [asset], context: context, library: library, undo: undo, place: place)
                             }
                             Divider()

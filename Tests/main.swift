@@ -179,4 +179,19 @@ precondition(store.prune(keeping: ["a"]) == 2)
 precondition(((try? FileManager.default.contentsOfDirectory(atPath: cache.path)) ?? []) == ["a"])
 try? FileManager.default.removeItem(at: cache)
 
+// cropping: the shown rectangle and the original's pixels
+let big = CGSize(width: 4000, height: 3000)
+precondition(pixelCrop(CGRect(x: 0.25, y: 0.5, width: 0.5, height: 0.5), angle: 0, size: big) == PixelCrop(x: 1000, y: 1500, width: 2000, height: 1500))
+precondition(pixelCrop(CGRect(x: 0, y: 0, width: 0.5, height: 1), angle: 90, size: big) == PixelCrop(x: 0, y: 1500, width: 4000, height: 1500))
+precondition(pixelCrop(CGRect(x: 0, y: 0, width: 0.5, height: 0.5), angle: 180, size: big) == PixelCrop(x: 2000, y: 1500, width: 2000, height: 1500))
+precondition(pixelCrop(CGRect(x: 0, y: 0, width: 0.5, height: 1), angle: 270, size: big) == PixelCrop(x: 0, y: 0, width: 4000, height: 1500))
+precondition(pixelCrop(CGRect(x: -0.2, y: 0.9, width: 1.5, height: 0.5), angle: 0, size: big) == PixelCrop(x: 0, y: 2700, width: 4000, height: 300))
+precondition(pixelCrop(CGRect(x: 0.5, y: 0.5, width: 0, height: 0), angle: 0, size: big).width == 1)
+for angle in [0, 90, 180, 270] {
+    let r = CGRect(x: 0.1, y: 0.2, width: 0.5, height: 0.6)
+    let back = shownRect(pixelCrop(r, angle: angle, size: big), angle: angle, size: big)
+    precondition(abs(back.minX - r.minX) < 0.001 && abs(back.minY - r.minY) < 0.001
+                 && abs(back.width - r.width) < 0.001 && abs(back.height - r.height) < 0.001)
+}
+
 print("all checks passed")

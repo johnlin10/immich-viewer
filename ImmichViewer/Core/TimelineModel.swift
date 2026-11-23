@@ -230,3 +230,38 @@ struct PhotoFilter: Equatable {
         }
     }
 }
+
+/// A crop in the original's pixels, upright (EXIF orientation applied): what Immich's `crop` edit takes.
+struct PixelCrop: Equatable, Sendable { var x, y, width, height: Int }
+
+/// `rect`, 0…1 in the photo as shown (turned `angle` degrees clockwise), in the upright original's pixels
+/// (`size`), rounded and kept inside it.
+func pixelCrop(_ rect: CGRect, angle: Int, size: CGSize) -> PixelCrop {
+    let a = cropPoint(rect.minX, rect.minY, angle: angle, toOriginal: true)
+    let b = cropPoint(rect.maxX, rect.maxY, angle: angle, toOriginal: true)
+    func span(_ p: Double, _ q: Double, _ length: Double) -> (Int, Int) {
+        let start = min(max(Int((min(p, q) * length).rounded()), 0), Int(length) - 1)
+        let end = min(max(Int((max(p, q) * length).rounded()), start + 1), Int(length))
+        return (start, end - start)
+    }
+    let (x, w) = span(a.x, b.x, size.width)
+    let (y, h) = span(a.y, b.y, size.height)
+    return PixelCrop(x: x, y: y, width: w, height: h)
+}
+
+/// The other way: where `crop` sits, 0…1, in the photo as shown.
+func shownRect(_ crop: PixelCrop, angle: Int, size: CGSize) -> CGRect {
+    let a = cropPoint(Double(crop.x) / size.width, Double(crop.y) / size.height, angle: angle, toOriginal: false)
+    let b = cropPoint(Double(crop.x + crop.width) / size.width, Double(crop.y + crop.height) / size.height, angle: angle, toOriginal: false)
+    return CGRect(x: min(a.x, b.x), y: min(a.y, b.y), width: abs(a.x - b.x), height: abs(a.y - b.y))
+}
+
+/// A point, 0…1, between the photo as shown (turned `angle` clockwise) and the upright original.
+private func cropPoint(_ p: Double, _ q: Double, angle: Int, toOriginal: Bool) -> (x: Double, y: Double) {
+    switch ((angle % 360) + 360) % 360 {
+    case 90: toOriginal ? (q, 1 - p) : (1 - q, p)
+    case 180: (1 - p, 1 - q)
+    case 270: toOriginal ? (1 - q, p) : (q, 1 - p)
+    default: (p, q)
+    }
+}

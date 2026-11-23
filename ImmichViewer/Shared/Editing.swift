@@ -37,8 +37,14 @@ enum PhotoAction {
     case removeTag
     /// Degrees clockwise.
     case rotate(Int)
+    case crop
     /// A face in the photo is someone else's.
     case changePerson(face: String, from: String)
+}
+
+extension Asset {
+    /// A still photo, which Immich can crop.
+    var canCrop: Bool { !isVideo && isLive != true }
 }
 
 /// The chosen photos' menu: right-click in the grid, ⋯ in the photo view.
@@ -47,6 +53,8 @@ struct PhotoMenu: View {
     let count: Int
     let allFavorite: Bool
     let context: BrowserContext
+    /// One still photo is chosen (not a video or a Live Photo).
+    var canCrop = false
     let perform: (PhotoAction) -> Void
 
     var body: some View {
@@ -82,6 +90,7 @@ struct PhotoMenu: View {
             Divider()
             Button("Rotate Left", systemImage: "rotate.left") { perform(.rotate(270)) }
             Button("Rotate Right", systemImage: "rotate.right") { perform(.rotate(90)) }
+            if canCrop { Button("Crop…", systemImage: "crop") { perform(.crop) } }
             Button("Adjust Date and Time…", systemImage: "calendar") { perform(.adjustDate) }
             Button("Set Location…", systemImage: "mappin.and.ellipse") { perform(.setLocation) }
             Divider()
@@ -138,6 +147,7 @@ final class PhotoEditor {
                 Task { await library.untag(ids, tag, undo: undo) }
             }
         case .rotate(let angle): Task { await library.rotate(ids, by: angle, undo: undo) }
+        case .crop: sheet = .crop(first)
         case let .changePerson(face, old): sheet = .changePerson(face: face, from: old)
         case .add(let album): Task { await library.add(ids, to: album, undo: undo) }
         case .newAlbum: sheet = .newAlbum(ids)
@@ -406,6 +416,7 @@ enum EditSheet: Identifiable {
     /// Someone else becomes this person.
     case merge(Person)
     case changePerson(face: String, from: String)
+    case crop(Asset)
 
     var id: String {
         switch self {
@@ -417,6 +428,7 @@ enum EditSheet: Identifiable {
         case .tag(let ids): "tag" + (ids.first ?? "")
         case .merge(let person): "merge" + person.id
         case .changePerson(let face, _): "face" + face
+        case .crop(let asset): "crop" + asset.id
         }
     }
 }
@@ -462,6 +474,8 @@ extension View {
                 PersonPicker(title: "Change Person", note: "Who is this?", people: library.people.filter { $0.id != old }) { new in
                     Task { await library.reassign(face: face, to: new.id, from: old, undo: undo) }
                 }
+            case let .crop(asset):
+                CropSheet(asset: asset, library: library, undo: undo)
             }
         }
     }

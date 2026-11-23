@@ -292,7 +292,8 @@ struct TimelineBrowser: View {
                       menu: { indices in
                           NSHostingMenu(rootView: PhotoMenu(library: library, count: indices.count,
                                                             allFavorite: indices.allSatisfy { grid.assets[$0].isFavorite == true },
-                                                            context: context) { perform($0, indices) })
+                                                            context: context,
+                                                            canCrop: indices.count == 1 && grid.assets.indices.contains(indices[0]) && grid.assets[indices[0]].canCrop) { perform($0, indices) })
                       },
                       bridge: bridge, scrubbed: context != .search)
                 .ignoresSafeArea(edges: .vertical)

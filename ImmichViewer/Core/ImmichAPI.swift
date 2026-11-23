@@ -185,8 +185,9 @@ struct ImmichAPI: Sendable {
     }
 
     /// `size`: "thumbnail" (~250 px, cached on disk) or "preview" (~1440 px, for the single-photo view).
-    func thumbnail(_ id: String, size: String = "thumbnail") async throws -> Data {
-        try await get("assets/\(id)/thumbnail", ["size": size, "edited": "true"]) // rotated, if it was
+    /// `edited` false: as the file is, upright, without the crop and the turn.
+    func thumbnail(_ id: String, size: String = "thumbnail", edited: Bool = true) async throws -> Data {
+        try await get("assets/\(id)/thumbnail", ["size": size, "edited": edited ? "true" : "false"]) // cropped and rotated, if it was
     }
 
     /// File name, camera settings, place and people of one asset.
@@ -531,6 +532,8 @@ struct AssetDetail: Decodable, Sendable {
     /// Numbers are Doubles so ints and floats both decode.
     struct Exif: Decodable, Sendable {
         var make, model, lensModel, exposureTime, city, state, country, description: String?
+        /// EXIF orientation as the server stores it, like "6".
+        var orientation: String?
         var fNumber, focalLength, iso, exifImageWidth, exifImageHeight, fileSizeInByte, latitude, longitude: Double?
         /// 1–5 stars, -1 rejected, nil unrated.
         var rating: Int?

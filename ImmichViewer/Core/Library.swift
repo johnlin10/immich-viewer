@@ -840,25 +840,25 @@ final class Library {
 
     // MARK: Rotating, downloading and uploading
 
-    /// Turns photos `angle` degrees clockwise, on top of earlier edits. The server keeps the original file as it was.
-    func rotate(_ ids: [String], by angle: Int, undo: UndoManager?) async {
-        guard await change({ api in
-            for id in ids {
-                let old = (try JSONSerialization.jsonObject(with: await api.get("assets/\(id)/edits")) as? [String: Any])?["edits"]
-                var edits = (old as? [[String: Any]] ?? []).map { ["action": $0["action"] ?? "", "parameters": $0["parameters"] ?? [:]] }
-                let i = edits.firstIndex { $0["action"] as? String == "rotate" }
-                let was = i.flatMap { (edits[$0]["parameters"] as? [String: Any])?["angle"] as? Int } ?? 0
-                let now = ((was + angle) % 360 + 360) % 360
-                if let i { edits.remove(at: i) }
-                if now != 0 { edits.append(["action": "rotate", "parameters": ["angle": now]]) }
-                if edits.isEmpty {
-                    try await api.send("DELETE", "assets/\(id)/edits")
-                } else {
-                    try await api.send("PUT", "assets/\(id)/edits", json: ["edits": edits])
-                }
-            }
-        }) else { return }
-        register(undo, String(localized: "Rotate")) { await $0.rotate(ids, by: -angle, undo: undo) }
+    /// Reads a photo's edits, lets `change` alter them (action/parameters dictionaries, in order), and saves them:
+    /// PUT, or DELETE when none are left.
+    private nonisolated static func changeEdits(_ api: ImmichAPI, _ id: String, _ change: (inout [[String: Any]]) -> Void) async throws {
+        var edits = try await readEdits(api, id)
+        change(&edits)
+        if edits.isEmpty {
+            try await api.send("DELETE", "assets/\(id)/edits")
+        } else {
+            try await api.send("PUT", "assets/\(id)/edits", json: ["edits": edits])
+        }
+    }
+
+    private nonisolated static func readEdits(_ api: ImmichAPI, _ id: String) async throws -> [[String: Any]] {
+        let old = (try JSONSerialization.jsonObject(with: await api.get("assets/\(id)/edits")) as? [String: Any])?["edits"]
+        return (old as? [[String: Any]] ?? []).map { ["action": $0["action"] ?? "", "parameters": $0["parameters"] ?? [:]] }
+    }
+
+    /// Waits for the server's new thumbnails, then shows them.
+    private func refetchEdited(_ ids: [String]) async {
         // ponytail: the server makes the new thumbnails in the background; one fixed wait, then they are fetched again
         try? await Task.sleep(for: .seconds(3))
         for id in ids {
@@ -867,6 +867,56 @@ final class Library {
         }
         revision += 1
         edits += 1
+    }
+
+    /// Turns photos `angle` degrees clockwise, on top of earlier edits. The server keeps the original file as it was.
+    func rotate(_ ids: [String], by angle: Int, undo: UndoManager?) async {
+        guard await change({ api in
+            for id in ids {
+                try await Self.changeEdits(api, id) { edits in
+                    let i = edits.firstIndex { $0["action"] as? String == "rotate" }
+                    let was = i.flatMap { (edits[$0]["parameters"] as? [String: Any])?["angle"] as? Int } ?? 0
+                    let now = ((was + angle) % 360 + 360) % 360
+                    if let i { edits.remove(at: i) }
+                    if now != 0 { edits.append(["action": "rotate", "parameters": ["angle": now]]) }
+                }
+            }
+        }) else { return }
+        register(undo, String(localized: "Rotate")) { await $0.rotate(ids, by: -angle, undo: undo) }
+        await refetchEdited(ids)
+    }
+
+    /// Crops a photo, keeping its other edits; nil takes the crop away. `was`: the crop before, for undo.
+    func crop(_ id: String, to crop: PixelCrop?, was: PixelCrop?, undo: UndoManager?) async {
+        guard await change({ api in
+            try await Self.changeEdits(api, id) { edits in
+                edits.removeAll { $0["action"] as? String == "crop" }
+                if let crop {
+                    edits.insert(["action": "crop", "parameters": ["x": crop.x, "y": crop.y, "width": crop.width, "height": crop.height]], at: 0)
+                }
+            }
+        }) else { return }
+        register(undo, String(localized: "Crop")) { await $0.crop(id, to: was, was: crop, undo: undo) }
+        await refetchEdited([id])
+    }
+
+    /// What the crop sheet needs: the photo's crop, turn and mirroring, the upright original's size (nil when the server
+    /// has none), and its preview as the file is, without edits.
+    func cropInfo(_ id: String) async throws -> (crop: PixelCrop?, angle: Int, mirrored: Bool, size: CGSize?, preview: Data) {
+        guard let api else { throw URLError(.userAuthenticationRequired) }
+        let edits = try await Self.readEdits(api, id)
+        func parameters(_ action: String) -> [String: Any]? { edits.first { $0["action"] as? String == action }?["parameters"] as? [String: Any] }
+        let crop = parameters("crop").flatMap { p -> PixelCrop? in
+            guard let x = p["x"] as? Int, let y = p["y"] as? Int, let w = p["width"] as? Int, let h = p["height"] as? Int else { return nil }
+            return PixelCrop(x: x, y: y, width: w, height: h)
+        }
+        let exif = try await api.detail(id).exifInfo
+        var size = exif.flatMap { e in e.exifImageWidth.flatMap { w in e.exifImageHeight.map { CGSize(width: w, height: $0) } } }
+        // the server swaps width and height for these orientations
+        if let o = exif?.orientation.flatMap({ Int($0) }), [5, 6, 7, 8, -90, 90].contains(o) { size = size.map { CGSize(width: $0.height, height: $0.width) } }
+        if let s = size, s.width < 1 || s.height < 1 { size = nil }
+        return (crop, parameters("rotate")?["angle"] as? Int ?? 0, parameters("mirror") != nil, size,
+                try await api.thumbnail(id, size: "preview", edited: false))
     }
 
     /// The original files, and a Live Photo's video beside its still under the same name. On the Mac, saved to Downloads

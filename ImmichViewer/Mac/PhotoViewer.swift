@@ -256,7 +256,7 @@ struct PhotoViewer: View {
                     .keyboardShortcut("i")
                     .help("Info (⌘I)")
                     Menu {
-                        PhotoMenu(library: library, count: 1, allFavorite: asset.isFavorite == true, context: context) { act($0) }
+                        PhotoMenu(library: library, count: 1, allFavorite: asset.isFavorite == true, context: context, canCrop: asset.canCrop) { act($0) }
                         Divider()
                         Button("Open in Browser", systemImage: "safari") { library.openInBrowser(asset) }
                     } label: {
