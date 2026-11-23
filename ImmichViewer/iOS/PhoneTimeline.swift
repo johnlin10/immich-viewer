@@ -291,109 +291,112 @@ struct PhotoPager: View {
     private var shownVideo: AVPlayer? { video != nil && video?.id == asset?.id ? video?.player : nil }
 
     var body: some View {
-        ScrollView(.horizontal) {
-            LazyHStack(spacing: 0) {
-                ForEach(window.clamped(to: 0..<assets.count), id: \.self) { i in // the list may have just got shorter
-                    PhonePhoto(asset: assets[i], cached: library.thumbs.anyCached(assets[i].id), playing: i == position) {
-                        chromeHidden.toggle()
-                    } onPlayer: { player in
-                        video = (assets[i].id, player)
-                    } onSwipeUp: {
-                        chromeHidden = false
-                        showInfo = true
-                    } onPress: { pressed in
-                        livePlaying = pressed && livePlayer != nil
+        // The stack is for the bottom toolbar; the info panel stays outside it, so on iPad the bar ends where the panel begins.
+        NavigationStack {
+            ScrollView(.horizontal) {
+                LazyHStack(spacing: 0) {
+                    ForEach(window.clamped(to: 0..<assets.count), id: \.self) { i in // the list may have just got shorter
+                        PhonePhoto(asset: assets[i], cached: library.thumbs.anyCached(assets[i].id), playing: i == position) {
+                            chromeHidden.toggle()
+                        } onPlayer: { player in
+                            video = (assets[i].id, player)
+                        } onSwipeUp: {
+                            chromeHidden = false
+                            showInfo = true
+                        } onPress: { pressed in
+                            livePlaying = pressed && livePlayer != nil
+                        }
+                            .id(assets[i].id) // another photo at this place after an edit: start over
+                            .containerRelativeFrame([.horizontal, .vertical])
                     }
-                        .id(assets[i].id) // another photo at this place after an edit: start over
-                        .containerRelativeFrame([.horizontal, .vertical])
+                }
+                .scrollTargetLayout()
+            }
+            .scrollTargetBehavior(.paging)
+            .scrollPosition(id: $position)
+            .scrollIndicators(.hidden)
+            .opacity(flying ? 0 : 1)
+            .ignoresSafeArea(edges: showInfo ? [.vertical, .leading] : .all) // the iPad's info panel floats over the trailing edge
+            .overlay {
+                if let livePlayer { LiveVideo(player: livePlayer, playing: $livePlaying).ignoresSafeArea() }
+            }
+            .background(flying ? Color.clear : chromeHidden ? Color.black : Color(.systemBackground))
+            .overlay(alignment: .bottom) {
+                VStack(alignment: .leading, spacing: 12) {
+                    if let shownVideo {
+                        VideoControls(player: shownVideo, running: $videoRunning).id(ObjectIdentifier(shownVideo))
+                    }
+                    if let people = detail?.people, !people.isEmpty { FaceRow(people: people, onPerson: open) }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(16)
+                .opacity(chromeHidden ? 0 : 1)
+                .allowsHitTesting(!chromeHidden)
+            }
+            // while a video plays, the bars and its controls go away after a moment, as in Photos; paused, they stay
+            .task(id: videoRunning && !chromeHidden) {
+                guard videoRunning, !chromeHidden else { return }
+                try? await Task.sleep(for: .seconds(3))
+                if !Task.isCancelled { chromeHidden = true }
+            }
+            .overlay(alignment: .topLeading) {
+                if livePlayer != nil {
+                    Button { livePlaying = true } label: { LiveBadge() }
+                        .buttonStyle(.plain)
+                        .padding(.horizontal, 16)
+                        .padding(.top, 8)
+                        .opacity(chromeHidden ? 0 : 1)
+                        .allowsHitTesting(!chromeHidden)
                 }
             }
-            .scrollTargetLayout()
-        }
-        .scrollTargetBehavior(.paging)
-        .scrollPosition(id: $position)
-        .scrollIndicators(.hidden)
-        .opacity(flying ? 0 : 1)
-        .ignoresSafeArea(edges: showInfo ? [.vertical, .leading] : .all) // the iPad's info panel floats over the trailing edge
-        .overlay {
-            if let livePlayer { LiveVideo(player: livePlayer, playing: $livePlaying).ignoresSafeArea() }
-        }
-        .background(flying ? Color.clear : chromeHidden ? Color.black : Color(.systemBackground))
-        .overlay(alignment: .bottom) {
-            VStack(alignment: .leading, spacing: 12) {
-                if let shownVideo {
-                    VideoControls(player: shownVideo, running: $videoRunning).id(ObjectIdentifier(shownVideo))
-                }
-                if let people = detail?.people, !people.isEmpty { FaceRow(people: people, onPerson: open) }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(16)
-            .opacity(chromeHidden ? 0 : 1)
-            .allowsHitTesting(!chromeHidden)
-        }
-        // while a video plays, the bars and its controls go away after a moment, as in Photos; paused, they stay
-        .task(id: videoRunning && !chromeHidden) {
-            guard videoRunning, !chromeHidden else { return }
-            try? await Task.sleep(for: .seconds(3))
-            if !Task.isCancelled { chromeHidden = true }
-        }
-        .overlay(alignment: .topLeading) {
-            if livePlayer != nil {
-                Button { livePlaying = true } label: { LiveBadge() }
-                    .buttonStyle(.plain)
-                    .padding(.horizontal, 16)
-                    .padding(.top, 8)
-                    .opacity(chromeHidden ? 0 : 1)
-                    .allowsHitTesting(!chromeHidden)
-            }
-        }
-        // Our own bar rather than the navigation bar, so it only fades, like the Mac's. A safe-area bar keeps the
-        // system's progressive blur under it when a zoomed photo runs beneath.
-        .safeAreaBar(edge: .top) {
-            ZStack {
-                HStack {
-                    Button(action: close) { Label("Close", systemImage: "xmark").circleGlass() }
-                    Spacer()
-                    if let asset {
-                        Menu {
-                            PhotoMenu(library: library, count: 1, allFavorite: asset.isFavorite == true, context: context, canCrop: asset.canCrop) {
-                                editor.perform($0, on: [asset], context: context, library: library, undo: undo, place: place)
+            // Our own bar rather than the navigation bar, so it only fades, like the Mac's. A safe-area bar keeps the
+            // system's progressive blur under it when a zoomed photo runs beneath.
+            .safeAreaBar(edge: .top) {
+                ZStack {
+                    HStack {
+                        Button(action: close) { Label("Close", systemImage: "xmark").circleGlass() }
+                        Spacer()
+                        if let asset {
+                            Menu {
+                                PhotoMenu(library: library, count: 1, allFavorite: asset.isFavorite == true, context: context, canCrop: asset.canCrop) {
+                                    editor.perform($0, on: [asset], context: context, library: library, undo: undo, place: place)
+                                }
+                                Divider()
+                                Button("Info", systemImage: "info.circle") { showInfo.toggle() } // on iPad the side panel stays until closed here
+                                Button("Open in Browser", systemImage: "safari") { library.openInBrowser(asset) }
+                            } label: {
+                                Label("More", systemImage: "ellipsis").circleGlass()
                             }
-                            Divider()
-                            Button("Info", systemImage: "info.circle") { showInfo.toggle() } // on iPad the side panel stays until closed here
-                            Button("Open in Browser", systemImage: "safari") { library.openInBrowser(asset) }
-                        } label: {
-                            Label("More", systemImage: "ellipsis").circleGlass()
                         }
                     }
-                }
-                .buttonStyle(.plain)
-                if let asset { // two lines, like Photos, so it fits between the buttons
-                    VStack(spacing: 0) {
-                        Text(asset.date.formatted(Self.dayStyle)).font(.subheadline.bold())
-                        Text(asset.date.formatted(Self.timeStyle)).font(.caption)
+                    .buttonStyle(.plain)
+                    if let asset { // two lines, like Photos, so it fits between the buttons
+                        VStack(spacing: 0) {
+                            Text(asset.date.formatted(Self.dayStyle)).font(.subheadline.bold())
+                            Text(asset.date.formatted(Self.timeStyle)).font(.caption)
+                        }
+                        .monospacedDigit()
+                        .padding(.horizontal, 16)
+                        .frame(height: 44)
+                        .glassEffect(.regular, in: .capsule)
                     }
-                    .monospacedDigit()
-                    .padding(.horizontal, 16)
-                    .frame(height: 44)
-                    .glassEffect(.regular, in: .capsule)
                 }
+                .padding(.horizontal, 16)
+                .opacity(chromeHidden ? 0 : 1)
+                .allowsHitTesting(!chromeHidden)
             }
-            .padding(.horizontal, 16)
-            .opacity(chromeHidden ? 0 : 1)
-            .allowsHitTesting(!chromeHidden)
+            // After the overlay above, so the video controls and faces sit over it.
+            .toolbar { if let asset { bottomBar(asset) } }
+            .toolbar(chromeHidden ? .hidden : .visible, for: .bottomBar)
+            .toolbar(.hidden, for: .navigationBar) // our own bar at the top, which only fades
+            .scrollEdgeEffectStyle(.soft, for: .top)
+            .scrollEdgeEffectHidden(chromeHidden, for: .top)
+            .scrollEdgeEffectStyle(.soft, for: .bottom)
+            .scrollEdgeEffectHidden(chromeHidden, for: .bottom)
+            .animation(.easeInOut(duration: 0.25), value: chromeHidden)
+            .statusBarHidden(chromeHidden)
+            .onChange(of: chromeHidden) { onDark(chromeHidden) }
         }
-        // After the overlay above, so the video controls and faces sit over it.
-        .safeAreaBar(edge: .bottom) {
-            if let asset { bottomBar(asset) }
-        }
-        .scrollEdgeEffectStyle(.soft, for: .top)
-        .scrollEdgeEffectHidden(chromeHidden, for: .top)
-        .scrollEdgeEffectStyle(.soft, for: .bottom)
-        .scrollEdgeEffectHidden(chromeHidden, for: .bottom)
-        .animation(.easeInOut(duration: 0.25), value: chromeHidden)
-        .statusBarHidden(chromeHidden)
-        .onChange(of: chromeHidden) { onDark(chromeHidden) }
         .inspector(isPresented: $showInfo) { // a side panel on iPad, a sheet on iPhone
             if let asset {
                 let edit = { (action: PhotoAction) in
@@ -442,38 +445,33 @@ struct PhotoPager: View {
 
     private func open(_ person: Person) { onPerson(person) }
 
-    /// Like Photos: share (restore in the trash) on the left, favorite, info and crop in the middle, delete on the right.
-    private func bottomBar(_ asset: Asset) -> some View {
+    /// Like Photos, in the system's bottom toolbar (its sizes, and the dialog morphing out of Delete): share (restore
+    /// in the trash) on the left, favorite, info and crop in the middle, delete on the right.
+    @ToolbarContentBuilder
+    private func bottomBar(_ asset: Asset) -> some ToolbarContent {
         let trash = context == .trash
         let favorite = asset.isFavorite == true
-        func run(_ action: PhotoAction) { editor.perform(action, on: [asset], context: context, library: library, undo: undo, place: place) }
-        return HStack {
+        let run = { (action: PhotoAction) in editor.perform(action, on: [asset], context: context, library: library, undo: undo, place: place) }
+        ToolbarItem(placement: .bottomBar) {
             if trash {
-                Button { run(.restore) } label: { Label("Restore", systemImage: "arrow.uturn.backward").circleGlass(48) }
+                Button("Restore", systemImage: "arrow.uturn.backward") { run(.restore) }
             } else {
-                Button { run(.download) } label: { Label("Share…", systemImage: "square.and.arrow.up").circleGlass(48) }
+                Button("Share…", systemImage: "square.and.arrow.up") { run(.download) }
             }
-            Spacer()
-            HStack(spacing: 0) {
-                if !trash {
-                    Button { run(.favorite) } label: {
-                        Label(favorite ? "Remove from Favorites" : "Add to Favorites", systemImage: favorite ? "heart.fill" : "heart")
-                            .labelStyle(.iconOnly).font(.title3).frame(width: 54, height: 48).contentShape(.rect)
-                    }
-                }
-                Button { showInfo.toggle() } label: {
-                    Label("Info", systemImage: "info.circle").labelStyle(.iconOnly).font(.title3).frame(width: 54, height: 48).contentShape(.rect)
-                }
-                if !trash && asset.canCrop {
-                    Button { run(.crop) } label: {
-                        Label("Crop…", systemImage: "crop").labelStyle(.iconOnly).font(.title3).frame(width: 54, height: 48).contentShape(.rect)
-                    }
-                }
+        }
+        ToolbarSpacer(.flexible, placement: .bottomBar)
+        ToolbarItemGroup(placement: .bottomBar) {
+            if !trash {
+                Button(favorite ? "Remove from Favorites" : "Add to Favorites", systemImage: favorite ? "heart.fill" : "heart") { run(.favorite) }
             }
-            .glassEffect(.regular.interactive(), in: .capsule)
-            Spacer()
-            // Like Photos: the confirmation grows out of the button rather than an alert in the middle.
-            Button { confirmDelete = true } label: { Label(trash ? "Delete Permanently…" : "Delete…", systemImage: "trash").circleGlass(48) }
+            Button("Info", systemImage: "info.circle") { showInfo.toggle() }
+            if !trash && asset.canCrop {
+                Button("Crop…", systemImage: "crop") { run(.crop) }
+            }
+        }
+        ToolbarSpacer(.flexible, placement: .bottomBar)
+        ToolbarItem(placement: .bottomBar) {
+            Button(trash ? "Delete Permanently…" : "Delete…", systemImage: "trash") { confirmDelete = true }
                 .confirmationDialog(trash ? "Delete This Photo Permanently?" : "Delete This Photo?", isPresented: $confirmDelete,
                                     titleVisibility: .hidden) {
                     Button(trash ? "Delete Permanently" : "Delete Photo", role: .destructive) {
@@ -485,20 +483,15 @@ struct PhotoPager: View {
                          : "The server’s trash is turned off, so this photo is deleted for good.")
                 }
         }
-        .buttonStyle(.plain)
-        .padding(.horizontal, 28) // Photos' sizes and margins
-        .padding(.bottom, -6) // and its height, a little into the home indicator's space
-        .opacity(chromeHidden ? 0 : 1)
-        .allowsHitTesting(!chromeHidden)
     }
 }
 
 private extension View {
-    /// The photo view's round glass buttons, all the same size whatever the symbol: 44 at the top, 48 at the bottom, as in Photos.
-    func circleGlass(_ side: CGFloat = 44) -> some View {
+    /// The photo view's round glass buttons, all the same size whatever the symbol.
+    func circleGlass() -> some View {
         labelStyle(.iconOnly)
             .font(.title3)
-            .frame(width: side, height: side)
+            .frame(width: 44, height: 44)
             .contentShape(.circle)
             .glassEffect(.regular.interactive(), in: .circle)
     }
