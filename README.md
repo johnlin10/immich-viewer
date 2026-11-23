@@ -40,7 +40,7 @@ Changes go straight to the server and show in the app right away. Edit > Undo (�
 - Delete asks first. Deleted photos go to the server's trash (Immich keeps them 30 days by default), and Undo brings them back. If the server has the trash turned off, the alert says the deletion is permanent and there is no undo.
 - Archived photos leave the timeline, like in Immich, and show on the Archive page, where the menu has Unarchive.
 - Trash page: right-click for Restore and Delete Permanently…; the ⋯ menu has Restore All and Empty Trash…. Permanent deletion asks first and can't be undone.
-- Tags: Add Tag… takes a new or existing tag (a slash nests it, like "Trips/Japan"); on iPhone and iPad the existing ones are listed under the field to tap, narrowed as you type, and the tags the photos already have are listed apart, ✕ (or a swipe) removing one. The Tags page lists them; click one for its photos, right-click to delete it. On iPhone and iPad, Select picks several (tap, or drag with two fingers down the list) and ⋯ > Delete deletes them at once. The info panel shows a photo's tags, ✕ removes one. Immich writes tag changes into the photos' `.xmp` files; if it can only read the library's folder (an external library mounted read-only), a deleted tag comes back the next time it reads the photos.
+- Tags: Add Tag… takes a new or existing tag (a slash nests it, like "Trips/Japan"); on iPhone and iPad the existing ones are listed under the field to tick, as many as you like, narrowed as you type, and the tags the photos already have are listed apart, ✕ (or a swipe) removing one. The Tags page lists them; click one for its photos, right-click to delete it. On iPhone and iPad, Select picks several (tap, or drag with two fingers down the list) and ⋯ > Delete deletes them at once. The info panel shows a photo's tags, ✕ removes one. Immich writes tag changes into the photos' `.xmp` files; if it can only read the library's folder (an external library mounted read-only), a deleted tag comes back the next time it reads the photos.
 - Rotate: the server keeps the original file and stores the turn as an edit (newer Immich servers only), then makes new thumbnails, which the app fetches again after a few seconds.
 - Crop…: shows the photo as it looks now with a frame over it, thirds inside; drag a corner to resize the frame, drag inside it to move it, Reset puts it back around the whole photo, Crop saves (Undo goes back to the earlier crop). Like Rotate, the server keeps the original and stores the crop as an edit, with the turn kept alongside, and makes new thumbnails. Only for a single still photo, not for Live Photos and videos, and not for photos mirrored in Immich's web app.
 - Download saves the original files (a Live Photo's video beside its still, under the same name) to the Downloads folder (a name already there gets " 2") and shows them in Finder. A panel in the middle of the window shows which file is downloading and how far along it is, with Cancel.
@@ -202,11 +202,18 @@ Sources are grouped by where they run. Every file is compiled for both platforms
 
 Map.
 
-Planned editing: cropping, then stacks, sharing and duplicates.
+Planned editing: stacks, sharing and duplicates.
 
 ## Version history
 
-### v0.14.0 (current)
+### v0.15.0 (current)
+
+- Crop…: in the photo menu, a frame over the photo as it looks now; drag a corner to resize it or inside it to move it, Reset puts it back. The server keeps the original and stores the crop as an edit, like Rotate. Only for a single still photo.
+- iPhone and iPad: Add Tag lets you tick several existing tags at once.
+- iPhone and iPad: the photo view's bottom bar is the system's, like Photos (share, favorite, info, crop, delete), and Delete's confirmation grows out of its button. On iPad the photo makes room for the info panel.
+- iPhone: while the tab bar is tucked away in Library, Days / Months / All shows beside it, like Photos: the system's segmented control, drag across it with your finger.
+
+### v0.14.0
 
 - Memories: today's are the top row of Collections (photos from this day in earlier years, or a person's birthday). One plays like a story, grown out of its card to fill the screen and shrunk back into it on close: a bar per photo, 5 seconds a photo, a video to its end. Move between photos, pause, or open them all as the usual grid. The heading, and Memories in the Mac and iPad sidebars, lists every memory due. Needs `memory.read`; without it the row is left out.
 
