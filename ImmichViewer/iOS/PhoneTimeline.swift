@@ -381,8 +381,14 @@ struct PhotoPager: View {
             .opacity(chromeHidden ? 0 : 1)
             .allowsHitTesting(!chromeHidden)
         }
+        // After the overlay above, so the video controls and faces sit over it.
+        .safeAreaBar(edge: .bottom) {
+            if let asset { bottomBar(asset) }
+        }
         .scrollEdgeEffectStyle(.soft, for: .top)
         .scrollEdgeEffectHidden(chromeHidden, for: .top)
+        .scrollEdgeEffectStyle(.soft, for: .bottom)
+        .scrollEdgeEffectHidden(chromeHidden, for: .bottom)
         .animation(.easeInOut(duration: 0.25), value: chromeHidden)
         .statusBarHidden(chromeHidden)
         .onChange(of: chromeHidden) { onDark(chromeHidden) }
@@ -433,14 +439,53 @@ struct PhotoPager: View {
     }
 
     private func open(_ person: Person) { onPerson(person) }
+
+    /// Like Photos: share (restore in the trash) on the left, favorite, info and crop in the middle, delete on the right.
+    private func bottomBar(_ asset: Asset) -> some View {
+        let trash = context == .trash
+        let favorite = asset.isFavorite == true
+        func run(_ action: PhotoAction) { editor.perform(action, on: [asset], context: context, library: library, undo: undo, place: place) }
+        return HStack {
+            if trash {
+                Button { run(.restore) } label: { Label("Restore", systemImage: "arrow.uturn.backward").circleGlass(48) }
+            } else {
+                Button { run(.download) } label: { Label("Share…", systemImage: "square.and.arrow.up").circleGlass(48) }
+            }
+            Spacer()
+            HStack(spacing: 0) {
+                if !trash {
+                    Button { run(.favorite) } label: {
+                        Label(favorite ? "Remove from Favorites" : "Add to Favorites", systemImage: favorite ? "heart.fill" : "heart")
+                            .labelStyle(.iconOnly).font(.title3).frame(width: 54, height: 48).contentShape(.rect)
+                    }
+                }
+                Button { showInfo.toggle() } label: {
+                    Label("Info", systemImage: "info.circle").labelStyle(.iconOnly).font(.title3).frame(width: 54, height: 48).contentShape(.rect)
+                }
+                if !trash && asset.canCrop {
+                    Button { run(.crop) } label: {
+                        Label("Crop…", systemImage: "crop").labelStyle(.iconOnly).font(.title3).frame(width: 54, height: 48).contentShape(.rect)
+                    }
+                }
+            }
+            .glassEffect(.regular.interactive(), in: .capsule)
+            Spacer()
+            Button { run(.trash) } label: { Label(trash ? "Delete Permanently…" : "Delete…", systemImage: "trash").circleGlass(48) }
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, 28) // Photos' sizes and margins
+        .padding(.bottom, -6) // and its height, a little into the home indicator's space
+        .opacity(chromeHidden ? 0 : 1)
+        .allowsHitTesting(!chromeHidden)
+    }
 }
 
 private extension View {
-    /// The photo view's round glass buttons, all the same size whatever the symbol.
-    func circleGlass() -> some View {
+    /// The photo view's round glass buttons, all the same size whatever the symbol: 44 at the top, 48 at the bottom, as in Photos.
+    func circleGlass(_ side: CGFloat = 44) -> some View {
         labelStyle(.iconOnly)
             .font(.title3)
-            .frame(width: 44, height: 44)
+            .frame(width: side, height: side)
             .contentShape(.circle)
             .glassEffect(.regular.interactive(), in: .circle)
     }
