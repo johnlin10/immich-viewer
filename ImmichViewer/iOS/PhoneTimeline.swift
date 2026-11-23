@@ -312,7 +312,7 @@ struct PhotoPager: View {
         .scrollPosition(id: $position)
         .scrollIndicators(.hidden)
         .opacity(flying ? 0 : 1)
-        .ignoresSafeArea()
+        .ignoresSafeArea(edges: showInfo ? [.vertical, .leading] : .all) // the iPad's info panel floats over the trailing edge
         .overlay {
             if let livePlayer { LiveVideo(player: livePlayer, playing: $livePlaying).ignoresSafeArea() }
         }
