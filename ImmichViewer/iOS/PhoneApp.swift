@@ -148,8 +148,10 @@ private struct TabBarGrouping: UIViewRepresentable {
         }
 
         private var picker: some View {
+            // one piece of glass as tall as the round buttons; the chosen option's pill 4 points in, as in Photos
             Segments(grouping: $grouping)
-                .padding(4)
+                .padding(2)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .glassEffect(.regular, in: .capsule)
         }
     }
@@ -160,14 +162,31 @@ private struct TabBarGrouping: UIViewRepresentable {
         @Binding var grouping: Grouping
 
         func makeUIView(context: Context) -> UISegmentedControl {
-            let control = UISegmentedControl(items: Grouping.allCases.map { String(localized: $0.label) })
-            control.backgroundColor = .clear
+            let control = Trackless(items: Grouping.allCases.map { String(localized: $0.label) })
+            // Photos' size, and the chosen option not bolder than the rest
+            let font = UIFont.preferredFont(forTextStyle: .body)
+            control.setTitleTextAttributes([.font: font], for: .normal)
+            control.setTitleTextAttributes([.font: font], for: .selected)
             control.selectedSegmentTintColor = UIColor { $0.userInterfaceStyle == .dark ? .black.withAlphaComponent(0.35) : .black.withAlphaComponent(0.1) }
             control.accessibilityLabel = String(localized: "Group By")
             control.addAction(UIAction { [binding = $grouping] action in
                 binding.wrappedValue = Grouping.allCases[(action.sender as! UISegmentedControl).selectedSegmentIndex]
             }, for: .valueChanged)
             return control
+        }
+
+        /// No track of its own (its segments' images, with the dividers in them): the capsule's glass is the only layer.
+        /// The chosen option's pill and lens are drawn apart and stay.
+        final class Trackless: UISegmentedControl {
+            override func layoutSubviews() {
+                super.layoutSubviews()
+                for case let track as UIImageView in subviews { track.alpha = 0 }
+            }
+        }
+
+        /// As big as it's given, not the system's 32 points.
+        func sizeThatFits(_ proposal: ProposedViewSize, uiView: UISegmentedControl, context: Context) -> CGSize? {
+            proposal.replacingUnspecifiedDimensions(by: uiView.intrinsicContentSize)
         }
 
         func updateUIView(_ control: UISegmentedControl, context: Context) {
