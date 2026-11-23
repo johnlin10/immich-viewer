@@ -144,7 +144,7 @@ final class PhotoEditor {
         case .addTag: sheet = .tag(ids)
         case .removeTag:
             if case .tag(let id) = context, let tag = library.tags.first(where: { $0.id == id }) {
-                Task { await library.untag(ids, tag, undo: undo) }
+                Task { await library.untag(ids, [tag], undo: undo) }
             }
         case .rotate(let angle): Task { await library.rotate(ids, by: angle, undo: undo) }
         case .crop: sheet = .crop(first)
@@ -462,8 +462,8 @@ extension View {
                     Task { await library.update(new, was: person, undo: undo) }
                 }
             case let .tag(ids):
-                TagSheet(tags: library.tags, ids: ids, undo: undo) { name in
-                    Task { await library.tag(ids, name, undo: undo) }
+                TagSheet(tags: library.tags, ids: ids, undo: undo) { names in
+                    Task { await library.tag(ids, names, undo: undo) }
                 }
             case let .merge(person):
                 PersonPicker(title: "Merge People", note: "The person you choose becomes \(person.name.isEmpty ? String(localized: "Unnamed") : person.name): their photos move over and they are gone. This can’t be undone.",
@@ -638,22 +638,24 @@ private struct PersonSheet: View {
     }
 }
 
-/// A tag name, new or one of the existing ones, over the tags the photos have already (✕ takes one off them all).
+/// A new tag name and any of the existing ones, over the tags the photos have already (✕ takes one off them all).
 private struct TagSheet: View {
     let tags: [Tag]
     let ids: [String]
     let undo: UndoManager?
-    let onSave: (String) -> Void
+    let onSave: ([String]) -> Void
     @Environment(Library.self) private var library
     @State private var name = ""
+    /// The existing tags ticked in the list.
+    @State private var picked: Set<String> = []
     /// The photos' tags, nil until loaded.
     @State private var added: [Tag]?
 
     var body: some View {
         let have = Set((added ?? []).map(\.id))
         let free = tags.filter { !have.contains($0.id) }
-        let query = free.contains { $0.value == name } ? "" : name // one picked: still show the others
-        let shown = free.filter { query.isEmpty || $0.value.localizedCaseInsensitiveContains(query) }
+        let shown = free.filter { name.isEmpty || $0.value.localizedCaseInsensitiveContains(name) || picked.contains($0.value) }
+        let names = picked.union([name.trimmingCharacters(in: .whitespaces)].filter { !$0.isEmpty })
         Form {
             SwiftUI.Section {
                 TextField("Tag", text: $name, prompt: Text("Trips/Japan"))
@@ -680,14 +682,14 @@ private struct TagSheet: View {
                 }
             }
             #if os(iOS)
-            if !shown.isEmpty { // no completion menu on iOS: the other tags to pick from, narrowed as you type
+            if !shown.isEmpty { // no completion menu on iOS: the other tags to tick, any number, narrowed as you type
                 SwiftUI.Section("Tags") {
                     ForEach(shown.sorted { $0.value.localizedStandardCompare($1.value) == .orderedAscending }) { tag in
-                        Button { name = tag.value } label: {
+                        Button { picked.formSymmetricDifference([tag.value]) } label: {
                             HStack {
                                 Label(tag.value, systemImage: "tag").foregroundStyle(.primary)
                                 Spacer()
-                                if tag.value == name { Image(systemName: "checkmark").foregroundStyle(.tint) }
+                                if picked.contains(tag.value) { Image(systemName: "checkmark").foregroundStyle(.tint) }
                             }
                         }
                     }
@@ -699,14 +701,14 @@ private struct TagSheet: View {
         .frame(width: 360)
         #endif
         .task { added = await library.tags(on: ids) }
-        .sheetButtons(title: "Add Tag", canSave: !name.trimmingCharacters(in: .whitespaces).isEmpty) {
-            onSave(name.trimmingCharacters(in: .whitespaces))
+        .sheetButtons(title: "Add Tag", canSave: !names.isEmpty) {
+            onSave(names.sorted())
         }
     }
 
     private func remove(_ tag: Tag) {
         withAnimation { added?.removeAll { $0.id == tag.id } }
-        Task { await library.untag(ids, tag, undo: undo) }
+        Task { await library.untag(ids, [tag], undo: undo) }
     }
 }
 

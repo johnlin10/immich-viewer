@@ -788,22 +788,23 @@ final class Library {
     // MARK: Tags
 
     /// Tags the photos with `name` ("Trips/Japan" nests), making the tag if it is new.
-    func tag(_ ids: [String], _ name: String, undo: UndoManager?) async {
-        var tag: Tag?
+    func tag(_ ids: [String], _ names: [String], undo: UndoManager?) async {
+        var added: [Tag] = []
         guard await change({ api in
-            tag = try JSONDecoder().decode([Tag].self, from: await api.send("PUT", "tags", json: ["tags": [name]])).first
-            guard let tag else { return }
+            added = try JSONDecoder().decode([Tag].self, from: await api.send("PUT", "tags", json: ["tags": names]))
+            guard !added.isEmpty else { return }
             struct Count: Decodable { let count: Int }
-            let added = try JSONDecoder().decode(Count.self, from: await api.send("PUT", "tags/assets",
-                                                                                  json: ["tagIds": [tag.id], "assetIds": ids])).count
+            let count = try JSONDecoder().decode(Count.self, from: await api.send("PUT", "tags/assets",
+                                                                                  json: ["tagIds": added.map(\.id), "assetIds": ids])).count
             // The server answers OK but skips photos it doesn't know or won't let this key change: say so,
-            // unless they simply had the tag already.
-            if added == 0, let first = ids.first, try await !(api.detail(first).tags ?? []).contains(where: { $0.id == tag.id }) {
-                throw TagNotAdded()
+            // unless they simply had the tags already.
+            if count == 0, let first = ids.first {
+                let have = Set((try await api.detail(first).tags ?? []).map(\.id))
+                if !added.allSatisfy({ have.contains($0.id) }) { throw TagNotAdded() }
             }
-        }), let tag else { return }
+        }), !added.isEmpty else { return }
         if let list = try? await api?.tags() { tags = list }
-        register(undo, String(localized: "Add Tag")) { await $0.untag(ids, tag, undo: undo) }
+        register(undo, String(localized: "Add Tag")) { await $0.untag(ids, added, undo: undo) }
     }
 
     private struct TagNotAdded: LocalizedError {
@@ -812,9 +813,11 @@ final class Library {
         }
     }
 
-    func untag(_ ids: [String], _ tag: Tag, undo: UndoManager?) async {
-        guard await change({ try await $0.send("DELETE", "tags/\(tag.id)/assets", json: ["ids": ids]) }) else { return }
-        register(undo, String(localized: "Remove Tag")) { await $0.tag(ids, tag.value, undo: undo) }
+    func untag(_ ids: [String], _ tags: [Tag], undo: UndoManager?) async {
+        guard await change({ api in
+            for tag in tags { _ = try await api.send("DELETE", "tags/\(tag.id)/assets", json: ["ids": ids]) }
+        }) else { return }
+        register(undo, String(localized: "Remove Tag")) { await $0.tag(ids, tags.map(\.value), undo: undo) }
     }
 
     /// The tag goes; its photos stay.

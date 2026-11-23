@@ -410,7 +410,7 @@ struct PhotoPager: View {
                           onDate: { edit(.adjustDate) },
                           onPlace: { edit(.setLocation) },
                           onAddTag: { edit(.addTag) },
-                          onUntag: { tag in Task { await library.untag([asset.id], tag, undo: undo) } },
+                          onUntag: { tag in Task { await library.untag([asset.id], [tag], undo: undo) } },
                           onChangePerson: { person in
                               if let face = person.faces?.first { edit(.changePerson(face: face.id, from: person.id)) }
                           })
