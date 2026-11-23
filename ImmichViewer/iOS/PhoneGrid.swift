@@ -28,8 +28,6 @@ struct PhoneGrid: UIViewControllerRepresentable {
         var onColumns: (Int) -> Void = { _ in }
         /// The photo at the top of the screen changed to another day.
         var onTop: (Int) -> Void = { _ in }
-        /// Scrolled down (true), as the tab bar collapses, or at the top (false). Called on every scroll that does either.
-        var onScrollDown: (Bool) -> Void = { _ in }
         var onPerson: (Person) -> Void = { _ in }
         /// A tap in select mode.
         var onToggle: (String) -> Void = { _ in }
@@ -351,14 +349,7 @@ final class PhoneGridController: UIViewController, UICollectionViewDataSource, U
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
         reportTop()
         updateFloating()
-        // the system has no "tab bar collapsed" to read; it collapses on any scroll down (not a bounce past the bottom)
-        let inset = scrollView.adjustedContentInset
-        let y = scrollView.contentOffset.y + inset.top
-        let bottom = scrollView.contentSize.height + inset.top + inset.bottom - scrollView.bounds.height
-        if y <= 0 { handlers.onScrollDown(false) } else if y <= bottom, scrollView.isTracking || scrollView.isDecelerating, y > lastY { handlers.onScrollDown(true) }
-        lastY = min(y, bottom)
     }
-    private var lastY = 0.0
 
     // MARK: Gestures
 
