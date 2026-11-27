@@ -1033,12 +1033,16 @@ final class Library {
         }
         func one(_ n: Int) async {
             var files: [UploadFile] = []
+            // the item's share of the progress, filled when it's done however it went (a failure before or while sending
+            // would otherwise leave its share empty and the bar behind the count)
+            let unit = Progress(totalUnitCount: 1, parent: progress, pendingUnitCount: 1)
+            defer { unit.completedUnitCount = 1 }
             do {
                 files = try await item(n)
                 var video: String?
                 for file in files {
                     // the video is small next to the still: only the still counts for the progress
-                    let (id, duplicate) = try await api.upload(file, livePhotoVideoId: video, progress: file.liveVideo ? nil : progress)
+                    let (id, duplicate) = try await api.upload(file, livePhotoVideoId: video, progress: file.liveVideo ? nil : unit)
                     if file.liveVideo { video = id; continue }
                     ids.append(id)
                     if duplicate { uploadSkipped += 1 } else { uploaded += 1 }
