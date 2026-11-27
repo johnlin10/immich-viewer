@@ -210,6 +210,7 @@ Planned editing: stacks, sharing and duplicates.
 
 - iPhone and iPad: Upload from Photos… no longer covers the screen. A ring in the top bar shows the progress (tap it for the count and Cancel), and the upload carries on after you leave the app, with the system's progress.
 - Uploads send four items at a time, so the connection isn't idle while a photo is copied out of Photos or downloaded from iCloud.
+- An upload that hits a passing server error (such as a 502 from a proxy while the server is busy) or a dropped connection is tried again twice before it counts as failed.
 - Uploading ends with a summary when photos were already on the server (skipped) or couldn't be uploaded, on the Mac too.
 - Fixed: some Live Photos saved by other apps (".pvt") failed to upload with "doesn't exist"; they now go as Live Photos, still and video.
 
