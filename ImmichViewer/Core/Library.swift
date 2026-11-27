@@ -1031,6 +1031,18 @@ final class Library {
             background.step(uploadStep)
             #endif
         }
+        // a passing failure (the proxy in front of the server answering 502 while it's busy, a dropped connection) is
+        // tried again twice, after a pause
+        func retrying<T>(_ attempt: (Int) async throws -> T) async throws -> T {
+            for n in 0... {
+                do { return try await attempt(n) } catch {
+                    let passing = (error as? ImmichAPI.HTTPError).map { $0.status >= 500 } ?? (error is URLError)
+                    guard passing, n < 2, !progress.isCancelled else { throw error }
+                    try? await Task.sleep(for: .seconds(n == 0 ? 2 : 5))
+                }
+            }
+            fatalError()
+        }
         func one(_ n: Int) async {
             var files: [UploadFile] = []
             // the item's share of the progress, filled when it's done however it went (a failure before or while sending
@@ -1042,7 +1054,11 @@ final class Library {
                 var video: String?
                 for file in files {
                     // the video is small next to the still: only the still counts for the progress
-                    let (id, duplicate) = try await api.upload(file, livePhotoVideoId: video, progress: file.liveVideo ? nil : unit)
+                    let (id, duplicate) = try await retrying {
+                        // a retry weighs nothing in the bar (the item's share fills when it's done), but cancels with it
+                        try await api.upload(file, livePhotoVideoId: video, progress: file.liveVideo ? nil
+                                             : $0 == 0 ? unit : Progress(totalUnitCount: 1, parent: unit, pendingUnitCount: 0))
+                    }
                     if file.liveVideo { video = id; continue }
                     ids.append(id)
                     if duplicate { uploadSkipped += 1 } else { uploaded += 1 }
