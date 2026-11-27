@@ -988,7 +988,7 @@ final class Library {
     /// Uploads `count` items (into `album` too, if given), with `upload` for the progress, then syncs. `item` hands over item
     /// `n`'s files when it's its turn (a Live Photo has two), so they needn't all be copied out first.
     /// Files the server already has count as uploaded.
-    func upload(count: Int, album: String?, item: (Int) async throws -> [UploadFile]) async {
+    func upload(count: Int, album: String?, item: @escaping (Int) async throws -> [UploadFile]) async {
         guard let api, count > 0 else { return }
         var ids: [String] = []
         var failures: [String] = []
@@ -1007,11 +1007,18 @@ final class Library {
         defer { UIApplication.shared.endBackgroundTask(grace) }
         #endif
         defer { upload = nil }
-        for n in 0..<count where !progress.isCancelled {
-            uploadStep = n + 1
+        // a few items at once: while one is copied out of Photos (or downloaded from iCloud) others are sending, so the
+        // connection isn't idle between them. They all run on the main actor; only the waiting overlaps.
+        let lanes = 4
+        var done = 0
+        func finished() {
+            done += 1
+            uploadStep = min(done + 1, count)
             #if os(iOS)
-            background.step(n + 1)
+            background.step(uploadStep)
             #endif
+        }
+        func one(_ n: Int) async {
             var files: [UploadFile] = []
             do {
                 files = try await item(n)
@@ -1031,6 +1038,15 @@ final class Library {
                 }
             }
             for file in files where file.temporary { try? FileManager.default.removeItem(at: file.url) }
+            finished()
+        }
+        uploadStep = 1
+        await withTaskGroup(of: Void.self) { group in
+            for n in 0..<count {
+                if n >= lanes { await group.next() }
+                if progress.isCancelled { break }
+                group.addTask { @MainActor in await one(n) }
+            }
         }
         #if os(iOS)
         let stopped = background.expired // by the system or its stop button, away from the app: say so, not silently stop
@@ -1039,8 +1055,8 @@ final class Library {
         #endif
         // a summary when not everything simply went up: what the server had already, what failed (the first few, why)
         if uploadSkipped > 0 || !failures.isEmpty || stopped {
-            var lines = [stopped ? String(localized: "iOS stopped the upload after \(uploadStep) of \(count). Upload them again to send the rest: the ones already on the server are skipped.")
-                         : progress.isCancelled ? String(localized: "Cancelled after \(uploadStep) of \(count).") : nil,
+            var lines = [stopped ? String(localized: "iOS stopped the upload after \(done) of \(count). Upload them again to send the rest: the ones already on the server are skipped.")
+                         : progress.isCancelled ? String(localized: "Cancelled after \(done) of \(count).") : nil,
                          String(localized: "Uploaded: \(uploaded)"),
                          uploadSkipped > 0 ? String(localized: "Already on the server, skipped: \(uploadSkipped)") : nil,
                          failures.isEmpty ? nil : String(localized: "Couldn’t upload: \(failures.count)")].compactMap { $0 }
