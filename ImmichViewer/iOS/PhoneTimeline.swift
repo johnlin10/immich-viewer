@@ -188,10 +188,10 @@ struct TimelineBrowser: View {
         .onChange(of: selecting) { if !selecting { chosen = [] } }
         .dropDestination(for: PickedFile.self) { files, _ in
             guard canDrop, !files.isEmpty else {
-                for file in files { try? FileManager.default.removeItem(at: file.url) }
+                for file in files.flatMap(\.files) { try? FileManager.default.removeItem(at: file.url) }
                 return false
             }
-            Task { await library.upload(count: files.count, album: album) { [UploadFile(url: files[$0].url, name: files[$0].name, temporary: true)] } }
+            Task { await library.upload(count: files.count, album: album) { files[$0].files } }
             return true
         } isTargeted: { dropTargeted = $0 }
         .overlay { if dropTargeted, canDrop { DropHighlight(album: album) } }

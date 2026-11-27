@@ -210,7 +210,7 @@ Planned editing: stacks, sharing and duplicates.
 
 - iPhone and iPad: Upload from Photos… no longer covers the screen. A ring in the top bar shows the progress (tap it for the count and Cancel), and the upload carries on after you leave the app, with the system's progress.
 - Uploading ends with a summary when photos were already on the server (skipped) or couldn't be uploaded, on the Mac too.
-- Fixed: some Live Photos saved by other apps (".pvt") failed to upload with "doesn't exist".
+- Fixed: some Live Photos saved by other apps (".pvt") failed to upload with "doesn't exist"; they now go as Live Photos, still and video.
 
 ### v0.15.0
 
