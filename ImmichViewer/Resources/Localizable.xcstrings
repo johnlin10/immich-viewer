@@ -5303,6 +5303,44 @@
           }
         }
       }
+    },
+    "iOS stopped the upload after %lld of %lld. Upload them again to send the rest: the ones already on the server are skipped." : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iOS 在第 %1$lld 個（共 %2$lld 個）時停止了上傳。再上傳一次這些項目即可傳完剩下的：伺服器上已有的會略過。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iOS 在第 %1$lld 个（共 %2$lld 个）时停止了上传。再上传一次这些项目即可传完剩下的：服务器上已有的会跳过。"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "iOS stopped the upload after %1$lld of %2$lld. Upload them again to send the rest: the ones already on the server are skipped."
+          }
+        }
+      }
+    },
+    "Upload Stopped" : {
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "上傳已停止"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "上传已停止"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

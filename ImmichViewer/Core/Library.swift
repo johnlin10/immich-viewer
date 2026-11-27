@@ -1032,9 +1032,15 @@ final class Library {
             }
             for file in files where file.temporary { try? FileManager.default.removeItem(at: file.url) }
         }
+        #if os(iOS)
+        let stopped = background.expired // by the system or its stop button, away from the app: say so, not silently stop
+        #else
+        let stopped = false
+        #endif
         // a summary when not everything simply went up: what the server had already, what failed (the first few, why)
-        if uploadSkipped > 0 || !failures.isEmpty {
-            var lines = [progress.isCancelled ? String(localized: "Cancelled after \(uploadStep) of \(count).") : nil,
+        if uploadSkipped > 0 || !failures.isEmpty || stopped {
+            var lines = [stopped ? String(localized: "iOS stopped the upload after \(uploadStep) of \(count). Upload them again to send the rest: the ones already on the server are skipped.")
+                         : progress.isCancelled ? String(localized: "Cancelled after \(uploadStep) of \(count).") : nil,
                          String(localized: "Uploaded: \(uploaded)"),
                          uploadSkipped > 0 ? String(localized: "Already on the server, skipped: \(uploadSkipped)") : nil,
                          failures.isEmpty ? nil : String(localized: "Couldn’t upload: \(failures.count)")].compactMap { $0 }
@@ -1043,7 +1049,8 @@ final class Library {
                 lines += failures.prefix(10)
                 if failures.count > 10 { lines.append(String(localized: "and \(failures.count - 10) more")) }
             }
-            editErrorTitle = failures.isEmpty ? String(localized: "Upload Finished") : String(localized: "Some Items Couldn’t Be Uploaded")
+            editErrorTitle = stopped ? String(localized: "Upload Stopped")
+                : failures.isEmpty ? String(localized: "Upload Finished") : String(localized: "Some Items Couldn’t Be Uploaded")
             editError = lines.joined(separator: "\n")
         }
         if let album, !ids.isEmpty { _ = await albumAssets("PUT", album, ids) }
