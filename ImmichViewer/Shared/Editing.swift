@@ -303,7 +303,7 @@ struct TransferPanel: View {
                         .font(.headline)
                         .monospacedDigit()
                         .contentTransition(.numericText())
-                    ProgressView(progress).labelsHidden()
+                    ProgressView(value: uploading ? library.uploadFraction : library.transferFraction).labelsHidden()
                     Button("Cancel", role: .cancel) { progress.cancel() }
                         .buttonStyle(.glass)
                 }

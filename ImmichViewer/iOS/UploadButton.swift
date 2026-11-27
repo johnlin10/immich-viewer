@@ -9,19 +9,19 @@ struct UploadButton: View {
     var body: some View {
         if let progress = library.upload {
             Button { shown = true } label: {
-                ProgressView(progress)
+                ProgressView(value: library.uploadFraction) // not `progress` itself: see Library.uploadFraction
                     .progressViewStyle(Ring())
                     .frame(width: 22, height: 22)
             }
             .accessibilityLabel("Uploading")
-            .accessibilityValue(progress.fractionCompleted.formatted(.percent.precision(.fractionLength(0))))
+            .accessibilityValue(library.uploadFraction.formatted(.percent.precision(.fractionLength(0))))
             .popover(isPresented: $shown) {
                 VStack(spacing: 14) {
                     Text("Uploading \(library.uploadStep) of \(Int(progress.totalUnitCount))")
                         .font(.headline)
                         .monospacedDigit()
                         .contentTransition(.numericText())
-                    ProgressView(progress).labelsHidden()
+                    ProgressView(value: library.uploadFraction).labelsHidden()
                     if library.uploadSkipped > 0 || library.uploadFailed > 0 {
                         VStack(spacing: 2) {
                             if library.uploadSkipped > 0 { Text("Already on the server, skipped: \(library.uploadSkipped)") }

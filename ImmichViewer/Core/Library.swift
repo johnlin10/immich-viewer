@@ -18,6 +18,10 @@ final class Library {
     /// The download under way, for the progress panel; cancel it to stop. `transferStep` is the file it is on, from 1.
     private(set) var transfer: Progress?
     private(set) var transferStep = 0
+    /// How far the download and the upload are, read on the main thread for the views: the Progress objects change on
+    /// URLSession's threads, and SwiftUI bound to them straight crashes when several change at once.
+    private(set) var transferFraction = 0.0
+    private(set) var uploadFraction = 0.0
     /// The upload under way (one at a time); cancel it to stop. `uploadStep` is the item it is on, from 1.
     private(set) var upload: Progress?
     private(set) var uploadStep = 0
@@ -943,7 +947,11 @@ final class Library {
         var saved: [URL] = []
         let progress = Progress(totalUnitCount: Int64(ids.count))
         transfer = progress
-        defer { transfer = nil }
+        transferFraction = 0
+        let poll = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { _ in
+            MainActor.assumeIsolated { self.transferFraction = progress.fractionCompleted }
+        }
+        defer { transfer = nil; poll.invalidate() }
         for (n, id) in ids.enumerated() where !progress.isCancelled {
             transferStep = n + 1
             do {
@@ -994,6 +1002,11 @@ final class Library {
         var failures: [String] = []
         let progress = Progress(totalUnitCount: Int64(count))
         upload = progress
+        uploadFraction = 0
+        let poll = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { _ in
+            MainActor.assumeIsolated { self.uploadFraction = progress.fractionCompleted }
+        }
+        defer { poll.invalidate() }
         uploadStep = 0
         uploadSkipped = 0
         uploadFailed = 0
