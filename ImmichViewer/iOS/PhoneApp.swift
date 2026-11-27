@@ -309,7 +309,12 @@ struct PhoneRoot: View {
             library.editError = nil
             library.editErrorTitle = nil
         })
-        top.present(alert, animated: true)
+        // not over a popover (the upload's, which goes away as the upload ends, taking the alert with it): close it first
+        if top.modalPresentationStyle == .popover, let below = top.presentingViewController {
+            top.dismiss(animated: true) { below.present(alert, animated: true) }
+        } else {
+            top.present(alert, animated: true)
+        }
     }
 }
 
