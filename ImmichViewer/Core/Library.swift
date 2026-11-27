@@ -21,6 +21,9 @@ final class Library {
     /// The upload under way (one at a time); cancel it to stop. `uploadStep` is the item it is on, from 1.
     private(set) var upload: Progress?
     private(set) var uploadStep = 0
+    /// Of this upload, the items the server had already (skipped) and the ones that failed so far.
+    private(set) var uploadSkipped = 0
+    private(set) var uploadFailed = 0
     private(set) var syncing = false
     private(set) var people: [Person] = []
     private(set) var albums: [Album] = []
@@ -609,6 +612,8 @@ final class Library {
 
     /// Why the last change failed, for an alert.
     var editError: String?
+    /// The alert's title when it isn't a failure ("Couldn’t Make the Change"), such as an upload's summary. Cleared with `editError`.
+    var editErrorTitle: String?
     /// Counts changes, so person and album pages and the info panel reload.
     private(set) var edits = 0
     /// False when the server deletes for good (its trash is turned off).
@@ -990,6 +995,9 @@ final class Library {
         let progress = Progress(totalUnitCount: Int64(count))
         upload = progress
         uploadStep = 0
+        uploadSkipped = 0
+        uploadFailed = 0
+        var uploaded = 0
         #if os(iOS)
         let background = BackgroundUpload.start(progress: progress, count: count) // goes on after leaving the app
         defer { background.finish(success: !progress.isCancelled) }
@@ -1010,18 +1018,34 @@ final class Library {
                 var video: String?
                 for file in files {
                     // the video is small next to the still: only the still counts for the progress
-                    let id = try await api.upload(file, livePhotoVideoId: video, progress: file.liveVideo ? nil : progress)
-                    if file.liveVideo { video = id } else { ids.append(id) }
+                    let (id, duplicate) = try await api.upload(file, livePhotoVideoId: video, progress: file.liveVideo ? nil : progress)
+                    if file.liveVideo { video = id; continue }
+                    ids.append(id)
+                    if duplicate { uploadSkipped += 1 } else { uploaded += 1 }
                 }
             } catch {
                 if !progress.isCancelled {
                     let name = files.last.map { $0.name ?? $0.url.lastPathComponent }
                     failures.append(name.map { "\($0): \(error.localizedDescription)" } ?? error.localizedDescription)
+                    uploadFailed += 1
                 }
             }
             for file in files where file.temporary { try? FileManager.default.removeItem(at: file.url) }
         }
-        if !failures.isEmpty { editError = failures.prefix(10).joined(separator: "\n") }
+        // a summary when not everything simply went up: what the server had already, what failed (the first few, why)
+        if uploadSkipped > 0 || !failures.isEmpty {
+            var lines = [progress.isCancelled ? String(localized: "Cancelled after \(uploadStep) of \(count).") : nil,
+                         String(localized: "Uploaded: \(uploaded)"),
+                         uploadSkipped > 0 ? String(localized: "Already on the server, skipped: \(uploadSkipped)") : nil,
+                         failures.isEmpty ? nil : String(localized: "Couldn’t upload: \(failures.count)")].compactMap { $0 }
+            if !failures.isEmpty {
+                lines.append("")
+                lines += failures.prefix(10)
+                if failures.count > 10 { lines.append(String(localized: "and \(failures.count - 10) more")) }
+            }
+            editErrorTitle = failures.isEmpty ? String(localized: "Upload Finished") : String(localized: "Some Items Couldn’t Be Uploaded")
+            editError = lines.joined(separator: "\n")
+        }
         if let album, !ids.isEmpty { _ = await albumAssets("PUT", album, ids) }
         edits += 1
         await refresh()

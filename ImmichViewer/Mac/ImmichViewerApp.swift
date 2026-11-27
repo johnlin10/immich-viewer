@@ -202,7 +202,8 @@ struct ContentView: View {
         .onChange(of: library.serverURL) { paths = [:] }
         .frame(minWidth: 700, minHeight: 400)
         .overlay { TransferPanel() }
-        .alert("Couldn’t Make the Change", isPresented: Binding { library.editError != nil } set: { if !$0 { library.editError = nil } }) {
+        .alert(library.editErrorTitle ?? String(localized: "Couldn’t Make the Change"),
+               isPresented: Binding { library.editError != nil } set: { if !$0 { library.editError = nil; library.editErrorTitle = nil } }) {
             Button("OK") {}
         } message: {
             Text(library.editError ?? "")

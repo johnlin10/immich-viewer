@@ -303,8 +303,12 @@ struct PhoneRoot: View {
               var top = UIApplication.shared.connectedScenes.compactMap({ ($0 as? UIWindowScene)?.keyWindow }).first?.rootViewController
         else { return }
         while let next = top.presentedViewController, !next.isBeingDismissed { top = next }
-        let alert = UIAlertController(title: String(localized: "Couldn’t Make the Change"), message: message, preferredStyle: .alert)
-        alert.addAction(UIAlertAction(title: String(localized: "OK"), style: .default) { _ in library.editError = nil })
+        let alert = UIAlertController(title: library.editErrorTitle ?? String(localized: "Couldn’t Make the Change"), message: message,
+                                      preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: String(localized: "OK"), style: .default) { _ in
+            library.editError = nil
+            library.editErrorTitle = nil
+        })
         top.present(alert, animated: true)
     }
 }

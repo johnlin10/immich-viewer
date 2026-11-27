@@ -22,6 +22,13 @@ struct UploadButton: View {
                         .monospacedDigit()
                         .contentTransition(.numericText())
                     ProgressView(progress).labelsHidden()
+                    if library.uploadSkipped > 0 || library.uploadFailed > 0 {
+                        VStack(spacing: 2) {
+                            if library.uploadSkipped > 0 { Text("Already on the server, skipped: \(library.uploadSkipped)") }
+                            if library.uploadFailed > 0 { Text("Couldn’t upload: \(library.uploadFailed)") }
+                        }
+                        .font(.footnote).foregroundStyle(.secondary).monospacedDigit()
+                    }
                     Button("Cancel", role: .cancel) { progress.cancel() }
                         .buttonStyle(.glass)
                 }

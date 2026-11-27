@@ -115,10 +115,10 @@ struct ImmichAPI: Sendable {
         }
     }
 
-    /// Uploads a file as a new asset. Returns its id (the existing one if the server already has the file).
+    /// Uploads a file as a new asset. Returns its id (the existing one if the server already has the file, `duplicate`).
     /// The multipart body is written to a temporary file first, so a large video never has to fit in memory.
     /// Its bytes count as one unit of `progress`, if given; cancelling that cancels the upload.
-    func upload(_ upload: UploadFile, livePhotoVideoId: String? = nil, progress: Progress? = nil) async throws -> String {
+    func upload(_ upload: UploadFile, livePhotoVideoId: String? = nil, progress: Progress? = nil) async throws -> (id: String, duplicate: Bool) {
         let file = upload.url
         let values = try file.resourceValues(forKeys: [.creationDateKey, .contentModificationDateKey])
         // without a date of its own (EXIF, a video's creation date) the server dates it by this. A copied file's creation
@@ -165,7 +165,7 @@ struct ImmichAPI: Sendable {
             local.timeZone = .current
             try await send("PUT", "assets/\(result.id)", json: ["dateTimeOriginal": local.string(from: created)])
         }
-        return result.id
+        return (result.id, result.status == "duplicate")
     }
 
     /// Whether the file says when it was taken, where Immich looks: EXIF, IPTC, XMP, a video's creation date.
