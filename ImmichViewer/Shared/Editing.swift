@@ -281,17 +281,25 @@ struct CollectionMenu: View {
     }
 }
 
-/// Over the middle of the window while originals download (to share, or to Downloads) or files upload, with Cancel.
+/// Over the middle of the window while originals download (to share, or to Downloads) or, on the Mac, files upload, with Cancel.
+/// On iOS an upload shows in the top bar instead (UploadButton), so the screen stays usable.
 struct TransferPanel: View {
     @Environment(Library.self) private var library
 
     var body: some View {
+        #if os(macOS)
+        let progress = library.upload ?? library.transfer // one at a time: imports and drops wait for the other
+        #else
+        let progress = library.transfer
+        #endif
+        let uploading = progress != nil && progress === library.upload
+        let step = uploading ? library.uploadStep : library.transferStep
         ZStack {
-            if let progress = library.transfer {
+            if let progress {
                 VStack(spacing: 14) {
-                    let step = library.transferStep, total = Int(progress.totalUnitCount)
-                    Text(library.transferIsUpload ? String(localized: "Uploading \(step) of \(total)")
-                                                  : String(localized: "Downloading \(step) of \(total)"))
+                    let total = Int(progress.totalUnitCount)
+                    Text(uploading ? String(localized: "Uploading \(step) of \(total)")
+                                   : String(localized: "Downloading \(step) of \(total)"))
                         .font(.headline)
                         .monospacedDigit()
                         .contentTransition(.numericText())
@@ -305,8 +313,8 @@ struct TransferPanel: View {
                 .transition(.scale(scale: 0.9).combined(with: .opacity))
             }
         }
-        .animation(.smooth, value: library.transfer != nil)
-        .animation(.smooth, value: library.transferStep)
+        .animation(.smooth, value: progress != nil)
+        .animation(.smooth, value: step)
     }
 }
 

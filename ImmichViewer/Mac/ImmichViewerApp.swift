@@ -106,7 +106,7 @@ struct ImportCommands: Commands {
                 Task { await library.upload(count: urls.count, album: browser?.album) { [UploadFile(url: urls[$0])] } }
             }
             .keyboardShortcut("i", modifiers: [.command, .shift])
-            .disabled(library.api == nil)
+            .disabled(library.api == nil || library.upload != nil || library.transfer != nil) // one transfer at a time, as with dropping
         }
     }
 }
@@ -276,7 +276,7 @@ struct TimelineBrowser: View {
     @Environment(\.undoManager) private var undo
 
     /// Files dropped here upload, like File > Import…, but only on Library and album pages, one transfer at a time, not over a photo.
-    private var canDrop: Bool { (context == .library || album != nil) && library.transfer == nil && viewer == nil }
+    private var canDrop: Bool { (context == .library || album != nil) && library.transfer == nil && library.upload == nil && viewer == nil }
 
     var body: some View {
         GeometryReader { geo in

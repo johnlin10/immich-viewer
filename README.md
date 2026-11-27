@@ -86,7 +86,7 @@ The same project also builds an iPhone and iPad app (iOS 26 or later). It isn't 
 - Live Photos: long-press the photo, or tap LIVE, to play the moving part.
 - On iPad the grid sits beside the sidebar, a photo's details open as a panel at its side (⋯ > Info opens and closes it), and forms keep a readable width.
 - Search: the round 🔍 button apart from the tabs turns into the search field with the keyboard up, like Photos; ✕ goes back. On iPad, Search is a tab at the top, or in the sidebar, with the field in its toolbar. Same results as on the Mac, with the same Filter button in the toolbar, which opens a sheet (the ⋯ menu has no Filter on this page).
-- ⋯ > Upload from Photos… on Library or an album's page uploads photos and videos picked from the device's library (into that album too), with the progress panel. With access to the library (asked the first time) each goes as Photos has it: the edited version if it was edited, a Live Photo with its moving part, its original name, favorite, and Photos' date for files whose metadata has none (an image saved from the web: when it was saved), with the device's time zone, like on the Mac. Without access, the picked files go with their own dates. The app has to stay open while it uploads. Photos or files dragged from other apps (Files, Photos) onto Library or an album's page upload too, with only the file's own dates.
+- ⋯ > Upload from Photos… on Library or an album's page uploads photos and videos picked from the device's library (into that album too). While it uploads, a ring in the top bar, left of Select, shows the progress; tap it for the count and Cancel. With access to the library (asked the first time) each goes as Photos has it: the edited version if it was edited, a Live Photo with its moving part, its original name, favorite, and Photos' date for files whose metadata has none (an image saved from the web: when it was saved), with the device's time zone, like on the Mac. Without access, the picked files go with their own dates. Leave the app and the upload carries on, with the system's progress, where it can be stopped. Photos or files dragged from other apps (Files, Photos) onto Library or an album's page upload too, with only the file's own dates.
 - Settings: servers (tap to switch, swipe to change the key or remove one, Add Server…), appearance, Statistics, video, the cache sizes with Clear Cache…, and the version.
 
 ### Settings (⌘,)
@@ -206,7 +206,11 @@ Planned editing: stacks, sharing and duplicates.
 
 ## Version history
 
-### v0.15.0 (current)
+### v0.15.1 (current)
+
+- iPhone and iPad: Upload from Photos… no longer covers the screen. A ring in the top bar shows the progress (tap it for the count and Cancel), and the upload carries on after you leave the app, with the system's progress.
+
+### v0.15.0
 
 - Crop…: in the photo menu, a frame over the photo as it looks now; drag a corner to resize it or inside it to move it, Reset puts it back. The server keeps the original and stores the crop as an edit, like Rotate. Only for a single still photo.
 - iPhone and iPad: Add Tag lets you tick several existing tags at once.

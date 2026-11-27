@@ -26,5 +26,10 @@
 	<!-- iOS: Upload from Photos, to upload each photo as the library has it (its date, name, a Live Photo's video) -->
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Immich Viewer uploads the photos and videos you pick to your Immich server, with their dates and Live Photo videos.</string>
+	<!-- iOS: an upload carries on after leaving the app (BGContinuedProcessingTask, with the system's progress) -->
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>$(PRODUCT_BUNDLE_IDENTIFIER).upload.*</string>
+	</array>
 </dict>
 </plist>

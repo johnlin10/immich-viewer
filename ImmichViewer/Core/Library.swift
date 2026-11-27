@@ -18,8 +18,9 @@ final class Library {
     /// The download under way, for the progress panel; cancel it to stop. `transferStep` is the file it is on, from 1.
     private(set) var transfer: Progress?
     private(set) var transferStep = 0
-    /// The transfer is an upload, not a download.
-    private(set) var transferIsUpload = false
+    /// The upload under way (one at a time); cancel it to stop. `uploadStep` is the item it is on, from 1.
+    private(set) var upload: Progress?
+    private(set) var uploadStep = 0
     private(set) var syncing = false
     private(set) var people: [Person] = []
     private(set) var albums: [Album] = []
@@ -937,7 +938,6 @@ final class Library {
         var saved: [URL] = []
         let progress = Progress(totalUnitCount: Int64(ids.count))
         transfer = progress
-        transferIsUpload = false
         defer { transfer = nil }
         for (n, id) in ids.enumerated() where !progress.isCancelled {
             transferStep = n + 1
@@ -980,7 +980,7 @@ final class Library {
         return url
     }
 
-    /// Uploads `count` items (into `album` too, if given), with the progress panel, then syncs. `item` hands over item
+    /// Uploads `count` items (into `album` too, if given), with `upload` for the progress, then syncs. `item` hands over item
     /// `n`'s files when it's its turn (a Live Photo has two), so they needn't all be copied out first.
     /// Files the server already has count as uploaded.
     func upload(count: Int, album: String?, item: (Int) async throws -> [UploadFile]) async {
@@ -988,11 +988,22 @@ final class Library {
         var ids: [String] = []
         var failures: [String] = []
         let progress = Progress(totalUnitCount: Int64(count))
-        transfer = progress
-        transferIsUpload = true
-        defer { transfer = nil }
+        upload = progress
+        uploadStep = 0
+        #if os(iOS)
+        let background = BackgroundUpload.start(progress: progress, count: count) // goes on after leaving the app
+        defer { background.finish(success: !progress.isCancelled) }
+        // where the system won't give that task (the simulator, a busy system), the usual short grace after leaving the app
+        var grace = UIBackgroundTaskIdentifier.invalid
+        grace = UIApplication.shared.beginBackgroundTask(withName: "Upload") { UIApplication.shared.endBackgroundTask(grace) }
+        defer { UIApplication.shared.endBackgroundTask(grace) }
+        #endif
+        defer { upload = nil }
         for n in 0..<count where !progress.isCancelled {
-            transferStep = n + 1
+            uploadStep = n + 1
+            #if os(iOS)
+            background.step(n + 1)
+            #endif
             var files: [UploadFile] = []
             do {
                 files = try await item(n)

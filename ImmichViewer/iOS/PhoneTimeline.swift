@@ -42,8 +42,8 @@ struct TimelineBrowser: View {
     /// Uploads from here go into the album too.
     private var album: String? { if case .album(let id) = context { id } else { nil } }
     @State private var dropTargeted = false
-    /// Dropped files upload only on Library and album pages (where Upload from Photos… is), one transfer at a time, not while selecting.
-    private var canDrop: Bool { (context == .library || album != nil) && library.transfer == nil && !selecting }
+    /// Dropped files upload only on Library and album pages (where Upload from Photos… is), one upload at a time, not while selecting.
+    private var canDrop: Bool { (context == .library || album != nil) && library.upload == nil && !selecting }
 
     /// Search's Filter, with ⋯: both about what's shown. A dot when on (tinted glass would sit inside ⋯'s).
     @ToolbarContentBuilder private var searchFiltersItem: some ToolbarContent {
@@ -98,6 +98,10 @@ struct TimelineBrowser: View {
             // two items swapped inside an animation: the toolbar morphs the glass from "Select" into ✕ and back.
             // Their ids differ (one id makes it swap the label without the morph); "select" matches the Tags page's, so the
             // button stays put when one page opens the other.
+            if library.upload != nil { // its own glass, left of Select
+                ToolbarItem(id: "upload", placement: .primaryAction) { UploadButton() }
+                ToolbarSpacer(.fixed, placement: .primaryAction)
+            }
             if selecting {
                 ToolbarItem(id: "cancel", placement: .primaryAction) {
                     Button("Cancel", systemImage: "xmark") { setSelecting(false) }
@@ -121,7 +125,7 @@ struct TimelineBrowser: View {
                     if !selecting, context == .library || album != nil {
                         SwiftUI.Section {
                             Button("Upload from Photos…", systemImage: "photo.badge.plus") { uploadShown = true }
-                                .disabled(library.transfer != nil)
+                                .disabled(library.upload != nil)
                         }
                     }
                     SwiftUI.Section {
@@ -161,6 +165,7 @@ struct TimelineBrowser: View {
                 }
             }
         }
+        .animation(.smooth, value: library.upload != nil)
         .pageBar() // the grid sets its own soft edge
         .navigationTitle(title)
         .navigationSubtitle(selecting ? (chosen.isEmpty ? String(localized: "Select Items") : String(localized: "\(chosen.count) selected"))
